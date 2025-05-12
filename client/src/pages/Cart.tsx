@@ -115,23 +115,35 @@ const Cart = () => {
   };
 
   const handleCheckout = () => {
-    // Simulate checkout process
+    // Check if the user is logged in
+    if (!currentUser) {
+      toast({
+        title: "Login Required",
+        description: "Please login to proceed with checkout",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+    
+    // Check if cart is empty
+    if (cartItems.length === 0) {
+      toast({
+        title: "Empty Cart",
+        description: "Your cart is empty. Add items before checkout.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Proceed to checkout
     toast({
-      title: "Processing checkout",
-      description: "You will be redirected to the payment gateway.",
+      title: "Proceeding to checkout",
+      description: "Preparing your order details",
     });
     
-    // Simulate redirect after a delay
-    setTimeout(() => {
-      clearCart();
-      navigate("/checkout/success");
-      
-      // For demo purposes, display a toast message
-      toast({
-        title: "Order Placed",
-        description: "Thank you for your order! Your order has been placed successfully.",
-      });
-    }, 2000);
+    // Redirect to checkout page
+    navigate("/checkout");
   };
 
   const cartItemVariants = {
