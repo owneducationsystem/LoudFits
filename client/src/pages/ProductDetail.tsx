@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -84,9 +84,8 @@ const ProductDetail = () => {
     setCurrentImageIndex((prevIndex) => 
       prevIndex === product.images.length - 1 ? 0 : prevIndex + 1
     );
-    // Reset zoom when changing images
-    setZoomLevel(1);
-    setIsZoomed(false);
+    // Reset zoom and drag position when changing images
+    resetZoom();
   };
 
   const prevImage = () => {
@@ -95,9 +94,8 @@ const ProductDetail = () => {
     setCurrentImageIndex((prevIndex) => 
       prevIndex === 0 ? product.images.length - 1 : prevIndex - 1
     );
-    // Reset zoom when changing images
-    setZoomLevel(1);
-    setIsZoomed(false);
+    // Reset zoom and drag position when changing images
+    resetZoom();
   };
   
   const handleZoomIn = () => {
@@ -295,8 +293,12 @@ const ProductDetail = () => {
           <div className="relative">
             {/* Main Image */}
             <div className="relative overflow-hidden rounded-md bg-gray-100 h-[500px]">
-              <div className={`w-full h-full ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`} 
-                onClick={() => isZoomed ? resetZoom() : handleZoomIn()}>
+              <div 
+                ref={imageRef}
+                className={`w-full h-full ${isZoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`} 
+                onClick={() => isZoomed ? resetZoom() : handleZoomIn()}
+                onMouseDown={isZoomed ? handleDragStart : undefined}
+              >
                 <AnimatePresence mode="wait">
                   <motion.img
                     key={currentImageIndex}
@@ -304,16 +306,37 @@ const ProductDetail = () => {
                     alt={product.name}
                     className="w-full h-full object-cover transition-transform duration-300"
                     style={{ 
-                      transform: `scale(${zoomLevel})`,
+                      transform: `scale(${zoomLevel}) translate(${dragPosition.x / (zoomLevel * 10)}px, ${dragPosition.y / (zoomLevel * 10)}px)`,
                       transformOrigin: 'center'
                     }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
+                    draggable={false}
                   />
                 </AnimatePresence>
               </div>
+              
+              {/* Zoom controls */}
+              {isZoomed && (
+                <div className="absolute bottom-4 right-4 flex gap-2">
+                  <button 
+                    onClick={handleZoomOut}
+                    className="p-2 bg-white/80 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors"
+                    aria-label="Zoom out"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <button 
+                    onClick={handleZoomIn}
+                    className="p-2 bg-white/80 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors"
+                    aria-label="Zoom in"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
               
               {/* Navigation Arrows */}
               <button
