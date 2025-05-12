@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Search, User, Heart, ShoppingBag, Menu, ChevronDown, LogOut } from "lucide-react";
 import { useCartContext } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { useWishlistContext } from "@/context/WishlistContext";
 import MobileMenu from "./MobileMenu";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
