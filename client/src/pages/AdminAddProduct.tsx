@@ -20,8 +20,8 @@ import { apiRequest } from "@/lib/queryClient";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { insertProductSchema } from "@shared/schema";
 
-// Add validations to the product schema
-const addProductSchema = z.object({
+// Use the insertProductSchema from shared schema with extra validations
+const addProductSchema = insertProductSchema.extend({
   name: z.string().min(3, "Product name must be at least 3 characters").max(100),
   description: z.string().min(10, "Description must be at least 10 characters"),
   price: z.string().regex(/^\d+(\.\d{1,2})?$/, "Enter a valid price"),
@@ -29,11 +29,7 @@ const addProductSchema = z.object({
   gender: z.enum(["Men", "Women", "Unisex"]).default("Unisex"),
   sizes: z.array(z.string()).min(1, "Select at least one size"),
   colors: z.array(z.string()).min(1, "Select at least one color"),
-  collection: z.string().optional(),
-  images: z.array(z.string()).optional(),
-  featured: z.boolean().default(false),
-  trending: z.boolean().default(false),
-  inStock: z.boolean().default(true),
+  images: z.array(z.string()).default([]),
 });
 
 type AddProductFormValues = z.infer<typeof addProductSchema>;
@@ -128,15 +124,25 @@ const AdminAddProduct = () => {
     setIsSubmitting(true);
     
     try {
-      // Ensure price is a string
+      console.log("Submitting product data:", values);
+      
+      // Convert the form data to the correct types
       const productData = {
         ...values,
         price: values.price.toString(),
+        // Make sure arrays are properly formatted
+        sizes: Array.isArray(values.sizes) ? values.sizes : [],
+        colors: Array.isArray(values.colors) ? values.colors : [],
+        images: Array.isArray(values.images) ? values.images : [],
       };
+      
+      console.log("Formatted product data:", productData);
       
       // Create product via API
       const response = await apiRequest("POST", "/api/admin/products", productData);
       const data = await response.json();
+      
+      console.log("API response:", data);
       
       toast({
         title: "Product created",
