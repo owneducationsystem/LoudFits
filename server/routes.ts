@@ -833,7 +833,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Format logs as events
       const events = logs.map(log => {
         try {
-          const details = JSON.parse(log.details);
+          // Parse details string to object
+          const details = JSON.parse(log.details as string);
           return {
             id: log.id.toString(),
             type: log.action.replace('BROADCAST_EVENT:', ''),
@@ -858,6 +859,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // WebSocket Test Page - Admin only testing interface
+  app.get("/admin/websocket-test", isAdmin, (req, res) => {
+    // Serve the WebSocket test HTML page
+    res.sendFile("admin-websocket-test.html", { root: "." });
+  });
+  
   // WebSocket Events API - for sending events via HTTP
   app.post("/api/admin/events", isAdmin, logAdminAction, async (req, res) => {
     try {
@@ -871,9 +878,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       global.broadcastEvent(event, data || {}, recipients);
       
       // Log event in admin logs
-      const adminId = req.headers['admin-id'] as string;
+      const adminId = req.headers['admin-id'];
       await storage.createAdminLog({
-        userId: parseInt(adminId),
+        userId: typeof adminId === 'string' ? parseInt(adminId) : 1,
         action: `BROADCAST_EVENT:${event}`,
         entityType: 'event',
         entityId: `${Date.now()}`,
