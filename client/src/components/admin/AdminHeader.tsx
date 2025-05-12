@@ -2,7 +2,7 @@ import React from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Home, Package, Users, Settings, BarChart3, ShoppingCart, LogOut, Bell, Radio, LayoutDashboard, Waves, Terminal, MinusCircle, RadioTower, Wifi } from 'lucide-react';
-import GlobalWebSocketTest from './GlobalWebSocketTest';
+import GlobalWebSocketIndicator from './GlobalWebSocketIndicator';
 
 interface AdminHeaderProps {
   title?: string;
@@ -130,7 +130,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ title = 'Admin Dashboard' }) 
           </nav>
           
           <div className="flex items-center space-x-3">
-            <GlobalWebSocketTest />
+            <GlobalWebSocketIndicator />
             
             <Button
               variant="ghost"

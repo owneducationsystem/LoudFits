@@ -394,17 +394,11 @@ const AdminRealTimeFixed: React.FC = () => {
                         placeholder="Admin ID"
                       />
                     </div>
-                    <Button
-                      onClick={() => {
-                        // Close existing connection
-                        if (socketRef.current) {
-                          socketRef.current.close();
-                        }
-                        // The useEffect will create a new connection
-                      }}
-                    >
-                      Reconnect
-                    </Button>
+                    <WebSocketKeepAlive 
+                      adminId={adminId} 
+                      interval={5000} 
+                      showControls={true} 
+                    />
                   </div>
                 </div>
               </div>
