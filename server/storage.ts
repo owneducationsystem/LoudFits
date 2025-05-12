@@ -226,8 +226,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async countProducts(): Promise<number> {
-    const [result] = await db.select({ count: count() }).from(products);
-    return result.count;
+    const result = await db.select({ value: count() }).from(products);
+    return result[0]?.value || 0;
   }
 
   // Cart methods
