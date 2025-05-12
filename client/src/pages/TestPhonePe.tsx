@@ -15,6 +15,43 @@ const TestPhonePe = () => {
   const [error, setError] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, any>>({});
   
+  const initiateTestPayment = async (amount: number, success: boolean) => {
+    try {
+      const response = await fetch('/api/payment/test-create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ amount, success })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setTestResults(prev => ({ ...prev, testPayment: data }));
+      
+      if (data.success) {
+        toast({
+          title: 'Test Payment Created',
+          description: `Order: ${data.data.orderNumber}, Amount: ₹${amount}`,
+        });
+        
+        // Direct to the mock payment page
+        window.location.href = data.data.paymentUrl;
+      } else {
+        throw new Error(data.error || 'Failed to create test payment');
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Error Creating Test Payment',
+        description: err.message || 'An unknown error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
+  
   useEffect(() => {
     const fetchConfig = async () => {
       try {
@@ -142,49 +179,68 @@ const TestPhonePe = () => {
                     You can test the payment flow using the buttons below. This will create a test order and redirect you to the PhonePe payment page.
                   </p>
                   
-                  <div className="flex flex-wrap gap-3 mt-2">
-                    <Button 
-                      className="bg-[#582A34] hover:bg-black flex items-center"
-                      onClick={async () => {
-                        try {
-                          const response = await fetch('/api/payment/test-create', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ amount: 100 })
-                          });
-                          
-                          if (!response.ok) {
-                            throw new Error(`HTTP error! Status: ${response.status}`);
-                          }
-                          
-                          const data = await response.json();
-                          setTestResults(prev => ({ ...prev, testPayment: data }));
-                          
-                          if (data.success) {
-                            toast({
-                              title: 'Test Payment Created',
-                              description: `Order: ${data.data.orderNumber}, Txn ID: ${data.data.merchantTransactionId}`,
-                            });
-                            
-                            // Direct to the mock payment page
-                            window.location.href = data.data.paymentUrl;
-                          } else {
-                            throw new Error(data.error || 'Failed to create test payment');
-                          }
-                        } catch (err: any) {
-                          toast({
-                            title: 'Error Creating Test Payment',
-                            description: err.message || 'An unknown error occurred',
-                            variant: 'destructive',
-                          });
-                        }
-                      }}
-                    >
-                      <span>Test Payment</span>
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                    <div className="bg-white border p-4 rounded-lg">
+                      <h4 className="font-medium text-base mb-2">Success Payment Flow</h4>
+                      <p className="text-sm text-gray-600 mb-3">Test a successful payment scenario</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button 
+                          size="sm"
+                          className="bg-[#582A34] hover:bg-black"
+                          onClick={() => initiateTestPayment(100, true)}
+                        >
+                          ₹100
+                        </Button>
+                        <Button 
+                          size="sm"
+                          className="bg-[#582A34] hover:bg-black"
+                          onClick={() => initiateTestPayment(499, true)}
+                        >
+                          ₹499
+                        </Button>
+                        <Button 
+                          size="sm"
+                          className="bg-[#582A34] hover:bg-black"
+                          onClick={() => initiateTestPayment(999, true)}
+                        >
+                          ₹999
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white border p-4 rounded-lg">
+                      <h4 className="font-medium text-base mb-2">Failure Payment Flow</h4>
+                      <p className="text-sm text-gray-600 mb-3">Test a payment failure scenario</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          className="border-red-300 text-red-600 hover:bg-red-50"
+                          onClick={() => initiateTestPayment(100, false)}
+                        >
+                          ₹100
+                        </Button>
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          className="border-red-300 text-red-600 hover:bg-red-50"
+                          onClick={() => initiateTestPayment(499, false)}
+                        >
+                          ₹499
+                        </Button>
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          className="border-red-300 text-red-600 hover:bg-red-50"
+                          onClick={() => initiateTestPayment(999, false)}
+                        >
+                          ₹999
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6">
                     <Button 
                       variant="outline"
                       className="flex items-center"

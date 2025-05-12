@@ -65,7 +65,7 @@ export function setupPaymentRoutes(app: Express) {
           email: req.user?.email || 'test@example.com',
           shippingAddress: '123 Test Street, Test City, Test Country',
           phone: '1234567890',
-          name: req.user?.name || 'Test User'
+          name: req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Test User' : 'Test User'
         };
         
         // We'll return all the data that would be used to create a real payment
