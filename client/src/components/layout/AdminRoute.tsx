@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Redirect } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 
 interface AdminUser {
@@ -10,7 +10,7 @@ interface AdminUser {
 }
 
 interface AdminRouteProps {
-  component: React.ComponentType;
+  component: React.ComponentType<any>;
 }
 
 /**
@@ -19,13 +19,16 @@ interface AdminRouteProps {
  */
 const AdminRoute = ({ component: Component, ...rest }: AdminRouteProps) => {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [location] = useLocation();
   
   useEffect(() => {
     // Check if user is logged in as admin
     const checkAdminAuth = () => {
+      console.log("Checking admin authentication for path:", location);
       const adminUserData = localStorage.getItem("adminUser");
       
       if (!adminUserData) {
+        console.log("No admin user data found in localStorage");
         setIsAdmin(false);
         return;
       }
@@ -34,8 +37,26 @@ const AdminRoute = ({ component: Component, ...rest }: AdminRouteProps) => {
         const adminUser = JSON.parse(adminUserData) as AdminUser;
         
         if (adminUser && adminUser.role === "admin") {
+          console.log("Admin user authenticated:", adminUser.username);
           setIsAdmin(true);
+          
+          // Set admin-id header for API requests
+          if (window.fetch) {
+            const originalFetch = window.fetch;
+            window.fetch = function(input, init) {
+              init = init || {};
+              init.headers = init.headers || {};
+              
+              // Add the admin-id header to API requests
+              if (typeof input === 'string' && input.startsWith('/api/admin/')) {
+                (init.headers as any)['admin-id'] = adminUser.id.toString();
+              }
+              
+              return originalFetch(input, init);
+            };
+          }
         } else {
+          console.log("User found but not an admin:", adminUser?.username);
           setIsAdmin(false);
         }
       } catch (error) {
@@ -45,7 +66,14 @@ const AdminRoute = ({ component: Component, ...rest }: AdminRouteProps) => {
     };
     
     checkAdminAuth();
-  }, []);
+    
+    // Clean up fetch override when component unmounts
+    return () => {
+      if (window.fetch && window.fetch !== globalThis.fetch) {
+        window.fetch = globalThis.fetch;
+      }
+    };
+  }, [location]);
   
   // Show loading while checking authentication
   if (isAdmin === null) {
@@ -61,10 +89,12 @@ const AdminRoute = ({ component: Component, ...rest }: AdminRouteProps) => {
   
   // Redirect to login if not an admin
   if (!isAdmin) {
+    console.log("Access denied, redirecting to login");
     return <Redirect to="/admin/login" />;
   }
   
   // Render admin component if authorized
+  console.log("Rendering admin component for", location);
   return <Component {...rest} />;
 };
 

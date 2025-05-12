@@ -119,14 +119,14 @@ function App() {
                 <Route path="/admin/orders">
                   {(params) => <AdminRoute component={AdminOrders} {...params} />}
                 </Route>
-                <Route path="/admin/products">
-                  {(params) => <AdminRoute component={AdminProducts} {...params} />}
-                </Route>
                 <Route path="/admin/products/add">
                   {(params) => <AdminRoute component={AdminAddProduct} {...params} />}
                 </Route>
                 <Route path="/admin/products/categories">
                   {(params) => <AdminRoute component={AdminCategories} {...params} />}
+                </Route>
+                <Route path="/admin/products">
+                  {(params) => <AdminRoute component={AdminProducts} {...params} />}
                 </Route>
                 <Route path="/admin/users/add">
                   {(params) => <AdminRoute component={AdminAddUser} {...params} />}

@@ -190,10 +190,20 @@ const AdminProducts = () => {
           </p>
         </div>
         
-        <Button onClick={() => navigate("/admin/products/add")}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Product
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => navigate("/admin/products/categories")}
+          >
+            <Filter className="mr-2 h-4 w-4" />
+            Manage Categories
+          </Button>
+          
+          <Button onClick={() => navigate("/admin/products/add")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Product
+          </Button>
+        </div>
       </div>
       
       <Card>
