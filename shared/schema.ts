@@ -232,5 +232,45 @@ export type OrderItem = typeof orderItems.$inferSelect;
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
 export type Testimonial = typeof testimonials.$inferSelect;
 
+// Payments table to track payment transactions
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  transactionId: text("transaction_id").notNull().unique(),
+  merchantTransactionId: text("merchant_transaction_id").notNull().unique(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("INR"),
+  method: text("method").notNull(), // PhonePe, COD, etc.
+  status: text("status").notNull().default("initiated"), // initiated, completed, failed, refunded
+  gatewayResponse: json("gateway_response"), // Response from payment gateway
+  gatewayErrorCode: text("gateway_error_code"),
+  gatewayErrorMessage: text("gateway_error_message"),
+  paymentDate: timestamp("payment_date"),
+  refundDate: timestamp("refund_date"),
+  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }),
+  refundReason: text("refund_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPaymentSchema = createInsertSchema(payments).pick({
+  orderId: true,
+  userId: true,
+  transactionId: true,
+  merchantTransactionId: true,
+  amount: true,
+  currency: true,
+  method: true,
+  status: true,
+  gatewayResponse: true,
+  gatewayErrorCode: true,
+  gatewayErrorMessage: true,
+  paymentDate: true,
+});
+
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type Payment = typeof payments.$inferSelect;
+
 export type InsertAdminLog = z.infer<typeof insertAdminLogSchema>;
 export type AdminLog = typeof adminLogs.$inferSelect;
