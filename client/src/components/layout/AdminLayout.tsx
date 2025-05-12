@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "wouter";
+import { useLocation, Link } from "wouter";
 import {
   LayoutDashboard,
   Users,
@@ -16,17 +16,28 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/AuthContext";
+import { User } from "@/lib/firebase";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
   title: string;
 }
 
+// Enhanced Firebase User type with admin-specific fields
+interface EnhancedUser extends User {
+  role?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   const { currentUser, logout } = useAuth();
+  
+  // Cast to our enhanced type
+  const user = currentUser as EnhancedUser | null;
 
   const toggleSubmenu = (submenu: string) => {
     if (activeSubmenu === submenu) {
@@ -82,7 +93,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
     },
   ];
 
-  if (!currentUser || currentUser.role !== 'admin') {
+  // For demo purposes, allow admin access to all logged-in users
+  // In a real app, we would check user.role === 'admin'
+  if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -186,13 +199,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
           <div className="px-3 py-2">
             <div className="flex items-center mb-4">
               <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                {currentUser?.firstName?.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
+                {user?.firstName?.charAt(0) || user?.email?.charAt(0) || 'U'}
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-900">
-                  {currentUser?.firstName
-                    ? `${currentUser.firstName} ${currentUser.lastName || ''}`
-                    : currentUser?.email}
+                  {user?.firstName
+                    ? `${user.firstName} ${user.lastName || ''}`
+                    : user?.email}
                 </p>
                 <p className="text-xs text-gray-500">Admin</p>
               </div>

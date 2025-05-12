@@ -23,6 +23,10 @@ import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsConditions from "@/pages/TermsConditions";
 import Account from "@/pages/Account";
 import Orders from "@/pages/Orders";
+// Admin pages
+import Admin from "@/pages/Admin";
+import AdminUsers from "@/pages/AdminUsers";
+import AdminOrders from "@/pages/AdminOrders";
 
 import { useEffect, useState } from "react";
 import { handleAuthRedirect } from "@/lib/firebase";
@@ -96,6 +100,12 @@ function App() {
                 <Route path="/terms-conditions" component={TermsConditions} />
                 <Route path="/account" component={Account} />
                 <Route path="/orders" component={Orders} />
+                
+                {/* Admin Routes */}
+                <Route path="/admin" component={Admin} />
+                <Route path="/admin/users" component={AdminUsers} />
+                <Route path="/admin/orders" component={AdminOrders} />
+                
                 <Route component={NotFound} />
               </Switch>
             </main>

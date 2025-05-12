@@ -5,7 +5,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest } from "@/lib/queryClient";
-import { TrendUp, TrendDown, Users, ShoppingBag, DollarSign, ClipboardList } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, ShoppingBag, DollarSign, ClipboardList } from "lucide-react";
 
 const AdminDashboard = () => {
   const [tabValue, setTabValue] = useState("overview");
