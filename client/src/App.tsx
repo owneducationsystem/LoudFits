@@ -2,6 +2,7 @@ import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/context/CartContext";
+import { AuthProvider } from "@/context/AuthContext";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import Home from "@/pages/Home";
@@ -23,36 +24,38 @@ import TermsConditions from "@/pages/TermsConditions";
 
 function App() {
   return (
-    <CartProvider>
-      <TooltipProvider>
-        <div className="flex flex-col min-h-screen">
-          <Header />
-          <main className="flex-grow">
-            <Switch>
-              <Route path="/" component={Home} />
-              <Route path="/shop" component={Shop} />
-              <Route path="/product/:id" component={ProductDetail} />
-              <Route path="/customize" component={Customize} />
-              <Route path="/cart" component={Cart} />
-              <Route path="/login" component={Auth} />
-              <Route path="/signup" component={Auth} />
-              <Route path="/search" component={Search} />
-              <Route path="/wishlist" component={Wishlist} />
-              <Route path="/size-guide" component={SizeGuide} />
-              <Route path="/faqs" component={FAQ} />
-              <Route path="/shipping-returns" component={ShippingReturns} />
-              <Route path="/contact" component={Contact} />
-              <Route path="/track-order" component={TrackOrder} />
-              <Route path="/privacy-policy" component={PrivacyPolicy} />
-              <Route path="/terms-conditions" component={TermsConditions} />
-              <Route component={NotFound} />
-            </Switch>
-          </main>
-          <Footer />
-        </div>
-        <Toaster />
-      </TooltipProvider>
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <TooltipProvider>
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow">
+              <Switch>
+                <Route path="/" component={Home} />
+                <Route path="/shop" component={Shop} />
+                <Route path="/product/:id" component={ProductDetail} />
+                <Route path="/customize" component={Customize} />
+                <Route path="/cart" component={Cart} />
+                <Route path="/login" component={Auth} />
+                <Route path="/signup" component={Auth} />
+                <Route path="/search" component={Search} />
+                <Route path="/wishlist" component={Wishlist} />
+                <Route path="/size-guide" component={SizeGuide} />
+                <Route path="/faqs" component={FAQ} />
+                <Route path="/shipping-returns" component={ShippingReturns} />
+                <Route path="/contact" component={Contact} />
+                <Route path="/track-order" component={TrackOrder} />
+                <Route path="/privacy-policy" component={PrivacyPolicy} />
+                <Route path="/terms-conditions" component={TermsConditions} />
+                <Route component={NotFound} />
+              </Switch>
+            </main>
+            <Footer />
+          </div>
+          <Toaster />
+        </TooltipProvider>
+      </CartProvider>
+    </AuthProvider>
   );
 }
 
