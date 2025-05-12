@@ -58,9 +58,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleSignInWithGoogle = async (): Promise<UserCredential | undefined> => {
     try {
       setError(null);
+      console.log('Attempting Google sign-in...');
       return await signInWithGoogle();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      console.error('Google sign-in error:', err);
+      // More detailed error reporting
+      let errorMessage = 'An unknown error occurred';
+      let errorCode = 'unknown';
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        // Check if it's a Firebase auth error with a code
+        const firebaseError = err as any;
+        if (firebaseError.code) {
+          errorCode = firebaseError.code;
+          errorMessage = `Firebase error (${errorCode}): ${errorMessage}`;
+        }
+      }
+      
       setError(errorMessage);
       toast({
         title: 'Authentication Error',
@@ -75,9 +90,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleSignInWithEmail = async (email: string, password: string): Promise<UserCredential | undefined> => {
     try {
       setError(null);
+      console.log('Attempting email sign-in...');
       return await emailSignIn(email, password);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      console.error('Email sign-in error:', err);
+      // More detailed error reporting
+      let errorMessage = 'An unknown error occurred';
+      let errorCode = 'unknown';
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        // Check if it's a Firebase auth error with a code
+        const firebaseError = err as any;
+        if (firebaseError.code) {
+          errorCode = firebaseError.code;
+          errorMessage = `Firebase error (${errorCode}): ${errorMessage}`;
+        }
+      }
+      
       setError(errorMessage);
       toast({
         title: 'Authentication Error',
@@ -92,9 +122,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleSignUpWithEmail = async (email: string, password: string): Promise<UserCredential | undefined> => {
     try {
       setError(null);
+      console.log('Attempting email sign-up...');
       return await emailSignUp(email, password);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      console.error('Email sign-up error:', err);
+      // More detailed error reporting
+      let errorMessage = 'An unknown error occurred';
+      let errorCode = 'unknown';
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        // Check if it's a Firebase auth error with a code
+        const firebaseError = err as any;
+        if (firebaseError.code) {
+          errorCode = firebaseError.code;
+          errorMessage = `Firebase error (${errorCode}): ${errorMessage}`;
+        }
+      }
+      
       setError(errorMessage);
       toast({
         title: 'Authentication Error',

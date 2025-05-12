@@ -23,6 +23,13 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+// Debug configuration
+console.log("Firebase config (without sensitive data):", {
+  ...firebaseConfig,
+  apiKey: firebaseConfig.apiKey ? "[API KEY PRESENT]" : "[API KEY MISSING]",
+  appId: firebaseConfig.appId ? "[APP ID PRESENT]" : "[APP ID MISSING]",
+});
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -35,10 +42,29 @@ googleProvider.setCustomParameters({
 
 // Authentication functions
 export const signInWithGoogle = async (): Promise<UserCredential> => {
-  return signInWithPopup(auth, googleProvider);
+  try {
+    console.log("Attempting sign in with Google popup...");
+    // In Replit, popup may be blocked, so we'll try popup first, then fall back to redirect
+    return await signInWithPopup(auth, googleProvider);
+  } catch (error) {
+    console.error("Error in signInWithGoogle popup:", error);
+    
+    // Check if this is a popup blocked error
+    if (error instanceof Error && error.message.includes('popup')) {
+      console.log("Popup blocked, falling back to redirect...");
+      // If popup is blocked, try redirect flow instead
+      signInWithGoogleRedirect();
+      // This function won't return as the page will redirect
+      throw new Error("Redirecting to Google authentication. Please wait...");
+    }
+    
+    // Re-throw other errors
+    throw error;
+  }
 };
 
 export const signInWithGoogleRedirect = () => {
+  console.log("Using redirect method for Google sign-in");
   return signInWithRedirect(auth, googleProvider);
 };
 

@@ -134,23 +134,27 @@ const Auth = () => {
   const handleGoogleLogin = async () => {
     try {
       setIsSubmitting(true);
+      console.log("Starting Google login process...");
       const result = await signInWithGoogle();
       
       if (result) {
+        console.log("Google login successful:", result.user.email);
         // Create or update user in our backend if needed
         const { user } = result;
         
         if (user.email) {
           try {
+            console.log("Attempting to save user to database");
             await apiRequest("POST", "/api/users", {
               username: user.displayName || user.email.split("@")[0],
               email: user.email,
               // We don't store the actual password for OAuth users
               password: ""
             });
+            console.log("User saved to database successfully");
           } catch (err) {
             // User might already exist in our database, which is fine
-            console.log("User might already exist in database");
+            console.log("User database operation result:", err);
           }
         }
         
@@ -159,10 +163,30 @@ const Auth = () => {
           description: "You have successfully signed in with Google!",
         });
         navigate("/");
+      } else {
+        console.log("Google login returned no result");
+        // Show a custom error if the auth context didn't already show one
+        if (!error) {
+          toast({
+            title: "Login failed",
+            description: "Failed to sign in with Google. Please try again.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (err) {
-      // Error will be handled by AuthContext
-      console.error("Google login error:", err);
+      // While most errors will be handled by AuthContext,
+      // we'll log them here too for debugging
+      console.error("Google login error in component:", err);
+      
+      // Add a popup directly in the Auth component to provide additional feedback
+      toast({
+        title: "Authentication Error",
+        description: err instanceof Error 
+          ? `Error: ${err.message}` 
+          : "An unknown error occurred during Google authentication",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
