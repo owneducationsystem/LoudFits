@@ -28,6 +28,9 @@ import Admin from "@/pages/Admin";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminOrders from "@/pages/AdminOrders";
 import AdminProducts from "@/pages/AdminProducts";
+import AdminAddProduct from "@/pages/AdminAddProduct";
+import AdminCategories from "@/pages/AdminCategories";
+import AdminAddUser from "@/pages/AdminAddUser";
 import AdminSettings from "@/pages/AdminSettings";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminRoute from "@/components/layout/AdminRoute";
@@ -118,6 +121,15 @@ function App() {
                 </Route>
                 <Route path="/admin/products">
                   {(params) => <AdminRoute component={AdminProducts} {...params} />}
+                </Route>
+                <Route path="/admin/products/add">
+                  {(params) => <AdminRoute component={AdminAddProduct} {...params} />}
+                </Route>
+                <Route path="/admin/products/categories">
+                  {(params) => <AdminRoute component={AdminCategories} {...params} />}
+                </Route>
+                <Route path="/admin/users/add">
+                  {(params) => <AdminRoute component={AdminAddUser} {...params} />}
                 </Route>
                 <Route path="/admin/settings">
                   {(params) => <AdminRoute component={AdminSettings} {...params} />}
