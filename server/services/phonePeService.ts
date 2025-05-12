@@ -8,6 +8,7 @@ const UAT_HOST = 'https://api-preprod.phonepe.com/apis/pg-sandbox';
 
 // Use UAT for testing and PRODUCTION for live payments
 const BASE_URL = process.env.NODE_ENV === 'production' ? PRODUCTION_HOST : UAT_HOST;
+console.log(`PhonePe service initialized with BASE_URL: ${BASE_URL}`);
 
 const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID || '';
 const SALT_KEY = process.env.PHONEPE_SALT_KEY || '';
@@ -15,6 +16,11 @@ const SALT_INDEX = process.env.PHONEPE_SALT_INDEX || '1';
 
 if (!process.env.PHONEPE_MERCHANT_ID || !process.env.PHONEPE_SALT_KEY || !process.env.PHONEPE_SALT_INDEX) {
   console.error('PhonePe credentials are missing. Please check your environment variables.');
+} else {
+  console.log('PhonePe credentials are configured:');
+  console.log(`- Merchant ID: ${process.env.PHONEPE_MERCHANT_ID ? 'Present' : 'Missing'}`);
+  console.log(`- Salt Key: ${process.env.PHONEPE_SALT_KEY ? 'Present' : 'Missing'}`);
+  console.log(`- Salt Index: ${process.env.PHONEPE_SALT_INDEX ? 'Present' : 'Missing'}`);
 }
 
 interface PhonePePaymentOptions {

@@ -33,13 +33,26 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
 export function setupPaymentRoutes(app: Express) {
   // Debug endpoint for PhonePe configuration (for development only)
   if (process.env.NODE_ENV !== 'production') {
+    // Simple test endpoint for generating an order number
+    app.get("/api/payment/test-order-number", (req, res) => {
+      res.json({
+        orderNumber: generateOrderNumber(),
+        timestamp: new Date().toISOString()
+      });
+    });
     app.get("/api/payment/config", (req, res) => {
       res.json({
-        merchantId: process.env.PHONEPE_MERCHANT_ID ? "Configured" : "Missing",
-        saltKey: process.env.PHONEPE_SALT_KEY ? "Configured" : "Missing",
-        saltIndex: process.env.PHONEPE_SALT_INDEX ? "Configured" : "Missing",
+        merchantId: process.env.PHONEPE_MERCHANT_ID || "Missing",
+        saltKey: process.env.PHONEPE_SALT_KEY ? 
+          process.env.PHONEPE_SALT_KEY.substring(0, 4) + "..." + 
+          process.env.PHONEPE_SALT_KEY.slice(-4) : "Missing",
+        saltIndex: process.env.PHONEPE_SALT_INDEX || "Missing",
         environment: process.env.NODE_ENV,
-        baseUrl: process.env.NODE_ENV === 'production' ? 'https://api.phonepe.com/apis/hermes' : 'https://api-preprod.phonepe.com/apis/pg-sandbox'
+        baseUrl: process.env.NODE_ENV === 'production' ? 
+          'https://api.phonepe.com/apis/hermes' : 
+          'https://api-preprod.phonepe.com/apis/pg-sandbox',
+        status: 'active',
+        timestamp: new Date().toISOString()
       });
     });
   }
@@ -104,6 +117,8 @@ export function setupPaymentRoutes(app: Express) {
       const appBaseUrl = process.env.NODE_ENV === 'production'
         ? 'https://your-production-domain.com'
         : `${req.protocol}://${req.get('host')}`;
+      
+      console.log(`Using base URL for redirects: ${appBaseUrl}`);
       
       // Initiate PhonePe payment
       const paymentResult = await PhonePeService.initiatePayment({
