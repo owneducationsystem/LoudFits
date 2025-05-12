@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Helmet } from "react-helmet";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Product } from "@shared/schema";
 
@@ -103,6 +103,12 @@ const AdminEditProduct = () => {
       
       const data = await response.json();
       console.log("API response:", data);
+      
+      // Invalidate related queries to refresh data across the application
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products/${params.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products/trending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products/featured"] });
       
       toast({
         title: "Product updated",

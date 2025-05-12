@@ -83,13 +83,18 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      refetchInterval: 30000, // Refetch data every 30 seconds
+      refetchOnWindowFocus: true, // Refetch when window is focused
+      staleTime: 10000, // Data becomes stale after 10 seconds
       retry: false,
     },
     mutations: {
       retry: false,
+      // Automatically invalidate related queries after mutations
+      onSuccess: () => {
+        // This is a global success handler that gets called after every mutation
+        // The specific invalidation logic is implemented in each component's mutation
+      },
     },
   },
 });

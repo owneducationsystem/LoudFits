@@ -15,30 +15,7 @@ const Home = () => {
     queryKey: ["/api/testimonials"],
   });
 
-  // Fallback testimonials if API hasn't been implemented
-  const fallbackTestimonials: Testimonial[] = [
-    {
-      id: 1,
-      name: "Priya S.",
-      rating: 5,
-      review: "The quality of these t-shirts is amazing. The prints are vibrant and haven't faded even after multiple washes. Definitely my go-to for statement tees!",
-      featured: true
-    },
-    {
-      id: 2,
-      name: "Rahul M.",
-      rating: 5,
-      review: "I used the customization feature to create a tee for my friend's birthday. The process was super easy and the final product looked exactly like the preview. Fast shipping too!",
-      featured: true
-    },
-    {
-      id: 3,
-      name: "Ananya K.",
-      rating: 4.5,
-      review: "The fit is perfect and the material is so comfortable. I've gotten so many compliments on my Urban Streetwear collection tees. Will definitely be ordering more designs!",
-      featured: true
-    }
-  ];
+  // No fallback data - only use database data
 
   const instagramImages = [
     { 
@@ -88,9 +65,15 @@ const Home = () => {
           <h2 className="text-3xl font-bold mb-8 text-center">WHAT OUR CUSTOMERS SAY</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {(testimonials || fallbackTestimonials).map((testimonial, index) => (
-              <TestimonialCard key={testimonial.id} testimonial={testimonial} index={index} />
-            ))}
+            {testimonials && testimonials.length > 0 ? (
+              testimonials.map((testimonial, index) => (
+                <TestimonialCard key={testimonial.id} testimonial={testimonial} index={index} />
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-8">
+                <p className="text-gray-500">No testimonials available at the moment.</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
