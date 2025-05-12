@@ -1,0 +1,582 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useParams, useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
+import { Helmet } from "react-helmet";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Share2, 
+  Heart, 
+  TruckIcon, 
+  RotateCcw, 
+  Ruler,
+  Upload
+} from "lucide-react";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
+import { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCartContext } from "@/context/CartContext";
+import { Product } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import ProductCarousel from "@/components/ui/product-carousel";
+
+const ProductDetail = () => {
+  const { id } = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const { addToCart } = useCartContext();
+  
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string>("");
+  const [quantity, setQuantity] = useState(1);
+
+  const { data: product, isLoading, error } = useQuery<Product>({
+    queryKey: [`/api/products/${id}`],
+  });
+
+  const { data: relatedProducts, isLoading: isLoadingRelated } = useQuery<Product[]>({
+    queryKey: ["/api/products"],
+  });
+
+  // Fallback product for development/testing
+  const fallbackProduct: Product = {
+    id: parseInt(id || "1"),
+    name: "Abstract Design Tee",
+    description: "Stylish black t-shirt with abstract graphic design. This premium cotton t-shirt features a unique, artistic print that sets you apart from the crowd. The soft, breathable fabric ensures comfort all day long, while the bold design makes a statement without saying a word.",
+    price: "899" as any,
+    category: "printed-tees",
+    gender: "unisex",
+    sizes: ["S", "M", "L", "XL"],
+    colors: ["Black", "White", "Gray"],
+    images: [
+      "https://images.unsplash.com/photo-1527719327859-c6ce80353573?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=500",
+      "https://images.unsplash.com/photo-1503341733017-1901578f9f1e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=500",
+      "https://images.unsplash.com/photo-1576566588028-4147f3842f27?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=500"
+    ],
+    trending: true,
+    featured: false,
+    collection: "urban-streetwear",
+    inStock: true
+  };
+
+  // Fallback related products
+  const fallbackRelatedProducts: Product[] = [
+    {
+      id: 2,
+      name: "Geometric Print Tee",
+      description: "White t-shirt with minimal geometric design",
+      price: "799" as any,
+      category: "printed-tees",
+      gender: "unisex",
+      sizes: ["S", "M", "L", "XL"],
+      colors: ["White", "Black"],
+      images: ["https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=500"],
+      trending: true,
+      featured: true,
+      collection: "minimalist",
+      inStock: true
+    },
+    {
+      id: 3,
+      name: "Vintage Graphic Tee",
+      description: "Gray t-shirt with vintage-style graphic print",
+      price: "999" as any,
+      category: "printed-tees",
+      gender: "unisex",
+      sizes: ["S", "M", "L", "XL"],
+      colors: ["Gray", "Black"],
+      images: ["https://images.unsplash.com/photo-1554568218-0f1715e72254?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=500"],
+      trending: true,
+      featured: false,
+      collection: "vintage",
+      inStock: true
+    },
+    {
+      id: 4,
+      name: "Statement Logo Tee",
+      description: "Navy blue t-shirt with bold logo print",
+      price: "849" as any,
+      category: "printed-tees",
+      gender: "unisex",
+      sizes: ["S", "M", "L", "XL"],
+      colors: ["Navy", "Black", "White"],
+      images: ["https://images.unsplash.com/photo-1581655353564-df123a1eb820?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=500"],
+      trending: true,
+      featured: true,
+      collection: "urban-streetwear",
+      inStock: true
+    }
+  ];
+
+  const displayProduct = product || fallbackProduct;
+  const displayRelatedProducts = (relatedProducts && relatedProducts.length > 0) 
+    ? relatedProducts.filter(p => p.id !== parseInt(id || "1")).slice(0, 4) 
+    : fallbackRelatedProducts;
+
+  if (!selectedSize && displayProduct.sizes.length > 0) {
+    setSelectedSize(displayProduct.sizes[0]);
+  }
+
+  if (!selectedColor && displayProduct.colors.length > 0) {
+    setSelectedColor(displayProduct.colors[0]);
+  }
+
+  const nextImage = () => {
+    setCurrentImageIndex((prevIndex) => 
+      prevIndex === displayProduct.images.length - 1 ? 0 : prevIndex + 1
+    );
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prevIndex) => 
+      prevIndex === 0 ? displayProduct.images.length - 1 : prevIndex - 1
+    );
+  };
+
+  const incrementQuantity = () => {
+    setQuantity(prev => prev + 1);
+  };
+
+  const decrementQuantity = () => {
+    if (quantity > 1) {
+      setQuantity(prev => prev - 1);
+    }
+  };
+
+  const handleAddToCart = () => {
+    if (!selectedSize) {
+      toast({
+        title: "Please select a size",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedColor) {
+      toast({
+        title: "Please select a color",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    addToCart({
+      productId: displayProduct.id,
+      quantity,
+      size: selectedSize,
+      color: selectedColor,
+      product: displayProduct
+    });
+
+    toast({
+      title: "Added to cart",
+      description: `${displayProduct.name} has been added to your cart.`,
+    });
+  };
+
+  const handleBuyNow = () => {
+    handleAddToCart();
+    navigate("/cart");
+  };
+
+  const handleCustomize = () => {
+    navigate(`/customize?productId=${displayProduct.id}`);
+  };
+
+  const handleAddToWishlist = () => {
+    toast({
+      title: "Added to wishlist",
+      description: `${displayProduct.name} has been added to your wishlist.`,
+    });
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: displayProduct.name,
+        text: displayProduct.description,
+        url: window.location.href,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast({
+        title: "Link copied",
+        description: "Product link copied to clipboard.",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Skeleton className="h-[500px] rounded-md" />
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-3/4 rounded-md" />
+            <Skeleton className="h-6 w-1/4 rounded-md" />
+            <Skeleton className="h-6 w-2/4 rounded-md" />
+            <Skeleton className="h-24 w-full rounded-md" />
+            <Skeleton className="h-12 w-full rounded-md" />
+            <Skeleton className="h-12 w-full rounded-md" />
+            <Skeleton className="h-12 w-full rounded-md" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error("Error loading product:", error);
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <p className="text-xl text-red-500">
+          Error loading product. Please try again later.
+        </p>
+        <Button 
+          className="mt-4" 
+          onClick={() => navigate("/shop")}
+        >
+          Back to Shop
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Helmet>
+        <title>{displayProduct.name} - Loudfits</title>
+        <meta name="description" content={displayProduct.description} />
+      </Helmet>
+
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Product Gallery */}
+          <div className="relative">
+            {/* Main Image */}
+            <div className="relative overflow-hidden rounded-md bg-gray-100 h-[500px]">
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={currentImageIndex}
+                  src={displayProduct.images[currentImageIndex]}
+                  alt={displayProduct.name}
+                  className="w-full h-full object-cover"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                />
+              </AnimatePresence>
+              
+              {/* Navigation Arrows */}
+              <button
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors"
+                onClick={prevImage}
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              
+              <button
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors"
+                onClick={nextImage}
+                aria-label="Next image"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Thumbnail Navigation */}
+            <div className="flex mt-4 gap-2">
+              {displayProduct.images.map((image, index) => (
+                <button
+                  key={index}
+                  className={`w-16 h-16 rounded-md overflow-hidden border-2 ${
+                    index === currentImageIndex
+                      ? "border-[#582A34]"
+                      : "border-transparent"
+                  }`}
+                  onClick={() => setCurrentImageIndex(index)}
+                >
+                  <img
+                    src={image}
+                    alt={`${displayProduct.name} thumbnail ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Product Info */}
+          <div className="flex flex-col space-y-6">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">{displayProduct.name}</h1>
+              <p className="text-xl font-bold text-[#582A34]">₹{displayProduct.price.toString()}</p>
+              <div className="flex items-center gap-4 mt-4">
+                <button
+                  onClick={handleShare}
+                  className="text-gray-600 hover:text-[#582A34] transition-colors"
+                  aria-label="Share product"
+                >
+                  <Share2 className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={handleAddToWishlist}
+                  className="text-gray-600 hover:text-[#582A34] transition-colors"
+                  aria-label="Add to wishlist"
+                >
+                  <Heart className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Size Selection */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-bold">Select Size</h3>
+                <button 
+                  className="text-sm flex items-center gap-1 text-gray-600 hover:text-[#582A34] transition-colors"
+                  onClick={() => {
+                    toast({
+                      title: "Size Guide",
+                      description: "Size guide information would be displayed here.",
+                    });
+                  }}
+                >
+                  <Ruler className="h-4 w-4" />
+                  <span>Size Guide</span>
+                </button>
+              </div>
+              <RadioGroup
+                value={selectedSize}
+                onValueChange={setSelectedSize}
+                className="flex flex-wrap gap-2"
+              >
+                {displayProduct.sizes.map((size) => (
+                  <div key={size}>
+                    <RadioGroupItem
+                      value={size}
+                      id={`size-${size}`}
+                      className="sr-only"
+                    />
+                    <Label
+                      htmlFor={`size-${size}`}
+                      className={`flex items-center justify-center h-10 w-10 border border-gray-300 rounded-md cursor-pointer hover:border-black transition-colors ${
+                        selectedSize === size
+                          ? "bg-black text-white"
+                          : "bg-white text-black"
+                      }`}
+                    >
+                      {size}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+
+            {/* Color Selection */}
+            <div>
+              <h3 className="font-bold mb-2">Select Color</h3>
+              <RadioGroup
+                value={selectedColor}
+                onValueChange={setSelectedColor}
+                className="flex flex-wrap gap-2"
+              >
+                {displayProduct.colors.map((color) => (
+                  <div key={color}>
+                    <RadioGroupItem
+                      value={color}
+                      id={`color-${color}`}
+                      className="sr-only"
+                    />
+                    <Label
+                      htmlFor={`color-${color}`}
+                      className={`flex items-center justify-center h-10 px-3 border border-gray-300 rounded-md cursor-pointer hover:border-black transition-colors ${
+                        selectedColor === color
+                          ? "bg-black text-white"
+                          : "bg-white text-black"
+                      }`}
+                    >
+                      {color}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+
+            {/* Quantity Selection */}
+            <div>
+              <h3 className="font-bold mb-2">Quantity</h3>
+              <div className="flex items-center">
+                <button
+                  onClick={decrementQuantity}
+                  className="h-10 w-10 border border-gray-300 rounded-l-md flex items-center justify-center hover:bg-gray-100 transition-colors"
+                  disabled={quantity <= 1}
+                >
+                  -
+                </button>
+                <div className="h-10 w-12 border-t border-b border-gray-300 flex items-center justify-center">
+                  {quantity}
+                </div>
+                <button
+                  onClick={incrementQuantity}
+                  className="h-10 w-10 border border-gray-300 rounded-r-md flex items-center justify-center hover:bg-gray-100 transition-colors"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Button
+                  onClick={handleAddToCart}
+                  className="w-full bg-black text-white hover:bg-[#582A34] transition-colors py-6"
+                >
+                  ADD TO CART
+                </Button>
+              </motion.div>
+              
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Button
+                  onClick={handleBuyNow}
+                  className="w-full bg-[#582A34] text-white hover:bg-black transition-colors py-6"
+                >
+                  BUY NOW
+                </Button>
+              </motion.div>
+              
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Button
+                  onClick={handleCustomize}
+                  variant="outline"
+                  className="w-full border-black text-black hover:bg-black hover:text-white transition-colors py-6 flex items-center justify-center gap-2"
+                >
+                  <Upload className="h-5 w-5" />
+                  CUSTOMIZE THIS TEE
+                </Button>
+              </motion.div>
+            </div>
+
+            {/* Shipping Info */}
+            <div className="flex gap-5 text-sm text-gray-700">
+              <div className="flex items-center gap-2">
+                <TruckIcon className="h-5 w-5 text-[#582A34]" />
+                <span>Free shipping above ₹1999</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <RotateCcw className="h-5 w-5 text-[#582A34]" />
+                <span>30-day returns</span>
+              </div>
+            </div>
+
+            {/* Product Details Tabs */}
+            <Tabs defaultValue="description" className="mt-8">
+              <TabsList className="grid grid-cols-3 w-full">
+                <TabsTrigger value="description">Description</TabsTrigger>
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="shipping">Shipping & Returns</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="description" className="mt-4">
+                <p className="text-gray-700">{displayProduct.description}</p>
+              </TabsContent>
+
+              <TabsContent value="details" className="mt-4">
+                <ul className="text-gray-700 space-y-2">
+                  <li><span className="font-bold">Material:</span> 100% Premium Cotton</li>
+                  <li><span className="font-bold">Fit:</span> Regular</li>
+                  <li><span className="font-bold">Print:</span> High-quality digital print</li>
+                  <li><span className="font-bold">Care:</span> Machine wash cold, inside out</li>
+                </ul>
+              </TabsContent>
+
+              <TabsContent value="shipping" className="mt-4">
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="shipping">
+                    <AccordionTrigger>Shipping Information</AccordionTrigger>
+                    <AccordionContent>
+                      <p className="text-gray-700">We offer free shipping on all orders above ₹1999. Standard delivery takes 3-5 business days.</p>
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="returns">
+                    <AccordionTrigger>Return Policy</AccordionTrigger>
+                    <AccordionContent>
+                      <p className="text-gray-700">We offer a 30-day return policy. Items must be unworn, unwashed, and in their original packaging.</p>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+
+        {/* Related Products */}
+        <div className="mt-16">
+          <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {(isLoadingRelated ? [] : displayRelatedProducts).map((product, index) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+              >
+                <div 
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setCurrentImageIndex(0);
+                    navigate(`/product/${product.id}`);
+                  }}
+                >
+                  <div className="overflow-hidden">
+                    <img 
+                      src={product.images[0]} 
+                      alt={product.name}
+                      className="product-image w-full h-[250px] object-cover" 
+                    />
+                  </div>
+                  <div className="mt-3 flex flex-col">
+                    <h3 className="font-medium text-sm">{product.name}</h3>
+                    <p className="font-bold">₹{product.price.toString()}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default ProductDetail;
