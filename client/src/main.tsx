@@ -1,18 +1,14 @@
 import { createRoot } from "react-dom/client";
 import React from "react";
-import SimpleApp from "./SimpleApp";
+import SimplifiedApp from "./SimplifiedApp";
 import "./index.css";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "./lib/queryClient";
 
 // Setup global error handling
 window.addEventListener('error', (event) => {
   console.error('Global error caught:', event.error);
 });
 
-// Render the simplified app without complex wrappers for debugging
+// Render the simplified app with Home page to test functionality
 createRoot(document.getElementById("root")!).render(
-  <QueryClientProvider client={queryClient}>
-    <SimpleApp />
-  </QueryClientProvider>
+  <SimplifiedApp />
 );
