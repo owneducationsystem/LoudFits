@@ -28,6 +28,7 @@ import Admin from "@/pages/Admin";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminOrders from "@/pages/AdminOrders";
 import AdminLogin from "@/pages/AdminLogin";
+import AdminRoute from "@/components/layout/AdminRoute";
 
 import { useEffect, useState } from "react";
 import { handleAuthRedirect } from "@/lib/firebase";
@@ -104,9 +105,15 @@ function App() {
                 
                 {/* Admin Routes */}
                 <Route path="/admin/login" component={AdminLogin} />
-                <Route path="/admin" component={Admin} />
-                <Route path="/admin/users" component={AdminUsers} />
-                <Route path="/admin/orders" component={AdminOrders} />
+                <Route path="/admin">
+                  {(params) => <AdminRoute component={Admin} {...params} />}
+                </Route>
+                <Route path="/admin/users">
+                  {(params) => <AdminRoute component={AdminUsers} {...params} />}
+                </Route>
+                <Route path="/admin/orders">
+                  {(params) => <AdminRoute component={AdminOrders} {...params} />}
+                </Route>
                 
                 <Route component={NotFound} />
               </Switch>

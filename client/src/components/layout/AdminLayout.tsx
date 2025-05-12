@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import {
   LayoutDashboard,
@@ -15,29 +15,38 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/context/AuthContext";
-import { User } from "@/lib/firebase";
-
 interface AdminLayoutProps {
   children: React.ReactNode;
   title: string;
 }
 
-// Enhanced Firebase User type with admin-specific fields
-interface EnhancedUser extends User {
-  role?: string;
+// Admin user type
+interface AdminUser {
+  id: number;
+  username: string;
+  email: string;
   firstName?: string;
   lastName?: string;
+  role: string;
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const [, navigate] = useLocation();
-  const { currentUser, logout } = useAuth();
+  const [user, setUser] = useState<AdminUser | null>(null);
   
-  // Cast to our enhanced type
-  const user = currentUser as EnhancedUser | null;
+  // Load admin user from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem("adminUser");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Error parsing admin user data:", error);
+      }
+    }
+  }, []);
 
   const toggleSubmenu = (submenu: string) => {
     if (activeSubmenu === submenu) {
@@ -47,13 +56,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/');
-    } catch (error) {
-      console.error("Logout failed", error);
-    }
+  const handleLogout = () => {
+    // Clear admin user from localStorage
+    localStorage.removeItem("adminUser");
+    // Redirect to login page
+    navigate('/admin/login');
   };
 
   const sidebarMenuItems = [
