@@ -8,6 +8,10 @@ import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 
+// Import core components
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+
 // Loading component
 const Loading = () => (
   <div className="flex items-center justify-center h-screen">
@@ -18,6 +22,8 @@ const Loading = () => (
 // Import essential pages
 const Home = lazy(() => import("@/pages/Home"));
 const Shop = lazy(() => import("@/pages/Shop"));
+const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
+const Cart = lazy(() => import("@/pages/Cart"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 const SimplifiedApp = () => {
@@ -28,27 +34,21 @@ const SimplifiedApp = () => {
           <WishlistProvider>
             <TooltipProvider>
               <div className="flex flex-col min-h-screen">
-                <header className="bg-white p-4 shadow-md">
-                  <div className="container mx-auto">
-                    <h1 className="text-2xl font-bold text-[#582A34]">Loudfits</h1>
-                  </div>
-                </header>
+                <Header />
                 
                 <main className="flex-grow">
                   <Suspense fallback={<Loading />}>
                     <Switch>
                       <Route path="/" component={Home} />
                       <Route path="/shop" component={Shop} />
+                      <Route path="/product/:id" component={ProductDetail} />
+                      <Route path="/cart" component={Cart} />
                       <Route component={NotFound} />
                     </Switch>
                   </Suspense>
                 </main>
                 
-                <footer className="bg-gray-100 p-4">
-                  <div className="container mx-auto text-center text-gray-600">
-                    &copy; 2025 Loudfits. All rights reserved.
-                  </div>
-                </footer>
+                <Footer />
               </div>
               <Toaster />
             </TooltipProvider>
