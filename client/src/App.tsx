@@ -48,6 +48,7 @@ import AdminBasic from "@/pages/AdminBasic";
 import AdminMini from "@/pages/AdminMini";
 import AdminRealTimeFixed from "@/pages/AdminRealTimeFixed";
 import AdminWsOnly from "@/pages/AdminWsOnly";
+import AdminDebug from "@/pages/AdminDebug";
 import AdminRoute from "@/components/layout/AdminRoute";
 
 import { useEffect, useState } from "react";

@@ -830,8 +830,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up WebSocket server for real-time updates
   const wss = new WebSocketServer({ 
     server: httpServer, 
-    path: '/ws' 
+    path: '/ws',
+    // Add longer ping timeout to prevent unnecessary disconnections
+    clientTracking: true
   });
+  
+  // Make WebSocket server available globally for communication from other modules
+  global.wss = wss;
 
   // Store connected clients with their identifiers
   const connectedClients = new Map<string, WebSocket>();

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Home, Package, Users, Settings, BarChart3, ShoppingCart, LogOut, Bell, Radio, LayoutDashboard, Waves, Terminal, MinusCircle, RadioTower } from 'lucide-react';
+import { Home, Package, Users, Settings, BarChart3, ShoppingCart, LogOut, Bell, Radio, LayoutDashboard, Waves, Terminal, MinusCircle, RadioTower, Wifi } from 'lucide-react';
 import GlobalWebSocketTest from './GlobalWebSocketTest';
 
 interface AdminHeaderProps {
