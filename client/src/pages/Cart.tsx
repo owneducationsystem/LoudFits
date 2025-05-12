@@ -316,17 +316,38 @@ const Cart = () => {
                                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
                               </svg>
                               <span className="font-medium">Custom Design</span>
-                              <span className="text-gray-500 ml-1">
-                                {item.customization.frontImage && item.customization.backImage ? 'Front & Back' : 'Front Only'}
-                                {item.customization.frontDesign 
-                                  ? ` (${Math.round(item.customization.frontDesign.size)}% size${
-                                     item.customization.frontDesign.rotation ? `, ${item.customization.frontDesign.rotation}° rotation` : ''}${
-                                     item.customization.frontDesign.flipped ? ', flipped' : ''})`
-                                  : ` (${Math.round(item.customization.size)}% size${
-                                     item.customization.rotation !== undefined ? `, ${item.customization.rotation}° rotation` : ''}${
-                                     item.customization.flipped !== undefined && item.customization.flipped ? ', flipped' : ''})`
-                                }
-                              </span>
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {item.customization?.frontImage && item.customization?.backImage ? (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <span className="bg-black text-white text-xs px-1.5 py-0.5 rounded">Front & Back</span>
+                                    <span 
+                                      className="text-xs underline cursor-pointer text-blue-600" 
+                                      onClick={() => toggleItemView(item)}
+                                    >
+                                      View {viewSides[getItemKey(item)] === 'back' ? 'Front' : 'Back'}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="bg-black text-white text-xs px-1.5 py-0.5 rounded mt-1">
+                                    {item.customization?.backImage ? 'Back Only' : 'Front Only'}
+                                  </span>
+                                )}
+                                
+                                <span className="text-gray-500 mt-1 block">
+                                  {viewSides[getItemKey(item)] === 'back' && item.customization?.backDesign
+                                    ? `Size: ${Math.round(item.customization.backDesign.size)}%${
+                                        item.customization.backDesign.rotation ? `, Rotation: ${item.customization.backDesign.rotation}°` : ''}${
+                                        item.customization.backDesign.flipped ? ', Flipped' : ''}`
+                                    : item.customization?.frontDesign
+                                      ? `Size: ${Math.round(item.customization.frontDesign.size)}%${
+                                          item.customization.frontDesign.rotation ? `, Rotation: ${item.customization.frontDesign.rotation}°` : ''}${
+                                          item.customization.frontDesign.flipped ? ', Flipped' : ''}`
+                                      : `Size: ${Math.round(item.customization?.size || 0)}%${
+                                          item.customization?.rotation !== undefined ? `, Rotation: ${item.customization.rotation}°` : ''}${
+                                          item.customization?.flipped !== undefined && item.customization.flipped ? ', Flipped' : ''}`
+                                  }
+                                </span>
+                              </div>
                             </div>
                           )}
                         </div>

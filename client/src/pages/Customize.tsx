@@ -165,10 +165,10 @@ const Customize = () => {
       return;
     }
 
-    if (!uploadedImage) {
+    if (!frontImage && !backImage && !uploadedImage) {
       toast({
-        title: "Please upload an image",
-        description: "You need to upload a design to customize your t-shirt",
+        title: "Please upload a design",
+        description: "You need to upload at least one design for the front or back of your t-shirt",
         variant: "destructive",
       });
       return;
@@ -199,8 +199,8 @@ const Customize = () => {
       color: selectedColor,
       product: baseProduct,
       customization: {
-        frontImage: frontImage || uploadedImage,
-        backImage: backImage,
+        frontImage: frontImage || uploadedImage || "/assets/placeholder.png",
+        backImage: backImage || "",
         verticalPosition: verticalPosition[0],
         horizontalPosition: horizontalPosition[0],
         size: imageSize[0],
@@ -773,11 +773,22 @@ const Customize = () => {
             >
               <Button
                 onClick={handleAddToCart}
-                className="w-full bg-[#582A34] text-white hover:bg-black transition-colors py-6 text-lg"
-                disabled={!uploadedImage || !selectedSize}
+                className="w-full bg-[#582A34] text-white hover:bg-black transition-colors py-6 text-lg relative"
+                disabled={(!frontImage && !backImage && !uploadedImage) || !selectedSize}
               >
-                <Check className="h-5 w-5 mr-2" />
-                ADD TO CART
+                <div className="flex items-center justify-center">
+                  <Check className="h-5 w-5 mr-2" />
+                  {frontImage && backImage ? (
+                    <>
+                      ADD TO CART
+                      <span className="absolute top-0 right-0 bg-black text-white text-xs px-2 py-1 rounded-bl-md">
+                        Front+Back
+                      </span>
+                    </>
+                  ) : (
+                    <>ADD TO CART</>
+                  )}
+                </div>
               </Button>
             </motion.div>
             
