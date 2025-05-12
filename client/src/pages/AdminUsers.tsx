@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -178,7 +179,10 @@ const AdminUsers = () => {
             </Button>
           </form>
 
-          <Button className="shrink-0">
+          <Button 
+            className="shrink-0" 
+            onClick={() => navigate("/admin/users/add")}
+          >
             <UserPlus className="h-4 w-4 mr-2" />
             <span>Add User</span>
           </Button>

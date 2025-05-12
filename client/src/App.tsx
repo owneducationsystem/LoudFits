@@ -111,28 +111,28 @@ function App() {
                 {/* Admin Routes - Protected */}
                 <Route path="/admin/login" component={AdminLogin} />
                 <Route path="/admin">
-                  {(params) => <AdminRoute component={Admin} {...params} />}
+                  <AdminRoute component={Admin} />
                 </Route>
                 <Route path="/admin/users">
-                  {(params) => <AdminRoute component={AdminUsers} {...params} />}
+                  <AdminRoute component={AdminUsers} />
                 </Route>
                 <Route path="/admin/orders">
-                  {(params) => <AdminRoute component={AdminOrders} {...params} />}
+                  <AdminRoute component={AdminOrders} />
                 </Route>
                 <Route path="/admin/products/add">
-                  {(params) => <AdminRoute component={AdminAddProduct} {...params} />}
+                  <AdminRoute component={AdminAddProduct} />
                 </Route>
                 <Route path="/admin/products/categories">
-                  {(params) => <AdminRoute component={AdminCategories} {...params} />}
+                  <AdminRoute component={AdminCategories} />
                 </Route>
                 <Route path="/admin/products">
-                  {(params) => <AdminRoute component={AdminProducts} {...params} />}
+                  <AdminRoute component={AdminProducts} />
                 </Route>
                 <Route path="/admin/users/add">
-                  {(params) => <AdminRoute component={AdminAddUser} {...params} />}
+                  <AdminRoute component={AdminAddUser} />
                 </Route>
                 <Route path="/admin/settings">
-                  {(params) => <AdminRoute component={AdminSettings} {...params} />}
+                  <AdminRoute component={AdminSettings} />
                 </Route>
                 
                 <Route component={NotFound} />
