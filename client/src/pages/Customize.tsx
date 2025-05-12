@@ -489,7 +489,11 @@ const Customize = () => {
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
-                      onChange={(e) => handleFileUpload(e, view)}
+                      onChange={(e) => {
+                        if (e.target.files?.length) {
+                          handleFileUpload(e, view);
+                        }
+                      }}
                       className="hidden"
                     />
                     <Button
@@ -505,7 +509,10 @@ const Customize = () => {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => clearImage(view)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          clearImage(view);
+                        }}
                         className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
                       >
                         <X className="h-4 w-4 mr-2" />
@@ -528,7 +535,10 @@ const Customize = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={resetCustomization}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            resetCustomization(view);
+                          }}
                           className="h-8 text-sm text-gray-500 hover:text-black"
                         >
                           <Undo className="h-3 w-3 mr-1" />
