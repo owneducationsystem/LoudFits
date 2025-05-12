@@ -21,6 +21,8 @@ import Contact from "@/pages/Contact";
 import TrackOrder from "@/pages/TrackOrder";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsConditions from "@/pages/TermsConditions";
+import Account from "@/pages/Account";
+import Orders from "@/pages/Orders";
 
 import { useEffect, useState } from "react";
 import { handleAuthRedirect } from "@/lib/firebase";
@@ -92,6 +94,8 @@ function App() {
                 <Route path="/track-order" component={TrackOrder} />
                 <Route path="/privacy-policy" component={PrivacyPolicy} />
                 <Route path="/terms-conditions" component={TermsConditions} />
+                <Route path="/account" component={Account} />
+                <Route path="/orders" component={Orders} />
                 <Route component={NotFound} />
               </Switch>
             </main>
