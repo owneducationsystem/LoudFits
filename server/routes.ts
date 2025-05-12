@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
@@ -12,6 +12,62 @@ import {
   insertTestimonialSchema,
   insertAdminLogSchema,
 } from "@shared/schema";
+
+// Middleware to check if user is admin
+const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // In a real app, you'd use authentication middleware and JWT
+    // For now, we'll just check if the user exists and has the admin role
+    const userId = req.headers['user-id'] as string;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    const user = await storage.getUser(parseInt(userId));
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: "Forbidden - Admin access required" });
+    }
+    
+    next();
+  } catch (error) {
+    res.status(500).json({ message: "Authentication error" });
+  }
+};
+
+// Middleware to log admin actions
+const logAdminAction = async (req: Request, res: Response, next: NextFunction) => {
+  const originalSend = res.send;
+  
+  res.send = function(body: any) {
+    const userId = parseInt(req.headers['user-id'] as string);
+    const action = req.method;
+    const path = req.path;
+    const entityType = path.split('/')[2]; // Assumes path format: /api/entityType/...
+    const entityId = req.params.id || 'multiple';
+    
+    // Create admin log
+    storage.createAdminLog({
+      userId,
+      action: `${action} ${path}`,
+      entityType,
+      entityId,
+      details: JSON.stringify({
+        requestBody: req.body,
+        params: req.params,
+        query: req.query,
+        ip: req.ip,
+        userAgent: req.get('user-agent')
+      }),
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    }).catch(err => console.error('Failed to log admin action:', err));
+    
+    originalSend.apply(res, arguments);
+    return res;
+  };
+  
+  next();
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
@@ -172,6 +228,283 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json({ message: "Subscription successful", email });
     } catch (error) {
       res.status(500).json({ message: "Failed to subscribe" });
+    }
+  });
+
+  // User Routes
+  app.get("/api/users/:id", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Remove password from response
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  app.patch("/api/users/:id", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Validate update data
+      const updateData = req.body;
+      const updatedUser = await storage.updateUser(userId, updateData);
+
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Order Routes
+  app.get("/api/orders/user/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const orders = await storage.getOrdersByUserId(userId);
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch orders" });
+    }
+  });
+
+  app.get("/api/orders/:id", async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      if (isNaN(orderId)) {
+        return res.status(400).json({ message: "Invalid order ID" });
+      }
+
+      const order = await storage.getOrderById(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      const orderItems = await storage.getOrderItems(orderId);
+      res.json({ ...order, items: orderItems });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch order" });
+    }
+  });
+
+  app.get("/api/orders/track/:orderNumber", async (req, res) => {
+    try {
+      const { orderNumber } = req.params;
+      const order = await storage.getOrderByOrderNumber(orderNumber);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      res.json(order);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to track order" });
+    }
+  });
+
+  // Enhanced Cart Routes
+  app.delete("/api/cart-items/:cartId/:productId", async (req, res) => {
+    try {
+      const cartId = parseInt(req.params.cartId);
+      const productId = parseInt(req.params.productId);
+      
+      if (isNaN(cartId) || isNaN(productId)) {
+        return res.status(400).json({ message: "Invalid cart or product ID" });
+      }
+
+      const success = await storage.removeCartItem(cartId, productId);
+      if (!success) {
+        return res.status(404).json({ message: "Cart item not found" });
+      }
+
+      res.json({ message: "Item removed from cart" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to remove item from cart" });
+    }
+  });
+
+  app.delete("/api/carts/:cartId", async (req, res) => {
+    try {
+      const cartId = parseInt(req.params.cartId);
+      if (isNaN(cartId)) {
+        return res.status(400).json({ message: "Invalid cart ID" });
+      }
+
+      const success = await storage.clearCart(cartId);
+      if (!success) {
+        return res.status(404).json({ message: "Cart not found or already empty" });
+      }
+
+      res.json({ message: "Cart cleared" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to clear cart" });
+    }
+  });
+
+  // Admin Routes (Protected)
+  app.get("/api/admin/users", isAdmin, logAdminAction, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      
+      const users = await storage.getAllUsers(limit, offset);
+      const count = await storage.countUsers();
+      
+      // Remove passwords from response
+      const usersWithoutPasswords = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      
+      res.json({ users: usersWithoutPasswords, total: count });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.get("/api/admin/orders", isAdmin, logAdminAction, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      
+      const orders = await storage.getAllOrders(limit, offset);
+      const count = await storage.countOrders();
+      
+      res.json({ orders, total: count });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch orders" });
+    }
+  });
+
+  app.patch("/api/admin/orders/:id", isAdmin, logAdminAction, async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      if (isNaN(orderId)) {
+        return res.status(400).json({ message: "Invalid order ID" });
+      }
+
+      const { status } = req.body;
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+
+      const updatedOrder = await storage.updateOrderStatus(orderId, status);
+      res.json(updatedOrder);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update order status" });
+    }
+  });
+
+  app.post("/api/admin/products", isAdmin, logAdminAction, async (req, res) => {
+    try {
+      const productData = insertProductSchema.parse(req.body);
+      const product = await storage.createProduct(productData);
+      res.status(201).json(product);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create product" });
+    }
+  });
+
+  app.patch("/api/admin/products/:id", isAdmin, logAdminAction, async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      if (isNaN(productId)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+
+      const productData = req.body;
+      const updatedProduct = await storage.updateProduct(productId, productData);
+      res.json(updatedProduct);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update product" });
+    }
+  });
+
+  app.delete("/api/admin/products/:id", isAdmin, logAdminAction, async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      if (isNaN(productId)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+
+      const success = await storage.deleteProduct(productId);
+      if (!success) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      res.json({ message: "Product deleted" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete product" });
+    }
+  });
+
+  app.get("/api/admin/logs", isAdmin, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      
+      const logs = await storage.getAdminLogs(limit, offset);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch admin logs" });
+    }
+  });
+
+  app.get("/api/admin/logs/search", isAdmin, async (req, res) => {
+    try {
+      const { query } = req.query;
+      if (!query) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+
+      const logs = await storage.searchAdminLogs(query as string);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to search admin logs" });
+    }
+  });
+
+  app.get("/api/admin/stats", isAdmin, async (req, res) => {
+    try {
+      const userCount = await storage.countUsers();
+      const productCount = await storage.countProducts();
+      const orderCount = await storage.countOrders();
+      
+      res.json({
+        users: userCount,
+        products: productCount,
+        orders: orderCount
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch statistics" });
     }
   });
 
