@@ -425,8 +425,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async countOrders(): Promise<number> {
-    const [result] = await db.select({ count: count() }).from(orders);
-    return result.count;
+    const result = await db.select({ value: count() }).from(orders);
+    return result[0]?.value || 0;
   }
 
   async getOrderItems(orderId: number): Promise<OrderItem[]> {

@@ -77,6 +77,11 @@ const logAdminAction = async (req: Request, res: Response, next: NextFunction) =
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Simple test endpoint
+  app.get("/api/test", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+  
   // Add route for redirecting from PhonePe callback to our frontend
   app.get("/payment/callback", (req, res) => {
     const { merchantTransactionId, transactionId, code } = req.query;

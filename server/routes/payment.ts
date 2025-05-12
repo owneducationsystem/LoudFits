@@ -31,6 +31,18 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
 };
 
 export function setupPaymentRoutes(app: Express) {
+  // Debug endpoint for PhonePe configuration (for development only)
+  if (process.env.NODE_ENV !== 'production') {
+    app.get("/api/payment/config", (req, res) => {
+      res.json({
+        merchantId: process.env.PHONEPE_MERCHANT_ID ? "Configured" : "Missing",
+        saltKey: process.env.PHONEPE_SALT_KEY ? "Configured" : "Missing",
+        saltIndex: process.env.PHONEPE_SALT_INDEX ? "Configured" : "Missing",
+        environment: process.env.NODE_ENV,
+        baseUrl: process.env.NODE_ENV === 'production' ? 'https://api.phonepe.com/apis/hermes' : 'https://api-preprod.phonepe.com/apis/pg-sandbox'
+      });
+    });
+  }
   // Initiate payment with PhonePe
   app.post("/api/payment/initiate", isAuthenticated, async (req, res) => {
     try {
