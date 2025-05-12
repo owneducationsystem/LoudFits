@@ -4,56 +4,41 @@ import { Button } from "@/components/ui/button";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
+import { getQueryFn } from "@/lib/queryClient";
 import { type Product } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
 
 // This is a temporary solution until we have backend wishlist functionality
 // In a real app, wishlist would be stored in the database and linked to the user
 const getLocalWishlist = (): number[] => {
-  const wishlist = localStorage.getItem("wishlist");
-  return wishlist ? JSON.parse(wishlist) : [];
+  if (typeof window !== 'undefined') {
+    const wishlist = localStorage.getItem("wishlist");
+    return wishlist ? JSON.parse(wishlist) : [];
+  }
+  return [];
 };
 
 const setLocalWishlist = (wishlist: number[]) => {
-  localStorage.setItem("wishlist", JSON.stringify(wishlist));
+  if (typeof window !== 'undefined') {
+    localStorage.setItem("wishlist", JSON.stringify(wishlist));
+  }
 };
 
 const Wishlist = () => {
   const [wishlistItems, setWishlistItems] = useState<number[]>(getLocalWishlist());
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const { addToCart } = useCartContext();
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setIsLoading(true);
-        if (wishlistItems.length === 0) {
-          setProducts([]);
-          setIsLoading(false);
-          return;
-        }
+  // Use React Query to fetch all products
+  const { data: allProducts = [], isLoading } = useQuery({
+    queryKey: ["/api/products"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+  });
 
-        const allProducts = await apiRequest<Product[]>("/api/products");
-        const filteredProducts = allProducts.filter(product => 
-          wishlistItems.includes(product.id)
-        );
-        setProducts(filteredProducts);
-      } catch (error) {
-        console.error("Error fetching wishlist products:", error);
-        toast({
-          title: "Error",
-          description: "Could not load your wishlist. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [wishlistItems, toast]);
+  // Filter products that are in the wishlist
+  const wishlistProducts = Array.isArray(allProducts) 
+    ? allProducts.filter((product: Product) => wishlistItems.includes(product.id))
+    : [];
 
   const removeFromWishlist = (productId: number) => {
     const updatedWishlist = wishlistItems.filter(id => id !== productId);
@@ -103,7 +88,7 @@ const Wishlist = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
-          {products.map((product) => (
+          {wishlistProducts.map((product) => (
             <div key={product.id} className="flex flex-col md:flex-row gap-4 border rounded-lg p-4">
               <div className="w-full md:w-48 h-48 overflow-hidden rounded-md shrink-0">
                 <img 

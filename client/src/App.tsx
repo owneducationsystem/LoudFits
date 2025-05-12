@@ -11,6 +11,13 @@ import Customize from "@/pages/Customize";
 import Cart from "@/pages/Cart";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/not-found";
+import Search from "@/pages/Search";
+import Wishlist from "@/pages/Wishlist";
+import SizeGuide from "@/pages/SizeGuide";
+import FAQ from "@/pages/FAQ";
+import ShippingReturns from "@/pages/ShippingReturns";
+import Contact from "@/pages/Contact";
+import TrackOrder from "@/pages/TrackOrder";
 
 function App() {
   return (
@@ -27,6 +34,13 @@ function App() {
               <Route path="/cart" component={Cart} />
               <Route path="/login" component={Auth} />
               <Route path="/signup" component={Auth} />
+              <Route path="/search" component={Search} />
+              <Route path="/wishlist" component={Wishlist} />
+              <Route path="/size-guide" component={SizeGuide} />
+              <Route path="/faqs" component={FAQ} />
+              <Route path="/shipping-returns" component={ShippingReturns} />
+              <Route path="/contact" component={Contact} />
+              <Route path="/track-order" component={TrackOrder} />
               <Route component={NotFound} />
             </Switch>
           </main>
