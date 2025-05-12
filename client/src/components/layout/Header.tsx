@@ -1,18 +1,24 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Search, User, Heart, ShoppingBag, Menu, ChevronDown } from "lucide-react";
+import { Search, User, Heart, ShoppingBag, Menu, ChevronDown, LogOut } from "lucide-react";
 import { useCartContext } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import MobileMenu from "./MobileMenu";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/loudfits-logo.png";
 
 const Header = () => {
   const [location] = useLocation();
+  const [, navigate] = useLocation();
   const { cartItems } = useCartContext();
+  const { currentUser, logout } = useAuth();
+  const { toast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   // Track scroll position to add shadow when scrolled
   useEffect(() => {
@@ -33,6 +39,23 @@ const Header = () => {
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
+  };
+  
+  const toggleUserMenu = () => {
+    setUserMenuOpen(!userMenuOpen);
+  };
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Logout successful",
+        description: "You have been logged out successfully.",
+      });
+      navigate("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const navLinks = [
@@ -222,16 +245,86 @@ const Header = () => {
               Search
             </span>
           </Link>
-          <Link 
-            href="/login" 
-            className="relative group p-2 hover:bg-gray-100 rounded-full transition-colors"
-            aria-label="Account"
-          >
-            <User className="h-[22px] w-[22px] text-gray-600 group-hover:text-[#582A34] transition-colors" />
-            <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs bg-white text-gray-700 shadow-md px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-gray-200">
-              Account
-            </span>
-          </Link>
+          <div className="relative">
+            <button 
+              onClick={toggleUserMenu}
+              className="relative group p-2 hover:bg-gray-100 rounded-full transition-colors"
+              aria-label="Account"
+            >
+              <User className={cn(
+                "h-[22px] w-[22px] transition-colors",
+                currentUser ? "text-[#582A34]" : "text-gray-600 group-hover:text-[#582A34]"
+              )} />
+              <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs bg-white text-gray-700 shadow-md px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-gray-200">
+                {currentUser ? 'My Account' : 'Login'}
+              </span>
+              
+              {/* User status indicator */}
+              {currentUser && (
+                <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-green-500 rounded-full border-2 border-white"></span>
+              )}
+            </button>
+            
+            {/* User dropdown menu */}
+            {userMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                {currentUser ? (
+                  <div>
+                    <div className="px-4 py-3 border-b border-gray-200">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {currentUser.displayName || currentUser.email?.split('@')[0]}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate mt-1">
+                        {currentUser.email}
+                      </p>
+                    </div>
+                    <div className="py-1">
+                      <Link
+                        href="/account"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        My Account
+                      </Link>
+                      <Link
+                        href="/orders"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        My Orders
+                      </Link>
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setUserMenuOpen(false);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" /> Sign out
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-1">
+                    <Link
+                      href="/login"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      href="/signup"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      Sign up
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <Link 
             href="/wishlist" 
             className="relative group p-2 hover:bg-gray-100 rounded-full transition-colors"

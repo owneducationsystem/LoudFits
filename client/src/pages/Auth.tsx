@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/context/AuthContext";
 
 // Login Form Schema
 const loginSchema = z.object({
@@ -41,9 +42,24 @@ const Auth = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { 
+    currentUser, 
+    signInWithGoogle, 
+    signInWithEmail, 
+    signUpWithEmail, 
+    resetPassword,
+    error 
+  } = useAuth();
   
   // Determine initial tab based on URL
   const initialTab = location === "/signup" ? "register" : "login";
+  
+  // Redirect if user is already logged in
+  useEffect(() => {
+    if (currentUser) {
+      navigate("/");
+    }
+  }, [currentUser, navigate]);
   
   // Login form
   const loginForm = useForm<LoginFormValues>({
@@ -69,18 +85,19 @@ const Auth = () => {
   const onLoginSubmit = async (values: LoginFormValues) => {
     setIsSubmitting(true);
     try {
-      await apiRequest("POST", "/api/login", values);
-      toast({
-        title: "Login successful",
-        description: "Welcome back to Loudfits!",
-      });
-      navigate("/");
-    } catch (error) {
-      toast({
-        title: "Login failed",
-        description: "Invalid username or password. Please try again.",
-        variant: "destructive",
-      });
+      // First attempt to sign in with email and password via Firebase
+      const result = await signInWithEmail(values.username, values.password);
+      
+      if (result) {
+        toast({
+          title: "Login successful",
+          description: "Welcome back to Loudfits!",
+        });
+        navigate("/");
+      }
+    } catch (err) {
+      // If Firebase auth fails, we don't need to display an error as the AuthContext will handle it
+      console.error("Login error:", err);
     } finally {
       setIsSubmitting(false);
     }
@@ -91,32 +108,64 @@ const Auth = () => {
     setIsSubmitting(true);
     try {
       const { confirmPassword, ...userData } = values;
-      await apiRequest("POST", "/api/users", userData);
-      toast({
-        title: "Registration successful",
-        description: "Your account has been created. Please log in.",
-      });
-      loginForm.setValue("username", values.username);
-      loginForm.setValue("password", "");
-      // Switch to login tab
-      document.querySelector('[data-state="inactive"][data-value="login"]')?.click();
-    } catch (error) {
-      toast({
-        title: "Registration failed",
-        description: "This username or email may already be in use.",
-        variant: "destructive",
-      });
+      
+      // Register with Firebase
+      const result = await signUpWithEmail(userData.email, userData.password);
+      
+      if (result) {
+        // Also send user data to our backend for storage
+        await apiRequest("POST", "/api/users", userData);
+        
+        toast({
+          title: "Registration successful",
+          description: "Your account has been created. You are now logged in.",
+        });
+        navigate("/");
+      }
+    } catch (err) {
+      // If Firebase auth fails, we don't need to display an error as the AuthContext will handle it
+      console.error("Registration error:", err);
     } finally {
       setIsSubmitting(false);
     }
   };
   
   // Handle Google login
-  const handleGoogleLogin = () => {
-    toast({
-      title: "Google login",
-      description: "Google login functionality would be implemented here.",
-    });
+  const handleGoogleLogin = async () => {
+    try {
+      setIsSubmitting(true);
+      const result = await signInWithGoogle();
+      
+      if (result) {
+        // Create or update user in our backend if needed
+        const { user } = result;
+        
+        if (user.email) {
+          try {
+            await apiRequest("POST", "/api/users", {
+              username: user.displayName || user.email.split("@")[0],
+              email: user.email,
+              // We don't store the actual password for OAuth users
+              password: ""
+            });
+          } catch (err) {
+            // User might already exist in our database, which is fine
+            console.log("User might already exist in database");
+          }
+        }
+        
+        toast({
+          title: "Login successful",
+          description: "You have successfully signed in with Google!",
+        });
+        navigate("/");
+      }
+    } catch (err) {
+      // Error will be handled by AuthContext
+      console.error("Google login error:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
@@ -242,10 +291,25 @@ const Auth = () => {
                         className="text-sm text-[#582A34] hover:underline"
                         onClick={(e) => {
                           e.preventDefault();
-                          toast({
-                            title: "Reset password",
-                            description: "Password reset functionality would be implemented here.",
-                          });
+                          const email = loginForm.getValues().username.includes('@') 
+                            ? loginForm.getValues().username 
+                            : '';
+                            
+                          // Show prompt if email is not already in the form
+                          const userEmail = email || window.prompt("Please enter your email address");
+                          
+                          if (userEmail) {
+                            resetPassword(userEmail)
+                              .then(() => {
+                                toast({
+                                  title: "Password reset email sent",
+                                  description: "Check your inbox for instructions to reset your password.",
+                                });
+                              })
+                              .catch((err) => {
+                                console.error("Password reset error:", err);
+                              });
+                          }
                         }}
                       >
                         Forgot password?
