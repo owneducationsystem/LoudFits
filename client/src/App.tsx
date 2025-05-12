@@ -157,27 +157,7 @@ function App() {
       <Route path="/admin/settings">
         <AdminRoute component={AdminSettings} />
       </Route>
-      <Route path="/admin/real-time">
-        <AdminRoute component={AdminRealTime} />
-      </Route>
-      <Route path="/admin/simple">
-        <AdminRoute component={AdminSimple} />
-      </Route>
-      <Route path="/admin/basic">
-        <AdminRoute component={AdminBasic} />
-      </Route>
-      <Route path="/admin/mini">
-        <AdminRoute component={AdminMini} />
-      </Route>
-      <Route path="/admin/real-time-fixed">
-        <AdminRoute component={AdminRealTimeFixed} />
-      </Route>
-      <Route path="/admin/ws-only">
-        <AdminRoute component={AdminWsOnly} />
-      </Route>
-      <Route path="/admin/debug">
-        <AdminRoute component={AdminDebug} />
-      </Route>
+      {/* Admin routes cleaned up - removed test pages */}
       
       <Route component={NotFound} />
     </Switch>
