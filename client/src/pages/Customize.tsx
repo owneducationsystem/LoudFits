@@ -38,6 +38,8 @@ const Customize = () => {
   const [verticalPosition, setVerticalPosition] = useState([50]); // Vertical position - 0 to 100
   const [horizontalPosition, setHorizontalPosition] = useState([50]); // Horizontal position - 0 to 100
   const [imageSize, setImageSize] = useState([50]); // 50% size - 0 to 100
+  const [rotation, setRotation] = useState([0]); // Rotation angle in degrees
+  const [isFlipped, setIsFlipped] = useState(false); // Whether the image is flipped horizontally
   const [isLoading, setIsLoading] = useState(false);
   
   // Fetch product if ID is provided
@@ -102,11 +104,13 @@ const Customize = () => {
     }
   };
 
-  // Reset position and size
+  // Reset position, size, rotation and flip
   const resetCustomization = () => {
     setVerticalPosition([50]);
     setHorizontalPosition([50]);
     setImageSize([50]);
+    setRotation([0]);
+    setIsFlipped(false);
   };
 
   // Add to cart
@@ -156,7 +160,9 @@ const Customize = () => {
         image: uploadedImage,
         verticalPosition: verticalPosition[0],
         horizontalPosition: horizontalPosition[0],
-        size: imageSize[0]
+        size: imageSize[0],
+        rotation: rotation[0],
+        flipped: isFlipped
       }
     });
 
@@ -223,7 +229,7 @@ const Customize = () => {
                   style={{ 
                     top: `${verticalPosition[0]}%`,
                     left: `${horizontalPosition[0]}%`,
-                    transform: `translate(-50%, -50%) scale(${imageSize[0] / 50})`,
+                    transform: `translate(-50%, -50%) scale(${imageSize[0] / 50}) rotate(${rotation[0]}deg) ${isFlipped ? 'scaleX(-1)' : ''}`,
                     maxWidth: "60%",
                     maxHeight: "60%"
                   }}

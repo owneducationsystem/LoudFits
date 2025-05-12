@@ -3,8 +3,11 @@ import { Product } from "@shared/schema";
 
 export interface Customization {
   image: string;
-  position: number;
+  verticalPosition: number;
+  horizontalPosition: number;
   size: number;
+  rotation: number;
+  flipped: boolean;
 }
 
 export interface CartItem {
