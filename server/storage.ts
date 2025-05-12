@@ -5,7 +5,8 @@ import {
   cartItems, type CartItem, type InsertCartItem,
   orders, type Order, type InsertOrder,
   orderItems, type OrderItem, type InsertOrderItem,
-  testimonials, type Testimonial, type InsertTestimonial
+  testimonials, type Testimonial, type InsertTestimonial,
+  adminLogs, type AdminLog, type InsertAdminLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";

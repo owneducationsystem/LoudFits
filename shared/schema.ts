@@ -11,10 +11,18 @@ export const users = pgTable("users", {
   lastName: text("last_name"),
   phoneNumber: text("phone_number"),
   address: text("address"),
+  addressLine2: text("address_line_2"),
   city: text("city"),
   state: text("state"),
   postalCode: text("postal_code"),
   country: text("country"),
+  profileImage: text("profile_image"),
+  role: text("role").default("customer"),
+  isEmailVerified: boolean("is_email_verified").default(false),
+  firebaseId: text("firebase_id").unique(),
+  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const products = pgTable("products", {
@@ -51,12 +59,27 @@ export const cartItems = pgTable("cart_items", {
 
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
+  orderNumber: text("order_number").notNull().unique(),
   userId: integer("user_id").references(() => users.id),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  tax: decimal("tax", { precision: 10, scale: 2 }).notNull(),
+  shippingCost: decimal("shipping_cost", { precision: 10, scale: 2 }).notNull(),
+  discount: decimal("discount", { precision: 10, scale: 2 }).default("0"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
-  status: text("status").notNull().default("pending"),
+  status: text("status").notNull().default("processing"),
+  paymentStatus: text("payment_status").notNull().default("pending"),
   paymentMethod: text("payment_method").notNull(),
-  shippingAddress: text("shipping_address").notNull(),
+  paymentId: text("payment_id"),
+  shippingMethod: text("shipping_method").notNull().default("standard"),
+  trackingNumber: text("tracking_number"),
+  trackingUrl: text("tracking_url"),
+  estimatedDelivery: timestamp("estimated_delivery"),
+  notes: text("notes"),
+  // Shipping address as JSON to store structured address data
+  shippingAddress: json("shipping_address").notNull(),
+  billingAddress: json("billing_address"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const orderItems = pgTable("order_items", {
@@ -78,6 +101,19 @@ export const testimonials = pgTable("testimonials", {
   featured: boolean("featured").default(false),
 });
 
+// Admin activity logs
+export const adminLogs = pgTable("admin_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  action: text("action").notNull(),
+  entityType: text("entity_type").notNull(), // "user", "product", "order", etc.
+  entityId: text("entity_id").notNull(),     // The ID of the affected entity
+  details: json("details"),                   // Additional details about the action
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -87,10 +123,15 @@ export const insertUserSchema = createInsertSchema(users).pick({
   lastName: true,
   phoneNumber: true,
   address: true,
+  addressLine2: true,
   city: true,
   state: true,
   postalCode: true,
   country: true,
+  profileImage: true,
+  role: true,
+  isEmailVerified: true,
+  firebaseId: true,
 });
 
 export const insertProductSchema = createInsertSchema(products).pick({
@@ -122,11 +163,24 @@ export const insertCartItemSchema = createInsertSchema(cartItems).pick({
 });
 
 export const insertOrderSchema = createInsertSchema(orders).pick({
+  orderNumber: true,
   userId: true,
+  subtotal: true,
+  tax: true,
+  shippingCost: true,
+  discount: true,
   total: true,
   status: true,
+  paymentStatus: true,
   paymentMethod: true,
+  paymentId: true,
+  shippingMethod: true,
+  trackingNumber: true,
+  trackingUrl: true,
+  estimatedDelivery: true,
+  notes: true,
   shippingAddress: true,
+  billingAddress: true,
 });
 
 export const insertOrderItemSchema = createInsertSchema(orderItems).pick({
@@ -144,6 +198,16 @@ export const insertTestimonialSchema = createInsertSchema(testimonials).pick({
   rating: true,
   review: true,
   featured: true,
+});
+
+export const insertAdminLogSchema = createInsertSchema(adminLogs).pick({
+  userId: true,
+  action: true,
+  entityType: true,
+  entityId: true,
+  details: true,
+  ipAddress: true,
+  userAgent: true,
 });
 
 // Types
@@ -167,3 +231,6 @@ export type OrderItem = typeof orderItems.$inferSelect;
 
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
 export type Testimonial = typeof testimonials.$inferSelect;
+
+export type InsertAdminLog = z.infer<typeof insertAdminLogSchema>;
+export type AdminLog = typeof adminLogs.$inferSelect;
