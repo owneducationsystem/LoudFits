@@ -345,7 +345,7 @@ export function setupPaymentRoutes(app: Express) {
       }
       
       // Create merchant transaction ID
-      const merchantTransactionId = `LF${Date.now()}${Math.floor(Math.random() * 1000)}`;
+      let merchantTransactionId = `LF${Date.now()}${Math.floor(Math.random() * 1000)}`;
       
       // App base URL for redirects (adjust for different environments)
       const appBaseUrl = process.env.NODE_ENV === 'production'
@@ -354,19 +354,68 @@ export function setupPaymentRoutes(app: Express) {
       
       console.log(`Using base URL for redirects: ${appBaseUrl}`);
       
-      // Initiate PhonePe payment
-      const paymentResult = await PhonePeService.initiatePayment({
-        amount: Number(orderData.total),
-        orderId: merchantTransactionId,
-        customerEmail: req.user!.email,
-        customerPhone: req.user!.phoneNumber || "9999999999", // Default if not available
-        customerName: `${req.user!.firstName || ''} ${req.user!.lastName || ''}`.trim() || req.user!.username,
-        redirectUrl: `${appBaseUrl}/payment/callback`,
-        callbackUrl: `${appBaseUrl}/api/payment/webhook`,
-      });
+      // Determine whether to use test mode or real payment
+      let paymentResult: {
+        success: boolean;
+        errorMessage?: string;
+        instrumentResponse?: {
+          redirectInfo: {
+            url: string;
+          };
+        };
+        transactionId?: string;
+      } = {
+        success: false,
+        errorMessage: "Payment not initialized"
+      };
       
-      if (!paymentResult.success) {
-        throw new Error(paymentResult.errorMessage || "Payment initiation failed");
+      let useTestMode = false;
+      
+      // For development, always default to test mode if we've seen this error before
+      if (process.env.NODE_ENV !== 'production') {
+        useTestMode = true;
+        console.log("[DEV] Using test payment mode by default");
+      } else {
+        try {
+          // In production, try initiating PhonePe payment
+          paymentResult = await PhonePeService.initiatePayment({
+            amount: Number(orderData.total),
+            orderId: merchantTransactionId,
+            customerEmail: req.user!.email,
+            customerPhone: req.user!.phoneNumber || "9999999999", // Default if not available
+            customerName: `${req.user!.firstName || ''} ${req.user!.lastName || ''}`.trim() || req.user!.username,
+            redirectUrl: `${appBaseUrl}/payment/callback`,
+            callbackUrl: `${appBaseUrl}/api/payment/webhook`,
+          });
+          
+          if (!paymentResult.success) {
+            throw new Error(paymentResult.errorMessage || "Payment initiation failed");
+          }
+          
+          // If we got here, PhonePe was successful, no need for test mode
+          useTestMode = false;
+        } catch (error) {
+          throw error; // In production, just throw the error
+        }
+      }
+      
+      // If in test mode, use the test payment endpoint
+      if (useTestMode) {
+        console.log("[DEV] Setting up test payment");
+        const testMerchantTransactionId = `TEST${Date.now()}${Math.floor(Math.random() * 1000)}`;
+        
+        paymentResult = {
+          success: true,
+          instrumentResponse: {
+            redirectInfo: {
+              url: `${appBaseUrl}/test-phonepe/mock-payment?txnId=${testMerchantTransactionId}&amount=${Number(orderData.total)}&success=true`
+            }
+          },
+          transactionId: `TESTTRX${Date.now()}`
+        };
+        
+        // Update the merchant transaction ID for the payment record
+        merchantTransactionId = testMerchantTransactionId;
       }
       
       // Store payment information
@@ -388,7 +437,8 @@ export function setupPaymentRoutes(app: Express) {
           orderNumber: order.orderNumber
         },
         paymentUrl: paymentResult.instrumentResponse?.redirectInfo.url,
-        transactionId: paymentResult.transactionId
+        transactionId: paymentResult.transactionId,
+        isTestMode: useTestMode
       });
       
     } catch (error: any) {
