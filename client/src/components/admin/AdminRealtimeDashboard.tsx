@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { useAdminRealtime } from '../../hooks/use-admin-realtime';
-import { Loader2, RefreshCw } from 'lucide-react';
-import AdminWebSocketIndicator from './AdminWebSocketIndicator';
+import React, { useEffect, useState } from 'react';
+import { useAdminRealtime } from '@/hooks/use-admin-realtime';
+import { useAdminWebSocket } from '@/hooks/use-admin-websocket';
+import { AlertCircle, Bell, CheckCircle, Clock, User, Package, CreditCard, Activity, RefreshCw } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Event {
   id: string;
@@ -14,156 +13,171 @@ interface Event {
   data?: any;
 }
 
-/**
- * A dashboard component to display real-time events from the admin WebSocket
- */
-const AdminRealtimeDashboard: React.FC = () => {
-  const [adminId] = useState<number>(1);
-  
-  // Use our admin real-time hook
-  const { 
-    events, 
-    loading, 
-    error, 
-    connected, 
-    registered, 
-    triggerAction, 
-    refresh 
-  } = useAdminRealtime<Event>({ adminId });
-  
-  // Handle requesting more data
-  const handleRefresh = () => {
-    refresh();
-  };
-  
-  // Handle sending a test event
-  const handleSendTestEvent = () => {
-    triggerAction('test_event', { 
-      message: 'Test event from admin dashboard',
-      timestamp: new Date().toISOString()
-    });
-  };
-  
+const eventIcons = {
+  order_update: <Package className="w-5 h-5" />,
+  user_signup: <User className="w-5 h-5" />,
+  product_update: <CreditCard className="w-5 h-5" />,
+  stock_alert: <AlertCircle className="w-5 h-5" />,
+  connection: <Activity className="w-5 h-5" />,
+  registration: <CheckCircle className="w-5 h-5" />,
+  error: <AlertCircle className="w-5 h-5 text-destructive" />,
+  default: <Bell className="w-5 h-5" />
+};
+
+const getEventIcon = (type: string) => {
+  const key = type.toLowerCase() as keyof typeof eventIcons;
+  return eventIcons[key] || eventIcons.default;
+};
+
+const getEventColor = (type: string) => {
+  switch (type.toLowerCase()) {
+    case 'order_update':
+      return 'bg-blue-50 border-blue-100 text-blue-700';
+    case 'user_signup':
+      return 'bg-green-50 border-green-100 text-green-700';
+    case 'product_update':
+      return 'bg-purple-50 border-purple-100 text-purple-700';
+    case 'stock_alert':
+      return 'bg-orange-50 border-orange-100 text-orange-700';
+    case 'error':
+      return 'bg-red-50 border-red-100 text-red-700';
+    case 'connection':
+      return 'bg-teal-50 border-teal-100 text-teal-700';
+    case 'registration':
+      return 'bg-indigo-50 border-indigo-100 text-indigo-700';
+    default:
+      return 'bg-gray-50 border-gray-100 text-gray-700';
+  }
+};
+
+interface AdminRealtimeDashboardProps {
+  adminId: number;
+  maxEvents?: number;
+}
+
+export const AdminRealtimeDashboard: React.FC<AdminRealtimeDashboardProps> = ({ 
+  adminId,
+  maxEvents = 30
+}) => {
+  const [events, setEvents] = useState<Event[]>([]);
+  const { toast } = useToast();
+  const { connected, registered, reconnect } = useAdminWebSocket({ 
+    adminId, 
+    autoConnect: true 
+  });
+
+  // Subscribe to realtime events
+  const { events: realtimeEvents } = useAdminRealtime<Event>({ 
+    adminId, 
+    enabled: connected && registered 
+  });
+
+  // Load initial events from API
+  useEffect(() => {
+    if (registered) {
+      fetch('/api/admin/events')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setEvents(prev => {
+              // Merge with existing events, avoiding duplicates
+              const merged = [...prev];
+              data.forEach(event => {
+                if (!merged.some(e => e.id === event.id)) {
+                  merged.push(event);
+                }
+              });
+              // Sort by timestamp descending and limit to maxEvents
+              return merged
+                .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                .slice(0, maxEvents);
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching events:', error);
+        });
+    }
+  }, [registered, maxEvents]);
+
+  // Update events when new realtime events arrive
+  useEffect(() => {
+    if (realtimeEvents?.length) {
+      const lastEvent = realtimeEvents[realtimeEvents.length - 1];
+      
+      // Add the event to our state
+      setEvents(prev => {
+        const newEvents = [...prev];
+        if (!newEvents.some(e => e.id === lastEvent.id)) {
+          newEvents.unshift(lastEvent);
+        }
+        return newEvents.slice(0, maxEvents);
+      });
+      
+      // Show toast notification for the event
+      toast({
+        title: `New ${lastEvent.type} event`,
+        description: lastEvent.message,
+        variant: 'default',
+      });
+    }
+  }, [realtimeEvents, toast, maxEvents]);
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Real-time Dashboard</h2>
-        <AdminWebSocketIndicator adminId={adminId} />
+    <div className="bg-white rounded-lg shadow-md p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Real-time Events</h2>
+        <div className="flex items-center gap-2">
+          <div className={`px-2 py-1 rounded-full text-xs font-medium ${connected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {connected ? 'Connected' : 'Disconnected'}
+          </div>
+          <button 
+            onClick={reconnect}
+            className="p-1 rounded-full hover:bg-gray-100"
+            title="Reconnect WebSocket"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Connection Status</CardTitle>
-            <CardDescription>
-              WebSocket connection information
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Connection:</span>
-                {connected ? (
-                  <Badge variant="outline" className="bg-green-100 text-green-800">
-                    Connected
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-red-100 text-red-800">
-                    Disconnected
-                  </Badge>
-                )}
+      <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
+        {events.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            <p>No events received yet</p>
+            <p className="text-sm">Events will appear here in real-time</p>
+          </div>
+        ) : (
+          events.map(event => (
+            <div 
+              key={event.id} 
+              className={`p-3 rounded-lg border flex items-start gap-3 ${getEventColor(event.type)}`}
+            >
+              <div className="mt-0.5">
+                {getEventIcon(event.type)}
               </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Registration:</span>
-                {registered ? (
-                  <Badge variant="outline" className="bg-green-100 text-green-800">
-                    Registered
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
-                    Not Registered
-                  </Badge>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-medium truncate">{event.type}</h3>
+                  <span className="text-xs flex items-center whitespace-nowrap ml-2">
+                    <Clock className="w-3 h-3 mr-1 opacity-70" />
+                    {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
+                  </span>
+                </div>
+                <p className="text-sm opacity-90">{event.message}</p>
+                {event.data && (
+                  <details className="mt-1">
+                    <summary className="text-xs cursor-pointer hover:underline">View details</summary>
+                    <pre className="text-xs mt-2 p-2 bg-white bg-opacity-50 rounded overflow-x-auto">
+                      {JSON.stringify(event.data, null, 2)}
+                    </pre>
+                  </details>
                 )}
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Admin ID:</span>
-                <Badge variant="outline">{adminId}</Badge>
               </div>
             </div>
-          </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleRefresh}
-              disabled={!connected || !registered}
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh Data
-            </Button>
-          </CardFooter>
-        </Card>
-        
-        <Card className="col-span-2">
-          <CardHeader>
-            <CardTitle>Recent Events</CardTitle>
-            <CardDescription>
-              Latest real-time events from the system
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center h-48">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : error ? (
-              <div className="p-4 border border-red-200 bg-red-50 text-red-800 rounded-md">
-                <h3 className="font-medium">Error loading events</h3>
-                <p className="text-sm">{error.message}</p>
-              </div>
-            ) : events.length === 0 ? (
-              <div className="p-4 border border-gray-200 bg-gray-50 text-gray-500 rounded-md">
-                <p>No events available. Try sending a test event.</p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {events.map((event) => (
-                  <div 
-                    key={event.id} 
-                    className="p-3 border rounded-md hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <Badge variant="outline">
-                        {event.type}
-                      </Badge>
-                      <span className="text-xs text-gray-500">
-                        {new Date(event.timestamp).toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="text-sm">{event.message}</p>
-                    {event.data && (
-                      <pre className="mt-2 p-2 text-xs bg-gray-100 rounded overflow-auto">
-                        {JSON.stringify(event.data, null, 2)}
-                      </pre>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-end space-x-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSendTestEvent}
-              disabled={!connected || !registered}
-            >
-              Send Test Event
-            </Button>
-          </CardFooter>
-        </Card>
+          ))
+        )}
       </div>
     </div>
   );
