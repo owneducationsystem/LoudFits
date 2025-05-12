@@ -27,6 +27,8 @@ import Orders from "@/pages/Orders";
 import Admin from "@/pages/Admin";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminOrders from "@/pages/AdminOrders";
+import AdminProducts from "@/pages/AdminProducts";
+import AdminSettings from "@/pages/AdminSettings";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminRoute from "@/components/layout/AdminRoute";
 

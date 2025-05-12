@@ -347,7 +347,7 @@ const AdminProducts = () => {
                         <div>
                           <div className="font-medium">{product.name}</div>
                           <div className="text-sm text-muted-foreground truncate max-w-[300px]">
-                            {product.sku && <span className="text-xs">SKU: {product.sku}</span>}
+                            <span className="text-xs">Category: {product.category}</span>
                           </div>
                         </div>
                       </TableCell>
@@ -362,7 +362,7 @@ const AdminProducts = () => {
                         {formatPrice(Number(product.price))}
                       </TableCell>
                       <TableCell className="text-right">
-                        {product.stock ?? "N/A"}
+                        {product.inStock ? "In Stock" : "Out of Stock"}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
