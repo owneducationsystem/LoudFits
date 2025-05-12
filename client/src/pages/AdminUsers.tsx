@@ -55,6 +55,7 @@ interface User {
 }
 
 const AdminUsers = () => {
+  const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
