@@ -48,7 +48,7 @@ const WebSocketTest: React.FC = () => {
         
         ws.onerror = (error) => {
           console.error('WebSocket error:', error);
-          setMessages(prev => [...prev, `[${new Date().toLocaleTimeString()}] Error: ${error}`]);
+          setMessages(prev => [...prev, `[${new Date().toLocaleTimeString()}] Error: WebSocket connection failed`]);
           
           toast({
             title: 'WebSocket Error',

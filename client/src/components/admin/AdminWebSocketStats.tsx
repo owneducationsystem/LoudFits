@@ -20,6 +20,10 @@ export function AdminWebSocketStats() {
   const { data, isLoading, error } = useQuery<WebSocketStats>({
     queryKey: ['/api/admin/ws-stats'],
     refetchInterval: 5000, // Refresh every 5 seconds
+    retry: 1, // Only retry once to avoid excessive requests
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    enabled: true, // Make sure it's enabled
+    staleTime: 4000, // Data becomes stale after 4 seconds
   });
 
   // Format server uptime from seconds to human-readable format

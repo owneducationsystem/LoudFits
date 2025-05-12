@@ -160,9 +160,7 @@ function App() {
         <AdminRoute component={AdminSettings} />
       </Route>
       {/* Admin testing and development routes */}
-      <Route path="/admin/realtime-fixed">
-        <AdminRoute component={AdminRealTimeFixed} />
-      </Route>
+      <Route path="/admin/realtime-fixed" component={AdminRealTimeFixed} />
       <Route path="/admin/realtime">
         <AdminRoute component={AdminRealTime} />
       </Route>
@@ -179,10 +177,10 @@ function App() {
 
   return (
     <AuthProvider>
-      <WebSocketProvider>
-        <CartProvider>
-          <WishlistProvider>
-            <TooltipProvider>
+      <CartProvider>
+        <WishlistProvider>
+          <TooltipProvider>
+            <WebSocketProvider initialAdminId={1}>
               <div className="flex flex-col min-h-screen">
                 <Header />
                 <main className="flex-grow">
@@ -191,10 +189,10 @@ function App() {
                 <Footer />
               </div>
               <Toaster />
-            </TooltipProvider>
-          </WishlistProvider>
-        </CartProvider>
-      </WebSocketProvider>
+            </WebSocketProvider>
+          </TooltipProvider>
+        </WishlistProvider>
+      </CartProvider>
     </AuthProvider>
   );
 }

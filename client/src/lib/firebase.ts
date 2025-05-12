@@ -32,16 +32,56 @@ console.log("Firebase config (without sensitive data):", {
 });
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
+let app: any;
+let auth = null as any;
+let googleProvider = null as any;
+
+try {
+  // Only initialize Firebase if required config is present
+  if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId) {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    googleProvider = new GoogleAuthProvider();
+    console.log("Firebase initialized successfully");
+  } else {
+    console.error("Firebase initialization skipped due to missing configuration");
+    // Create fallback objects to prevent crashes
+    auth = { 
+      currentUser: null,
+      onAuthStateChanged: () => {},
+      signInWithPopup: async () => { throw new Error("Firebase not initialized"); },
+      signInWithRedirect: () => { throw new Error("Firebase not initialized"); },
+      signInWithEmailAndPassword: async () => { throw new Error("Firebase not initialized"); },
+      createUserWithEmailAndPassword: async () => { throw new Error("Firebase not initialized"); },
+      sendPasswordResetEmail: async () => { throw new Error("Firebase not initialized"); },
+      signOut: async () => { throw new Error("Firebase not initialized"); }
+    };
+    googleProvider = { setCustomParameters: () => {} };
+  }
+} catch (error) {
+  console.error("Error initializing Firebase:", error);
+  // Create fallback objects to prevent crashes
+  auth = { 
+    currentUser: null,
+    onAuthStateChanged: () => {},
+    signInWithPopup: async () => { throw new Error("Firebase initialization failed"); },
+    signInWithRedirect: () => { throw new Error("Firebase initialization failed"); },
+    signInWithEmailAndPassword: async () => { throw new Error("Firebase initialization failed"); },
+    createUserWithEmailAndPassword: async () => { throw new Error("Firebase initialization failed"); },
+    sendPasswordResetEmail: async () => { throw new Error("Firebase initialization failed"); },
+    signOut: async () => { throw new Error("Firebase initialization failed"); }
+  };
+  googleProvider = { setCustomParameters: () => {} };
+}
 
 // Configure Google provider with additional parameters for Replit environment
-googleProvider.setCustomParameters({
-  prompt: 'select_account',
-  // Allow redirect to Replit domain
-  redirect_uri: window.location.origin
-});
+if (googleProvider && typeof googleProvider.setCustomParameters === 'function') {
+  googleProvider.setCustomParameters({
+    prompt: 'select_account',
+    // Allow redirect to Replit domain
+    redirect_uri: window.location.origin
+  });
+}
 
 // Authentication functions
 export const signInWithGoogle = async (): Promise<UserCredential> => {
