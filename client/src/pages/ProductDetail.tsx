@@ -271,8 +271,8 @@ const ProductDetail = () => {
           {/* Product Info */}
           <div className="flex flex-col space-y-6">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">{displayProduct.name}</h1>
-              <p className="text-xl font-bold text-[#582A34]">₹{displayProduct.price.toString()}</p>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">{product.name}</h1>
+              <p className="text-xl font-bold text-[#582A34]">₹{product.price.toString()}</p>
               <div className="flex items-center gap-4 mt-4">
                 <button
                   onClick={handleShare}
@@ -315,7 +315,7 @@ const ProductDetail = () => {
                 onValueChange={setSelectedSize}
                 className="flex flex-wrap gap-2"
               >
-                {displayProduct.sizes.map((size) => (
+                {product.sizes.map((size: string) => (
                   <div key={size}>
                     <RadioGroupItem
                       value={size}
@@ -345,7 +345,7 @@ const ProductDetail = () => {
                 onValueChange={setSelectedColor}
                 className="flex flex-wrap gap-2"
               >
-                {displayProduct.colors.map((color) => (
+                {product.colors.map((color: string) => (
                   <div key={color}>
                     <RadioGroupItem
                       value={color}
@@ -452,7 +452,7 @@ const ProductDetail = () => {
               </TabsList>
 
               <TabsContent value="description" className="mt-4">
-                <p className="text-gray-700">{displayProduct.description}</p>
+                <p className="text-gray-700">{product.description}</p>
               </TabsContent>
 
               <TabsContent value="details" className="mt-4">
@@ -488,9 +488,9 @@ const ProductDetail = () => {
         <div className="mt-16">
           <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {(isLoadingRelated ? [] : displayRelatedProducts).map((product, index) => (
+            {(isLoadingRelated ? [] : filteredRelatedProducts).map((relatedProduct: Product, index: number) => (
               <motion.div
-                key={product.id}
+                key={relatedProduct.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
