@@ -499,19 +499,19 @@ const ProductDetail = () => {
                   className="cursor-pointer"
                   onClick={() => {
                     setCurrentImageIndex(0);
-                    navigate(`/product/${product.id}`);
+                    navigate(`/product/${relatedProduct.id}`);
                   }}
                 >
                   <div className="overflow-hidden">
                     <img 
-                      src={product.images[0]} 
-                      alt={product.name}
+                      src={relatedProduct.images[0]} 
+                      alt={relatedProduct.name}
                       className="product-image w-full h-[250px] object-cover" 
                     />
                   </div>
                   <div className="mt-3 flex flex-col">
-                    <h3 className="font-medium text-sm">{product.name}</h3>
-                    <p className="font-bold">₹{product.price.toString()}</p>
+                    <h3 className="font-medium text-sm">{relatedProduct.name}</h3>
+                    <p className="font-bold">₹{relatedProduct.price.toString()}</p>
                   </div>
                 </div>
               </motion.div>
