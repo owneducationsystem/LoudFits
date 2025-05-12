@@ -18,6 +18,8 @@ import FAQ from "@/pages/FAQ";
 import ShippingReturns from "@/pages/ShippingReturns";
 import Contact from "@/pages/Contact";
 import TrackOrder from "@/pages/TrackOrder";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsConditions from "@/pages/TermsConditions";
 
 function App() {
   return (
@@ -41,6 +43,8 @@ function App() {
               <Route path="/shipping-returns" component={ShippingReturns} />
               <Route path="/contact" component={Contact} />
               <Route path="/track-order" component={TrackOrder} />
+              <Route path="/privacy-policy" component={PrivacyPolicy} />
+              <Route path="/terms-conditions" component={TermsConditions} />
               <Route component={NotFound} />
             </Switch>
           </main>
