@@ -1,101 +1,36 @@
 import React from 'react';
-import { useLocation } from 'wouter';
-import { Button } from '@/components/ui/button';
-import { Home, Package, Users, Settings, ShoppingCart, LogOut, Bell, LayoutDashboard } from 'lucide-react';
+import { Bell, Search } from 'lucide-react';
 import AdminWebSocketIndicator from './AdminWebSocketIndicator';
 
 interface AdminHeaderProps {
   title?: string;
 }
 
-const AdminHeader: React.FC<AdminHeaderProps> = ({ title = 'Admin Dashboard' }) => {
-  const [location, navigate] = useLocation();
-  
+const AdminHeader: React.FC<AdminHeaderProps> = ({ title = 'Dashboard' }) => {
   return (
-    <header className="bg-white border-b">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <h1 className="text-xl font-bold">{title}</h1>
+    <header className="bg-white border-b px-6 py-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
+        
+        <div className="flex items-center space-x-4">
+          {/* Search */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search..."
+              className="pl-10 pr-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+            <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
           </div>
           
-          <nav className="hidden md:flex items-center space-x-2">
-            <Button
-              variant={location === '/admin' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => navigate('/admin')}
-            >
-              <Home className="h-4 w-4 mr-2" />
-              Home
-            </Button>
-            
-            <Button
-              variant={location === '/admin/dashboard' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => navigate('/admin/dashboard')}
-            >
-              <LayoutDashboard className="h-4 w-4 mr-2" />
-              Dashboard
-            </Button>
-            
-            <Button
-              variant={location === '/admin/orders' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => navigate('/admin/orders')}
-            >
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Orders
-            </Button>
-            
-            <Button
-              variant={location === '/admin/products' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => navigate('/admin/products')}
-            >
-              <Package className="h-4 w-4 mr-2" />
-              Products
-            </Button>
-            
-            <Button
-              variant={location === '/admin/users' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => navigate('/admin/users')}
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Users
-            </Button>
-            
-            <Button
-              variant={location === '/admin/settings' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => navigate('/admin/settings')}
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
-          </nav>
+          {/* Notifications */}
+          <button className="p-2 rounded-md hover:bg-gray-100 relative">
+            <Bell className="w-5 h-5 text-gray-600" />
+            <span className="absolute top-1 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+          </button>
           
-          <div className="flex items-center space-x-3">
-            <AdminWebSocketIndicator adminId={1} showControls={true} />
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
-            >
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full" />
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/admin/login')}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          </div>
+          {/* WebSocket Status */}
+          <AdminWebSocketIndicator showControls={false} />
         </div>
       </div>
     </header>
