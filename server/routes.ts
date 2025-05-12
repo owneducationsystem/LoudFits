@@ -705,19 +705,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/products", isAdmin, logAdminAction, async (req, res) => {
-    try {
-      const productData = insertProductSchema.parse(req.body);
-      const product = await storage.createProduct(productData);
-      res.status(201).json(product);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create product" });
-    }
-  });
-
   app.patch("/api/admin/products/:id", isAdmin, logAdminAction, async (req, res) => {
     try {
       const productId = parseInt(req.params.id);
