@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +58,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface Order {
   id: number;
@@ -116,6 +117,7 @@ const getPaymentStatusColor = (status: string) => {
 };
 
 const AdminOrders = () => {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -182,6 +184,11 @@ const AdminOrders = () => {
       setOrders(orders.map(order => 
         order.id === selectedOrder.id ? { ...order, status: newStatus } : order
       ));
+      
+      // Invalidate the query cache to refetch the updated data
+      queryClient.invalidateQueries({
+        queryKey: ["/api/admin/orders"]
+      });
       
       setIsUpdateStatusDialogOpen(false);
     } catch (error) {
