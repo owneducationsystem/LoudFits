@@ -29,6 +29,7 @@ import AdminUsers from "@/pages/AdminUsers";
 import AdminOrders from "@/pages/AdminOrders";
 import AdminProducts from "@/pages/AdminProducts";
 import AdminAddProduct from "@/pages/AdminAddProduct";
+import AdminAddProductSimple from "@/pages/AdminAddProductSimple";
 import AdminCategories from "@/pages/AdminCategories";
 import AdminAddUser from "@/pages/AdminAddUser";
 import AdminSettings from "@/pages/AdminSettings";
@@ -120,7 +121,7 @@ function App() {
                   <AdminRoute component={AdminOrders} />
                 </Route>
                 <Route path="/admin/products/add">
-                  <AdminRoute component={AdminAddProduct} />
+                  <AdminRoute component={AdminAddProductSimple} />
                 </Route>
                 <Route path="/admin/products/categories">
                   <AdminRoute component={AdminCategories} />
