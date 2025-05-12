@@ -27,6 +27,7 @@ import Orders from "@/pages/Orders";
 import Admin from "@/pages/Admin";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminOrders from "@/pages/AdminOrders";
+import AdminLogin from "@/pages/AdminLogin";
 
 import { useEffect, useState } from "react";
 import { handleAuthRedirect } from "@/lib/firebase";
@@ -102,6 +103,7 @@ function App() {
                 <Route path="/orders" component={Orders} />
                 
                 {/* Admin Routes */}
+                <Route path="/admin/login" component={AdminLogin} />
                 <Route path="/admin" component={Admin} />
                 <Route path="/admin/users" component={AdminUsers} />
                 <Route path="/admin/orders" component={AdminOrders} />

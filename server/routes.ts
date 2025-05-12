@@ -368,6 +368,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin login route (not protected)
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+      
+      // Find user by username
+      const user = await storage.getUserByUsername(username);
+      
+      // Check if user exists and is an admin
+      if (!user || user.role !== "admin") {
+        return res.status(401).json({ message: "Invalid credentials or not authorized" });
+      }
+      
+      // In a real app, we would compare hashed passwords
+      // For demo purposes, we'll just compare the plain text
+      if (user.password !== password) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      
+      // Return user information (excluding password)
+      const { password: _, ...userWithoutPassword } = user;
+      
+      res.json({ 
+        user: userWithoutPassword,
+        message: "Login successful" 
+      });
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "Failed to authenticate" });
+    }
+  });
+
   // Admin Routes (Protected)
   app.get("/api/admin/users", isAdmin, logAdminAction, async (req, res) => {
     try {
