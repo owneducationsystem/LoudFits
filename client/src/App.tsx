@@ -47,6 +47,7 @@ import AdminSimple from "@/pages/AdminSimple";
 import AdminBasic from "@/pages/AdminBasic";
 import AdminMini from "@/pages/AdminMini";
 import AdminRealTimeFixed from "@/pages/AdminRealTimeFixed";
+import AdminWsOnly from "@/pages/AdminWsOnly";
 import AdminRoute from "@/components/layout/AdminRoute";
 
 import { useEffect, useState } from "react";
@@ -174,6 +175,9 @@ function App() {
                 </Route>
                 <Route path="/admin/real-time-fixed">
                   <AdminRoute component={AdminRealTimeFixed} />
+                </Route>
+                <Route path="/admin/ws-only">
+                  <AdminRoute component={AdminWsOnly} />
                 </Route>
                 
                 <Route component={NotFound} />

@@ -159,7 +159,7 @@ const AdminRealTimeFixed: React.FC = () => {
     };
 
     fetchOrders().catch(() => fetchSingleOrder());
-  }, [toast, selectedOrder]);
+  }, [toast]); // Removed selectedOrder dependency to prevent repeated API calls
 
   // Format date for display
   const formatDate = (dateString: string) => {

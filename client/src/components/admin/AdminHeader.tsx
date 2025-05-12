@@ -84,6 +84,15 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ title = 'Admin Dashboard' }) 
             </Button>
             
             <Button
+              variant={location === '/admin/ws-only' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/admin/ws-only')}
+            >
+              <Wifi className="h-4 w-4 mr-2" />
+              WS-Only
+            </Button>
+            
+            <Button
               variant={location === '/admin/simple' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => navigate('/admin/simple')}
