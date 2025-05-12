@@ -310,7 +310,15 @@ const OrderConfirmation = () => {
                     Placed on {formatDate(order.createdAt)}
                   </CardDescription>
                 </div>
-                {renderStatusBadge(order.paymentStatus)}
+                <div className="flex items-center gap-2">
+                  {isConnected && (
+                    <div className="flex items-center text-xs text-green-500" title="Real-time updates active">
+                      <Wifi className="h-3 w-3 mr-1" />
+                      <span>Live</span>
+                    </div>
+                  )}
+                  {renderStatusBadge(order.paymentStatus)}
+                </div>
               </div>
             </CardHeader>
             
