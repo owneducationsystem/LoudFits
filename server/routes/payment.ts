@@ -140,8 +140,11 @@ export function setupPaymentRoutes(app: Express) {
   });
   
   // Payment callback route (user is redirected here after payment)
-  app.post("/payment/callback", async (req, res) => {
-    const { merchantTransactionId, transactionId, code } = req.body;
+  app.all("/api/payment/callback", async (req, res) => {
+    // Get parameters from either query params (GET) or body (POST)
+    const merchantTransactionId = req.query.merchantTransactionId || req.body.merchantTransactionId;
+    const transactionId = req.query.transactionId || req.body.transactionId;
+    const code = req.query.code || req.body.code;
     
     try {
       // Verify payment status with PhonePe
@@ -191,6 +194,9 @@ export function setupPaymentRoutes(app: Express) {
       } else {
         res.redirect(`/payment-failed/${payment.orderId}?reason=${encodeURIComponent(paymentStatusMessage)}`);
       }
+      
+      // Log payment callback
+      console.log(`Payment callback processed: orderId=${payment.orderId}, status=${newStatus}`);
       
     } catch (error: any) {
       console.error("Payment callback error:", error);

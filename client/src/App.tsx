@@ -27,6 +27,7 @@ import Orders from "@/pages/Orders";
 import Checkout from "@/pages/Checkout";
 import OrderConfirmation from "@/pages/OrderConfirmation";
 import PaymentFailed from "@/pages/PaymentFailed";
+import PaymentError from "@/pages/PaymentError";
 // Admin pages
 import Admin from "@/pages/Admin";
 import AdminUsers from "@/pages/AdminUsers";
@@ -117,6 +118,7 @@ function App() {
                 <Route path="/checkout" component={Checkout} />
                 <Route path="/order-confirmation/:orderId" component={OrderConfirmation} />
                 <Route path="/payment-failed/:orderId" component={PaymentFailed} />
+                <Route path="/payment-error" component={PaymentError} />
                 
                 {/* Admin Routes - Protected */}
                 <Route path="/admin/login" component={AdminLogin} />

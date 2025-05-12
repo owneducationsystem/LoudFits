@@ -176,7 +176,7 @@ const OrderConfirmation = () => {
     switch(status) {
       case "paid":
       case "completed":
-        return <Badge variant="success" className="bg-green-500">Completed</Badge>;
+        return <Badge className="bg-green-500 text-white">Completed</Badge>;
       case "processing":
         return <Badge variant="secondary" className="bg-blue-500 text-white">Processing</Badge>;
       case "pending":

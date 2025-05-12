@@ -77,6 +77,21 @@ const logAdminAction = async (req: Request, res: Response, next: NextFunction) =
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add route for redirecting from PhonePe callback to our frontend
+  app.get("/payment/callback", (req, res) => {
+    const { merchantTransactionId, transactionId, code } = req.query;
+    
+    // PhonePe sometimes sends status in query params
+    if (merchantTransactionId) {
+      console.log(`Payment callback received: merchantId=${merchantTransactionId}, code=${code}`);
+      
+      // Forward to API endpoint which will handle the validation
+      res.redirect(`/api/payment/callback?merchantTransactionId=${merchantTransactionId}&transactionId=${transactionId || ''}&code=${code || ''}`);
+    } else {
+      // If no params, redirect to homepage
+      res.redirect('/');
+    }
+  });
   // API Routes
   app.get("/api/products", async (req, res) => {
     try {
