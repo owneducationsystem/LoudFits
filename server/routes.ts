@@ -1,5 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import { setupPaymentRoutes } from "./routes/payment";
 import { storage } from "./storage";
 import { z } from "zod";
 import {
@@ -781,6 +782,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Initialize server
+  // Set up PhonePe payment routes
+  setupPaymentRoutes(app);
+  
   const httpServer = createServer(app);
   return httpServer;
 }

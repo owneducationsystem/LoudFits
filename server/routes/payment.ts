@@ -1,5 +1,6 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { Express } from "express";
+import { User } from "@shared/schema";
 import crypto from "crypto";
 import { PhonePeService } from "../services/phonePeService";
 import { storage } from "../storage";
@@ -11,9 +12,19 @@ function generateOrderNumber(): string {
   return `LF-${timestamp.slice(-6)}-${randomPart}`;
 }
 
+// Extend the Express Request type to include auth properties
+declare global {
+  namespace Express {
+    interface Request {
+      isAuthenticated(): boolean;
+      user?: User;
+    }
+  }
+}
+
 // Middleware to check if user is authenticated
-const isAuthenticated = (req: Request, res: Response, next: Function) => {
-  if (req.isAuthenticated()) {
+const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+  if (req.isAuthenticated && req.isAuthenticated()) {
     return next();
   }
   return res.status(401).json({ error: "Unauthorized access" });

@@ -24,6 +24,9 @@ import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsConditions from "@/pages/TermsConditions";
 import Account from "@/pages/Account";
 import Orders from "@/pages/Orders";
+import Checkout from "@/pages/Checkout";
+import OrderConfirmation from "@/pages/OrderConfirmation";
+import PaymentFailed from "@/pages/PaymentFailed";
 // Admin pages
 import Admin from "@/pages/Admin";
 import AdminUsers from "@/pages/AdminUsers";
@@ -111,6 +114,9 @@ function App() {
                 <Route path="/terms-conditions" component={TermsConditions} />
                 <Route path="/account" component={Account} />
                 <Route path="/orders" component={Orders} />
+                <Route path="/checkout" component={Checkout} />
+                <Route path="/order-confirmation/:orderId" component={OrderConfirmation} />
+                <Route path="/payment-failed/:orderId" component={PaymentFailed} />
                 
                 {/* Admin Routes - Protected */}
                 <Route path="/admin/login" component={AdminLogin} />
