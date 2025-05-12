@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useCartContext } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { CartItem } from "@/context/CartContext";
 
 const Cart = () => {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { currentUser } = useAuth();
   const { cartItems, updateQuantity, removeFromCart, clearCart } = useCartContext();
   const [couponCode, setCouponCode] = useState("");
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
