@@ -411,6 +411,36 @@ export class DatabaseStorage implements IStorage {
 
   // Seed the database with initial data if it's empty
   async seedInitialData() {
+    // Check if users table is empty
+    const existingUsers = await db.select().from(users);
+    if (existingUsers.length === 0) {
+      // Create admin user
+      await db.insert(users).values({
+        username: "admin",
+        password: "admin123", // In a real app, this would be hashed
+        email: "admin@loudfits.com",
+        firstName: "Admin",
+        lastName: "User",
+        role: "admin",
+        isEmailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      // Create a regular customer user 
+      await db.insert(users).values({
+        username: "customer",
+        password: "customer123", // In a real app, this would be hashed
+        email: "customer@example.com",
+        firstName: "Sample",
+        lastName: "Customer",
+        role: "customer",
+        isEmailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
+    
     // Check if products table is empty
     const existingProducts = await db.select().from(products);
     if (existingProducts.length === 0) {
