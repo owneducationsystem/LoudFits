@@ -606,14 +606,15 @@ const AdminAddProduct = () => {
                         <div className="mb-4">
                           <FormLabel>Product Images</FormLabel>
                           <FormDescription>
-                            Add image URLs for this product. The first image will be used as the main image.
+                            Upload images or add image URLs for this product. The first image will be used as the main image.
                           </FormDescription>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                          {/* URL Images */}
                           {imageUrls.map((url, index) => (
                             <div
-                              key={`${url}-${index}`}
+                              key={`url-${url}-${index}`}
                               className="relative rounded-md overflow-hidden border aspect-square group"
                             >
                               <img
@@ -628,7 +629,7 @@ const AdminAddProduct = () => {
                               >
                                 <X className="h-4 w-4" />
                               </button>
-                              {index === 0 && (
+                              {index === 0 && !uploadPreviews.length && (
                                 <Badge 
                                   className="absolute bottom-2 left-2" 
                                   variant="secondary"
@@ -639,18 +640,63 @@ const AdminAddProduct = () => {
                             </div>
                           ))}
                           
-                          {/* Add image placeholder */}
-                          {imageUrls.length < 6 && (
-                            <div className="border border-dashed rounded-md flex items-center justify-center aspect-square">
+                          {/* File Upload Previews */}
+                          {uploadPreviews.map((preview, index) => (
+                            <div
+                              key={`preview-${index}`}
+                              className="relative rounded-md overflow-hidden border aspect-square group"
+                            >
+                              <img
+                                src={preview}
+                                alt={`Uploaded image ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveUploadedImage(index)}
+                                className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                              {index === 0 && imageUrls.length === 0 && (
+                                <Badge 
+                                  className="absolute bottom-2 left-2" 
+                                  variant="secondary"
+                                >
+                                  Main Image
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
+                          
+                          {/* Upload image button */}
+                          {(imageUrls.length + uploadPreviews.length) < 6 && (
+                            <div 
+                              className="border border-dashed rounded-md flex items-center justify-center aspect-square cursor-pointer hover:bg-muted/50 transition-colors"
+                              onClick={handleImageUploadClick}
+                            >
                               <div className="text-center p-4">
-                                <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                                <p className="text-sm text-muted-foreground">
-                                  Add product images
+                                <ImagePlus className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                                <p className="text-sm font-medium mb-1">Upload Images</p>
+                                <p className="text-xs text-muted-foreground">
+                                  JPG, PNG, GIF up to 5MB
                                 </p>
+                                {/* Hidden file input */}
+                                <input
+                                  type="file"
+                                  ref={fileInputRef}
+                                  onChange={handleFileChange}
+                                  accept="image/*"
+                                  multiple
+                                  className="hidden"
+                                />
                               </div>
                             </div>
                           )}
                         </div>
+                        
+                        <Separator className="my-4" />
+                        <p className="text-sm font-medium mb-2">Or add an image by URL</p>
                         
                         <div className="flex gap-2">
                           <Input
@@ -665,7 +711,7 @@ const AdminAddProduct = () => {
                             onClick={handleAddImageUrl}
                           >
                             <Plus className="mr-2 h-4 w-4" />
-                            Add Image
+                            Add URL
                           </Button>
                         </div>
                       </FormItem>
