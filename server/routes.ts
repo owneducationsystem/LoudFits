@@ -846,7 +846,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Register client with identifier (userId, adminId, etc.)
         if (data.type === 'register') {
-          const { id, role } = data;
+          const { id, role } = data.data;
           const clientId = `${role}:${id}`;
           connectedClients.set(clientId, ws);
           console.log(`Client registered: ${clientId}`);
@@ -855,7 +855,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ws.send(JSON.stringify({ 
             type: 'registered', 
             success: true, 
-            timestamp: new Date().toISOString() 
+            timestamp: new Date().toISOString(),
+            data: { clientId }
           }));
         }
       } catch (error) {

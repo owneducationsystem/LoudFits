@@ -56,7 +56,7 @@ const AdminDashboard: React.FC = () => {
         const message = {
           type: 'register',
           data: { 
-            id: `admin:${adminId}`,
+            id: adminId,
             role: 'admin' 
           },
           timestamp: new Date().toISOString()
