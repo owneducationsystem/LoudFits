@@ -33,8 +33,24 @@ console.log("Firebase config (without sensitive data):", {
 
 // Initialize Firebase
 let app: any;
-let auth = null as any;
-let googleProvider = null as any;
+let auth: any;
+let googleProvider: GoogleAuthProvider | null = null;
+
+// Initialize a mock provider for type safety
+const createMockAuth = () => {
+  console.error("Using mock Firebase auth - authentication features will be unavailable");
+  return {
+    currentUser: null,
+    onAuthStateChanged: () => () => {},
+    signInWithPopup: () => Promise.reject(new Error("Firebase not initialized")),
+    signInWithRedirect: () => { throw new Error("Firebase not initialized"); },
+    signInWithEmailAndPassword: () => Promise.reject(new Error("Firebase not initialized")),
+    createUserWithEmailAndPassword: () => Promise.reject(new Error("Firebase not initialized")),
+    sendPasswordResetEmail: () => Promise.reject(new Error("Firebase not initialized")),
+    signOut: () => Promise.reject(new Error("Firebase not initialized")),
+    getRedirectResult: () => Promise.resolve(null)
+  };
+};
 
 try {
   // Only initialize Firebase if required config is present
@@ -45,33 +61,13 @@ try {
     console.log("Firebase initialized successfully");
   } else {
     console.error("Firebase initialization skipped due to missing configuration");
-    // Create fallback objects to prevent crashes
-    auth = { 
-      currentUser: null,
-      onAuthStateChanged: () => {},
-      signInWithPopup: async () => { throw new Error("Firebase not initialized"); },
-      signInWithRedirect: () => { throw new Error("Firebase not initialized"); },
-      signInWithEmailAndPassword: async () => { throw new Error("Firebase not initialized"); },
-      createUserWithEmailAndPassword: async () => { throw new Error("Firebase not initialized"); },
-      sendPasswordResetEmail: async () => { throw new Error("Firebase not initialized"); },
-      signOut: async () => { throw new Error("Firebase not initialized"); }
-    };
-    googleProvider = { setCustomParameters: () => {} };
+    auth = createMockAuth();
+    googleProvider = null;
   }
 } catch (error) {
   console.error("Error initializing Firebase:", error);
-  // Create fallback objects to prevent crashes
-  auth = { 
-    currentUser: null,
-    onAuthStateChanged: () => {},
-    signInWithPopup: async () => { throw new Error("Firebase initialization failed"); },
-    signInWithRedirect: () => { throw new Error("Firebase initialization failed"); },
-    signInWithEmailAndPassword: async () => { throw new Error("Firebase initialization failed"); },
-    createUserWithEmailAndPassword: async () => { throw new Error("Firebase initialization failed"); },
-    sendPasswordResetEmail: async () => { throw new Error("Firebase initialization failed"); },
-    signOut: async () => { throw new Error("Firebase initialization failed"); }
-  };
-  googleProvider = { setCustomParameters: () => {} };
+  auth = createMockAuth();
+  googleProvider = null;
 }
 
 // Configure Google provider with additional parameters for Replit environment
@@ -86,6 +82,11 @@ if (googleProvider && typeof googleProvider.setCustomParameters === 'function') 
 // Authentication functions
 export const signInWithGoogle = async (): Promise<UserCredential> => {
   try {
+    // Make sure we have a provider before attempting
+    if (!googleProvider) {
+      throw new Error("Google authentication provider not available");
+    }
+    
     console.log("Attempting sign in with Google popup...");
     // In Replit, popup may be blocked, so we'll try popup first, then fall back to redirect
     return await signInWithPopup(auth, googleProvider);
@@ -95,10 +96,15 @@ export const signInWithGoogle = async (): Promise<UserCredential> => {
     // Check if this is a popup blocked error
     if (error instanceof Error && error.message.includes('popup')) {
       console.log("Popup blocked, falling back to redirect...");
+      
       // If popup is blocked, try redirect flow instead
-      signInWithGoogleRedirect();
-      // This function won't return as the page will redirect
-      throw new Error("Redirecting to Google authentication. Please wait...");
+      if (googleProvider) {
+        signInWithGoogleRedirect();
+        // This function won't return as the page will redirect
+        throw new Error("Redirecting to Google authentication. Please wait...");
+      } else {
+        throw new Error("Google authentication provider not available");
+      }
     }
     
     // Re-throw other errors
@@ -108,6 +114,12 @@ export const signInWithGoogle = async (): Promise<UserCredential> => {
 
 export const signInWithGoogleRedirect = () => {
   console.log("Using redirect method for Google sign-in");
+  
+  if (!googleProvider) {
+    console.error("Google provider not available, cannot redirect");
+    throw new Error("Google authentication provider not available");
+  }
+  
   return signInWithRedirect(auth, googleProvider);
 };
 

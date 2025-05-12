@@ -116,8 +116,23 @@ class GlobalWebSocketService {
       // Log the WebSocket URL for debugging
       console.log('Attempting to connect to WebSocket URL:', wsUrl);
       
-      // Create WebSocket
-      const socket = new WebSocket(wsUrl) as EnhancedWebSocket;
+      // Create WebSocket with proper error handling
+      let socket: EnhancedWebSocket;
+      
+      try {
+        socket = new WebSocket(wsUrl) as EnhancedWebSocket;
+      } catch (e) {
+        console.error('Error creating WebSocket connection:', e);
+        // Schedule a reconnect attempt
+        const reconnectInterval = this.options.reconnectInterval;
+        setTimeout(() => {
+          console.log('Attempting to reconnect...');
+          this.connect();
+        }, reconnectInterval);
+        // Raise the error event
+        this.events.emit('error', e);
+        return this;
+      }
       this.socket = socket;
       
       // Connection opened
@@ -206,6 +221,24 @@ class GlobalWebSocketService {
       this.log('Sending ping');
       this.send('ping', { timestamp: new Date().toISOString() });
     }
+  }
+
+  /**
+   * Public method to force a reconnection
+   */
+  reconnect(): this {
+    this.log('Manual reconnection requested');
+    
+    // Close existing connection if it exists
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.close();
+    }
+    
+    // Reset reconnect attempts to ensure faster reconnect
+    this.reconnectAttempts = 0;
+    
+    // Connect again
+    return this.connect();
   }
 
   /**
