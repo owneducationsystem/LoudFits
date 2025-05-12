@@ -1,57 +1,80 @@
 import React from 'react';
-import { useAdminWebSocket } from '@/hooks/use-admin-websocket';
-import { Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertCircle, CheckCircle2, WifiOff } from 'lucide-react';
 
 interface AdminWebSocketIndicatorProps {
-  adminId: number;
+  connected: boolean;
+  registered: boolean;
+  adminId?: number;
 }
 
-const AdminWebSocketIndicator: React.FC<AdminWebSocketIndicatorProps> = ({ adminId }) => {
-  const { connected, registered, reconnect } = useAdminWebSocket({
-    adminId,
-    autoConnect: true,
-  });
+const AdminWebSocketIndicator: React.FC<AdminWebSocketIndicatorProps> = ({
+  connected,
+  registered,
+  adminId,
+}) => {
+  const getStatusColor = () => {
+    if (connected && registered) return 'text-green-500';
+    if (connected) return 'text-yellow-500';
+    return 'text-red-500';
+  };
+
+  const getStatusIcon = () => {
+    if (connected && registered) {
+      return <CheckCircle2 className={`w-4 h-4 ${getStatusColor()}`} />;
+    }
+    if (connected) {
+      return <AlertCircle className={`w-4 h-4 ${getStatusColor()}`} />;
+    }
+    return <WifiOff className={`w-4 h-4 ${getStatusColor()}`} />;
+  };
+
+  const getStatusText = () => {
+    if (connected && registered) {
+      return `Connected to WebSocket (Admin ID: ${adminId})`;
+    }
+    if (connected) {
+      return 'Connected but not registered as admin yet';
+    }
+    return 'Disconnected from WebSocket server';
+  };
+  
+  const getStatusBadge = () => {
+    const baseClasses = "text-xs font-medium px-2 py-1 rounded-full";
+    
+    if (connected && registered) {
+      return `${baseClasses} bg-green-100 text-green-800`;
+    }
+    if (connected) {
+      return `${baseClasses} bg-yellow-100 text-yellow-800`;
+    }
+    return `${baseClasses} bg-red-100 text-red-800`;
+  };
 
   return (
     <TooltipProvider>
-      <div className="flex items-center gap-2">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center">
-              <div className={`h-2 w-2 rounded-full mr-1 ${connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm font-medium">
-                {connected ? 'Connected' : 'Disconnected'}
-              </span>
-              <span className="ml-1 text-xs text-muted-foreground">
-                {registered ? '(Registered)' : ''}
-              </span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center cursor-help">
+            {getStatusIcon()}
+            <span className="ml-1.5 text-xs text-muted-foreground">
+              {connected && registered ? 'Connected' : connected ? 'Connecting...' : 'Disconnected'}
+            </span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="flex flex-col items-center p-1">
+            <div className={getStatusBadge()}>
+              {connected && registered 
+                ? 'Real-time connection active' 
+                : connected 
+                ? 'Partially connected' 
+                : 'Connection offline'}
             </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <div className="text-xs space-y-1">
-              <p>WebSocket Status: {connected ? 'Connected' : 'Disconnected'}</p>
-              <p>Admin Registration: {registered ? 'Registered' : 'Not Registered'}</p>
-              <p>Admin ID: {adminId}</p>
-            </div>
-          </TooltipContent>
-        </Tooltip>
-        
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button 
-              onClick={reconnect}
-              className="p-1 rounded-full hover:bg-muted flex items-center justify-center"
-              aria-label="Reconnect WebSocket"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p className="text-xs">Reconnect WebSocket</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
+            <p className="text-xs mt-1">{getStatusText()}</p>
+          </div>
+        </TooltipContent>
+      </Tooltip>
     </TooltipProvider>
   );
 };

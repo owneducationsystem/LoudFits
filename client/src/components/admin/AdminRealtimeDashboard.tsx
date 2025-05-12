@@ -1,185 +1,214 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAdminRealtime } from '@/hooks/use-admin-realtime';
-import { useAdminWebSocket } from '@/hooks/use-admin-websocket';
-import { AlertCircle, Bell, CheckCircle, Clock, User, Package, CreditCard, Activity, RefreshCw } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { formatDistanceToNow } from 'date-fns';
-
-interface Event {
-  id: string;
-  type: string;
-  message: string;
-  timestamp: string;
-  data?: any;
-}
-
-const eventIcons = {
-  order_update: <Package className="w-5 h-5" />,
-  user_signup: <User className="w-5 h-5" />,
-  product_update: <CreditCard className="w-5 h-5" />,
-  stock_alert: <AlertCircle className="w-5 h-5" />,
-  connection: <Activity className="w-5 h-5" />,
-  registration: <CheckCircle className="w-5 h-5" />,
-  error: <AlertCircle className="w-5 h-5 text-destructive" />,
-  default: <Bell className="w-5 h-5" />
-};
-
-const getEventIcon = (type: string) => {
-  const key = type.toLowerCase() as keyof typeof eventIcons;
-  return eventIcons[key] || eventIcons.default;
-};
-
-const getEventColor = (type: string) => {
-  switch (type.toLowerCase()) {
-    case 'order_update':
-      return 'bg-blue-50 border-blue-100 text-blue-700';
-    case 'user_signup':
-      return 'bg-green-50 border-green-100 text-green-700';
-    case 'product_update':
-      return 'bg-purple-50 border-purple-100 text-purple-700';
-    case 'stock_alert':
-      return 'bg-orange-50 border-orange-100 text-orange-700';
-    case 'error':
-      return 'bg-red-50 border-red-100 text-red-700';
-    case 'connection':
-      return 'bg-teal-50 border-teal-100 text-teal-700';
-    case 'registration':
-      return 'bg-indigo-50 border-indigo-100 text-indigo-700';
-    default:
-      return 'bg-gray-50 border-gray-100 text-gray-700';
-  }
-};
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Package, 
+  User, 
+  AlertTriangle, 
+  Clock, 
+  ShoppingBag,
+  RefreshCw,
+  Bell
+} from 'lucide-react';
 
 interface AdminRealtimeDashboardProps {
   adminId: number;
-  maxEvents?: number;
 }
 
-export const AdminRealtimeDashboard: React.FC<AdminRealtimeDashboardProps> = ({ 
-  adminId,
-  maxEvents = 30
-}) => {
-  const [events, setEvents] = useState<Event[]>([]);
-  const { toast } = useToast();
-  const { connected, registered, reconnect } = useAdminWebSocket({ 
-    adminId, 
-    autoConnect: true 
+interface AdminEvent {
+  id: string;
+  type: string;
+  data: any;
+  timestamp: string;
+}
+
+const EVENT_COLORS: Record<string, string> = {
+  order_update: 'bg-blue-100 text-blue-800 border-blue-200',
+  user_signup: 'bg-green-100 text-green-800 border-green-200',
+  product_update: 'bg-purple-100 text-purple-800 border-purple-200',
+  stock_alert: 'bg-red-100 text-red-800 border-red-200',
+  payment: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  default: 'bg-gray-100 text-gray-800 border-gray-200'
+};
+
+const EVENT_ICONS: Record<string, React.ReactNode> = {
+  order_update: <Package className="w-4 h-4" />,
+  user_signup: <User className="w-4 h-4" />,
+  product_update: <ShoppingBag className="w-4 h-4" />,
+  stock_alert: <AlertTriangle className="w-4 h-4" />,
+  payment: <RefreshCw className="w-4 h-4" />,
+  default: <Bell className="w-4 h-4" />
+};
+
+const AdminRealtimeDashboard: React.FC<AdminRealtimeDashboardProps> = ({ adminId }) => {
+  const [activeTab, setActiveTab] = useState('all');
+  const [events, setEvents] = useState<AdminEvent[]>([]);
+  const maxEvents = 20; // Maximum number of events to display
+
+  // Query to fetch past events from API
+  const { data: pastEvents = [], refetch, isLoading } = useQuery({
+    queryKey: ['/api/admin/events'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/events');
+      if (!response.ok) throw new Error('Failed to fetch events');
+      return response.json();
+    },
   });
 
-  // Subscribe to realtime events
-  const { events: realtimeEvents } = useAdminRealtime<Event>({ 
+  // Set up WebSocket for real-time events
+  const { addEvent, events: realtimeEvents, clearEvents } = useAdminRealtime<AdminEvent>({ 
     adminId, 
-    enabled: connected && registered 
+    enabled: true
   });
 
-  // Load initial events from API
+  // Combine past events with realtime events
   useEffect(() => {
-    if (registered) {
-      fetch('/api/admin/events')
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            setEvents(prev => {
-              // Merge with existing events, avoiding duplicates
-              const merged = [...prev];
-              data.forEach(event => {
-                if (!merged.some(e => e.id === event.id)) {
-                  merged.push(event);
-                }
-              });
-              // Sort by timestamp descending and limit to maxEvents
-              return merged
-                .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                .slice(0, maxEvents);
-            });
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching events:', error);
-        });
-    }
-  }, [registered, maxEvents]);
+    // Combined and sorted events
+    const combinedEvents = [...pastEvents, ...realtimeEvents]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, maxEvents);
+    
+    setEvents(combinedEvents);
+  }, [pastEvents, realtimeEvents]);
 
-  // Update events when new realtime events arrive
-  useEffect(() => {
-    if (realtimeEvents?.length) {
-      const lastEvent = realtimeEvents[realtimeEvents.length - 1];
-      
-      // Add the event to our state
-      setEvents(prev => {
-        const newEvents = [...prev];
-        if (!newEvents.some(e => e.id === lastEvent.id)) {
-          newEvents.unshift(lastEvent);
-        }
-        return newEvents.slice(0, maxEvents);
-      });
-      
-      // Show toast notification for the event
-      toast({
-        title: `New ${lastEvent.type} event`,
-        description: lastEvent.message,
-        variant: 'default',
-      });
-    }
-  }, [realtimeEvents, toast, maxEvents]);
+  // Filter events based on active tab
+  const filteredEvents = activeTab === 'all' 
+    ? events 
+    : events.filter(event => event.type === activeTab);
+
+  // Format timestamp to readable time
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
+  // Get event color class based on type
+  const getEventColor = (type: string) => {
+    return EVENT_COLORS[type] || EVENT_COLORS.default;
+  };
+
+  // Get event icon based on type
+  const getEventIcon = (type: string) => {
+    return EVENT_ICONS[type] || EVENT_ICONS.default;
+  };
+
+  // Reset all events
+  const handleReset = () => {
+    clearEvents();
+    refetch();
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Real-time Events</h2>
-        <div className="flex items-center gap-2">
-          <div className={`px-2 py-1 rounded-full text-xs font-medium ${connected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-            {connected ? 'Connected' : 'Disconnected'}
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center">
+            <Bell className="w-5 h-5 mr-2" />
+            <span>Real-time Events</span>
           </div>
-          <button 
-            onClick={reconnect}
-            className="p-1 rounded-full hover:bg-gray-100"
-            title="Reconnect WebSocket"
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleReset}
+            disabled={isLoading}
+            className="ml-auto"
           >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-      
-      <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
-        {events.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
-            <p>No events received yet</p>
-            <p className="text-sm">Events will appear here in real-time</p>
-          </div>
-        ) : (
-          events.map(event => (
-            <div 
-              key={event.id} 
-              className={`p-3 rounded-lg border flex items-start gap-3 ${getEventColor(event.type)}`}
-            >
-              <div className="mt-0.5">
-                {getEventIcon(event.type)}
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </CardTitle>
+        <CardDescription>
+          Monitor real-time events and activities across your store
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="all">All Events</TabsTrigger>
+            <TabsTrigger value="order_update">Orders</TabsTrigger>
+            <TabsTrigger value="user_signup">Users</TabsTrigger>
+            <TabsTrigger value="product_update">Products</TabsTrigger>
+            <TabsTrigger value="stock_alert">Alerts</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value={activeTab} className="space-y-4">
+            {filteredEvents.length === 0 ? (
+              <div className="text-center p-6 text-muted-foreground">
+                <Bell className="w-12 h-12 mx-auto opacity-20 mb-2" />
+                <p>No {activeTab === 'all' ? '' : activeTab} events to display.</p>
+                <p className="text-sm mt-1">Events will appear here in real-time.</p>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start">
-                  <h3 className="font-medium truncate">{event.type}</h3>
-                  <span className="text-xs flex items-center whitespace-nowrap ml-2">
-                    <Clock className="w-3 h-3 mr-1 opacity-70" />
-                    {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
-                  </span>
-                </div>
-                <p className="text-sm opacity-90">{event.message}</p>
-                {event.data && (
-                  <details className="mt-1">
-                    <summary className="text-xs cursor-pointer hover:underline">View details</summary>
-                    <pre className="text-xs mt-2 p-2 bg-white bg-opacity-50 rounded overflow-x-auto">
-                      {JSON.stringify(event.data, null, 2)}
-                    </pre>
-                  </details>
-                )}
+            ) : (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                {filteredEvents.map((event, index) => (
+                  <div 
+                    key={`${event.id}-${index}`} 
+                    className="border rounded-lg p-3 transition-all hover:shadow-sm"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center">
+                        <Badge 
+                          variant="outline" 
+                          className={`${getEventColor(event.type)} flex items-center gap-1 mr-2`}
+                        >
+                          {getEventIcon(event.type)}
+                          {event.type.replace('_', ' ')}
+                        </Badge>
+                        <div className="text-xs text-muted-foreground flex items-center">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {formatTime(event.timestamp)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm">
+                      {event.type === 'order_update' && (
+                        <p>
+                          <strong>Order #{event.data.orderId}</strong> status changed to <strong>{event.data.status}</strong>
+                          {event.data.message && <span> - {event.data.message}</span>}
+                        </p>
+                      )}
+                      
+                      {event.type === 'user_signup' && (
+                        <p>
+                          New user <strong>{event.data.name}</strong> ({event.data.email}) has registered
+                        </p>
+                      )}
+                      
+                      {event.type === 'product_update' && (
+                        <p>
+                          Product <strong>{event.data.name}</strong> has been updated - 
+                          Price: ₹{event.data.price}, Stock: {event.data.stock}
+                        </p>
+                      )}
+                      
+                      {event.type === 'stock_alert' && (
+                        <p>
+                          <strong>Low stock alert</strong> for {event.data.name} - 
+                          Only {event.data.currentStock} left (below threshold of {event.data.threshold})
+                        </p>
+                      )}
+                      
+                      {!['order_update', 'user_signup', 'product_update', 'stock_alert'].includes(event.type) && (
+                        <pre className="text-xs bg-muted p-2 rounded-md overflow-x-auto">
+                          {JSON.stringify(event.data, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+      <CardFooter className="border-t pt-4 text-xs text-muted-foreground">
+        Displaying {filteredEvents.length} of {events.length} events • Admin ID: {adminId}
+      </CardFooter>
+    </Card>
   );
 };
 
