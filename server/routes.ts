@@ -865,6 +865,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.sendFile("admin-websocket-test.html", { root: "." });
   });
   
+  // Admin events API - Get past events
+  app.get("/api/admin/events", async (req, res) => {
+    try {
+      // Get events from storage (we'll use a dummy implementation for now)
+      // In a real app, this would fetch from the database
+      const events = [
+        {
+          id: "evt-001",
+          type: "order_update",
+          data: {
+            orderId: 12345,
+            status: "shipped",
+            customer: "John Smith",
+            timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() // 5 minutes ago
+          },
+          timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString()
+        },
+        {
+          id: "evt-002",
+          type: "user_signup",
+          data: {
+            userId: 5678,
+            name: "Sarah Johnson",
+            email: "sarah@example.com",
+            signupDate: new Date(Date.now() - 1000 * 60 * 30).toISOString() // 30 minutes ago
+          },
+          timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString()
+        }
+      ];
+      
+      res.json(events);
+    } catch (error) {
+      console.error('Error fetching admin events:', error);
+      res.status(500).json({ message: "Failed to fetch events" });
+    }
+  });
+  
+  // Admin stats API - Get dashboard statistics
+  app.get("/api/admin/stats", async (req, res) => {
+    try {
+      // Get stats from storage (we'll use a dummy implementation for now)
+      // In a real app, this would fetch from the database
+      const stats = {
+        users: await storage.countUsers(),
+        products: await storage.countProducts(),
+        orders: await storage.countOrders(),
+        lowStock: 2, // This would be a real count in production
+        revenue: {
+          daily: 1250,
+          weekly: 8750,
+          monthly: 32500
+        }
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching admin stats:', error);
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
   // WebSocket Events API - for sending events via HTTP (temporarily without auth for testing)
   app.post("/api/admin/events", async (req, res) => {
     try {
