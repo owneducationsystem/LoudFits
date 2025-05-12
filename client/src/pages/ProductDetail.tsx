@@ -11,7 +11,9 @@ import {
   TruckIcon, 
   RotateCcw, 
   Ruler,
-  Upload
+  Upload,
+  Plus,
+  Minus
 } from "lucide-react";
 import { 
   Tabs, 

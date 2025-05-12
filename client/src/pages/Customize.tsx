@@ -35,7 +35,8 @@ const Customize = () => {
   const [selectedColor, setSelectedColor] = useState<string>("White");
   const [quantity, setQuantity] = useState(1);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [imagePosition, setImagePosition] = useState([50]); // Center position - 0 to 100
+  const [verticalPosition, setVerticalPosition] = useState([50]); // Vertical position - 0 to 100
+  const [horizontalPosition, setHorizontalPosition] = useState([50]); // Horizontal position - 0 to 100
   const [imageSize, setImageSize] = useState([50]); // 50% size - 0 to 100
   const [isLoading, setIsLoading] = useState(false);
   
@@ -103,7 +104,8 @@ const Customize = () => {
 
   // Reset position and size
   const resetCustomization = () => {
-    setImagePosition([50]);
+    setVerticalPosition([50]);
+    setHorizontalPosition([50]);
     setImageSize([50]);
   };
 
@@ -152,7 +154,8 @@ const Customize = () => {
       product: baseProduct,
       customization: {
         image: uploadedImage,
-        position: imagePosition[0],
+        verticalPosition: verticalPosition[0],
+        horizontalPosition: horizontalPosition[0],
         size: imageSize[0]
       }
     });
@@ -218,8 +221,8 @@ const Customize = () => {
                 <motion.div
                   className="absolute"
                   style={{ 
-                    top: `${imagePosition[0]}%`,
-                    left: "50%",
+                    top: `${verticalPosition[0]}%`,
+                    left: `${horizontalPosition[0]}%`,
                     transform: `translate(-50%, -50%) scale(${imageSize[0] / 50})`,
                     maxWidth: "60%",
                     maxHeight: "60%"
@@ -231,14 +234,21 @@ const Customize = () => {
                     bottom: 0,
                     left: 0
                   }}
-                  onDragEnd={(_, info) => {
+                  onDragEnd={(e, info) => {
                     // Update position based on drag end position
-                    const container = info.node.parentElement;
+                    const target = e.target as HTMLDivElement;
+                    const container = target.parentElement;
                     if (container) {
                       const rect = container.getBoundingClientRect();
                       const x = (info.point.x - rect.left) / rect.width * 100;
                       const y = (info.point.y - rect.top) / rect.height * 100;
-                      setImagePosition([y]);
+                      
+                      // Constrain within safe boundaries (20-80%)
+                      const safeX = Math.max(20, Math.min(80, x));
+                      const safeY = Math.max(20, Math.min(80, y));
+                      
+                      setHorizontalPosition([safeX]);
+                      setVerticalPosition([safeY]);
                     }
                   }}
                 >
@@ -379,12 +389,12 @@ const Customize = () => {
                       </div>
                     </div>
                     
-                    {/* Image Position Slider */}
+                    {/* Vertical Position Slider */}
                     <div>
                       <h3 className="font-bold mb-2">Vertical Position</h3>
                       <Slider
-                        value={imagePosition}
-                        onValueChange={setImagePosition}
+                        value={verticalPosition}
+                        onValueChange={setVerticalPosition}
                         min={20}
                         max={80}
                         step={1}
@@ -393,6 +403,23 @@ const Customize = () => {
                       <div className="flex justify-between text-xs text-gray-500">
                         <span>Higher</span>
                         <span>Lower</span>
+                      </div>
+                    </div>
+                    
+                    {/* Horizontal Position Slider */}
+                    <div>
+                      <h3 className="font-bold mb-2">Horizontal Position</h3>
+                      <Slider
+                        value={horizontalPosition}
+                        onValueChange={setHorizontalPosition}
+                        min={20}
+                        max={80}
+                        step={1}
+                        className="py-4"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>Left</span>
+                        <span>Right</span>
                       </div>
                     </div>
                     
