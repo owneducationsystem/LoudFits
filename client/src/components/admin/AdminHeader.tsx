@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Home, Package, Users, Settings, BarChart3, ShoppingCart, LogOut, Bell, Radio } from 'lucide-react';
+import { Home, Package, Users, Settings, BarChart3, ShoppingCart, LogOut, Bell, Radio, LayoutDashboard } from 'lucide-react';
 
 interface AdminHeaderProps {
   title?: string;
@@ -25,6 +25,15 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ title = 'Admin Dashboard' }) 
               onClick={() => navigate('/admin')}
             >
               <Home className="h-4 w-4 mr-2" />
+              Home
+            </Button>
+            
+            <Button
+              variant={location === '/admin/dashboard' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/admin/dashboard')}
+            >
+              <LayoutDashboard className="h-4 w-4 mr-2" />
               Dashboard
             </Button>
             
