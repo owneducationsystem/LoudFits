@@ -149,10 +149,12 @@ const ProductDetail = () => {
   };
 
   const handleShare = () => {
+    if (!product) return;
+    
     if (navigator.share) {
       navigator.share({
-        title: displayProduct.name,
-        text: displayProduct.description,
+        title: product.name,
+        text: product.description,
         url: window.location.href,
       }).catch(console.error);
     } else {
@@ -183,12 +185,12 @@ const ProductDetail = () => {
     );
   }
 
-  if (error) {
+  if (error || !product) {
     console.error("Error loading product:", error);
     return (
       <div className="container mx-auto px-4 py-8 text-center">
         <p className="text-xl text-red-500">
-          Error loading product. Please try again later.
+          {error ? "Error loading product. Please try again later." : "Product not found."}
         </p>
         <Button 
           className="mt-4" 
@@ -203,8 +205,8 @@ const ProductDetail = () => {
   return (
     <>
       <Helmet>
-        <title>{displayProduct.name} - Loudfits</title>
-        <meta name="description" content={displayProduct.description} />
+        <title>{product.name} - Loudfits</title>
+        <meta name="description" content={product.description} />
       </Helmet>
 
       <div className="container mx-auto px-4 py-8">
@@ -216,8 +218,8 @@ const ProductDetail = () => {
               <AnimatePresence mode="wait">
                 <motion.img
                   key={currentImageIndex}
-                  src={displayProduct.images[currentImageIndex]}
-                  alt={displayProduct.name}
+                  src={product.images[currentImageIndex]}
+                  alt={product.name}
                   className="w-full h-full object-cover"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -246,7 +248,7 @@ const ProductDetail = () => {
 
             {/* Thumbnail Navigation */}
             <div className="flex mt-4 gap-2">
-              {displayProduct.images.map((image, index) => (
+              {product.images.map((image: string, index: number) => (
                 <button
                   key={index}
                   className={`w-16 h-16 rounded-md overflow-hidden border-2 ${
@@ -258,7 +260,7 @@ const ProductDetail = () => {
                 >
                   <img
                     src={image}
-                    alt={`${displayProduct.name} thumbnail ${index + 1}`}
+                    alt={`${product.name} thumbnail ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
                 </button>
