@@ -1,525 +1,504 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { Helmet } from "react-helmet";
 import Webcam from "react-webcam";
-import { motion } from "framer-motion";
 import * as THREE from "three";
-import { useQuery } from "@tanstack/react-query";
-import { 
-  Camera, 
-  ArrowLeft, 
-  RotateCcw, 
-  ImagePlus,
-  ZoomIn,
-  ZoomOut,
-  MoveHorizontal,
-  MoveVertical,
-  RefreshCcw,
-  Share2
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Label } from "@/components/ui/label";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
+import { 
+  ArrowLeft, 
+  Camera, 
+  Maximize, 
+  Minimize, 
+  RotateCw, 
+  Share2,
+  Download,
+  RefreshCw
+} from "lucide-react";
 import { Product } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
-const ARVirtualTryOn = () => {
+const VirtualTryOn = () => {
   const { id } = useParams<{ id: string }>();
-  const [, navigate] = useLocation();
+  const [_, navigate] = useLocation();
   const { toast } = useToast();
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [showControls, setShowControls] = useState(true);
-  const [tshirtPosition, setTshirtPosition] = useState({ x: 0, y: 0 });
-  const [tshirtScale, setTshirtScale] = useState(1);
-  const [tshirtRotation, setTshirtRotation] = useState(0);
-  const [activeTab, setActiveTab] = useState("position");
+  const [cameraReady, setCameraReady] = useState<boolean>(false);
+  const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  
+  // T-shirt positioning state
+  const [tShirtScale, setTShirtScale] = useState<number>(50);
+  const [tShirtPosition, setTShirtPosition] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
+  const [tShirtRotation, setTShirtRotation] = useState<number>(0);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   
   // Get product data
   const { data: product, isLoading, error } = useQuery<Product>({
-    queryKey: [`/api/products/${id}`],
+    queryKey: ["/api/products", id],
+    queryFn: ({ signal }) => 
+      fetch(`/api/products/${id}`, { signal }).then(res => {
+        if (!res.ok) throw new Error("Failed to fetch product");
+        return res.json();
+      }),
   });
   
-  // Initialize AR
-  useEffect(() => {
-    if (product && cameraActive && webcamRef.current && canvasRef.current && !isInitialized) {
-      initializeAR();
-    }
-    
-    return () => {
-      // Cleanup if needed
-      if (isInitialized) {
-        // Clean up AR resources
-      }
-    };
-  }, [product, cameraActive, webcamRef.current, canvasRef.current]);
-  
-  // Initialize AR functionality
-  const initializeAR = async () => {
-    try {
-      setIsInitialized(true);
-      
-      // Start rendering loop
-      const renderFrame = () => {
-        if (!webcamRef.current || !canvasRef.current || !cameraActive) return;
-        
-        const video = webcamRef.current.video;
-        const canvas = canvasRef.current;
-        
-        if (video && canvas) {
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return;
-          
-          // Set canvas dimensions to match video
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          
-          // Draw the video frame
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          
-          // Draw the t-shirt overlay with current position, scale, and rotation
-          if (product && product.images && product.images.length > 0) {
-            drawTShirtOverlay(ctx, tshirtPosition, tshirtScale, tshirtRotation, product.images[0]);
-          }
-        }
-        
-        // Continue the render loop if camera is still active
-        if (cameraActive) {
-          requestAnimationFrame(renderFrame);
-        }
-      };
-      
-      // Start the rendering loop
-      renderFrame();
-      
-    } catch (error) {
-      console.error("Error initializing AR:", error);
-      toast({
-        title: "AR Initialization Failed",
-        description: "Failed to initialize the AR experience. Please try again.",
-        variant: "destructive",
-      });
-      setIsInitialized(false);
+  // Handle back button
+  const handleBack = () => {
+    if (capturedImage) {
+      setCapturedImage(null);
+    } else {
+      navigate(`/product/${id}`);
     }
   };
   
-  // Function to draw the t-shirt overlay on the canvas
-  const drawTShirtOverlay = (
-    ctx: CanvasRenderingContext2D, 
-    position: { x: number, y: number }, 
-    scale: number,
-    rotation: number,
-    imageUrl: string
-  ) => {
-    // Create an image element for the t-shirt
-    const tshirtImage = new Image();
-    tshirtImage.src = imageUrl;
-    
-    // Draw the t-shirt when image is loaded
-    tshirtImage.onload = () => {
-      if (!canvasRef.current) return;
-      
-      const canvas = canvasRef.current;
-      
-      // Center the image on the canvas with adjustments from user controls
-      const centerX = canvas.width / 2 + position.x;
-      const centerY = canvas.height / 2 + position.y;
-      
-      // Calculate width and height based on scale
-      const width = tshirtImage.width * scale;
-      const height = tshirtImage.height * scale;
-      
-      // Save the current context state
-      ctx.save();
-      
-      // Translate to the center point
-      ctx.translate(centerX, centerY);
-      
-      // Rotate
-      ctx.rotate(rotation * Math.PI / 180);
-      
-      // Draw the image centered
-      ctx.drawImage(tshirtImage, -width / 2, -height / 2, width, height);
-      
-      // Restore the context
-      ctx.restore();
-    };
-  };
-  
-  // Start AR experience
-  const startAR = () => {
-    setCameraActive(true);
-    setShowControls(true);
-    setCapturedImage(null);
-  };
-  
-  // Stop AR experience
-  const stopAR = () => {
-    setCameraActive(false);
-    setIsInitialized(false);
-  };
-  
-  // Capture current frame
+  // Handle camera capture
   const captureImage = () => {
-    if (!canvasRef.current) return;
+    if (!webcamRef.current) return;
     
-    try {
-      const dataUrl = canvasRef.current.toDataURL('image/png');
-      setCapturedImage(dataUrl);
-      setCameraActive(false);
+    setIsCapturing(true);
+    const imageSrc = webcamRef.current.getScreenshot();
+    
+    // Draw the t-shirt on the canvas
+    if (canvasRef.current && imageSrc) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
       
-      toast({
-        title: "Image Captured",
-        description: "Your virtual try-on image has been captured successfully!",
-      });
-    } catch (error) {
-      console.error("Error capturing image:", error);
-      toast({
-        title: "Capture Failed",
-        description: "Failed to capture the image. Please try again.",
-        variant: "destructive",
-      });
+      if (ctx) {
+        // Load the captured image
+        const img = new Image();
+        img.onload = () => {
+          // Draw the background
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          
+          // Draw the t-shirt
+          if (product?.images && product.images.length > 0) {
+            const tShirtImg = new Image();
+            tShirtImg.onload = () => {
+              // Calculate positioning
+              const scale = tShirtScale / 100;
+              const tShirtWidth = canvas.width * scale;
+              const tShirtHeight = (tShirtImg.height / tShirtImg.width) * tShirtWidth;
+              
+              const posX = (canvas.width * tShirtPosition.x / 100) - (tShirtWidth / 2);
+              const posY = (canvas.height * tShirtPosition.y / 100) - (tShirtHeight / 2);
+              
+              // Save context for rotation
+              ctx.save();
+              
+              // Translate to the center of where we want to draw the image
+              ctx.translate(
+                posX + tShirtWidth / 2,
+                posY + tShirtHeight / 2
+              );
+              
+              // Rotate the canvas around that point
+              ctx.rotate((tShirtRotation * Math.PI) / 180);
+              
+              // Draw the t-shirt
+              ctx.drawImage(
+                tShirtImg,
+                -tShirtWidth / 2,
+                -tShirtHeight / 2,
+                tShirtWidth,
+                tShirtHeight
+              );
+              
+              // Restore the context
+              ctx.restore();
+              
+              // Add product info and branding
+              ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+              ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+              
+              ctx.fillStyle = "white";
+              ctx.font = "bold 16px sans-serif";
+              ctx.fillText(`${product.name} - ${product.price}`, 10, canvas.height - 15);
+              
+              ctx.fillStyle = "white";
+              ctx.font = "12px sans-serif";
+              ctx.textAlign = "right";
+              ctx.fillText("Loudfits Virtual Try-On", canvas.width - 10, canvas.height - 15);
+              
+              // Set the captured image
+              setCapturedImage(canvas.toDataURL("image/png"));
+              setIsCapturing(false);
+            };
+            tShirtImg.src = product.images[0];
+          }
+        };
+        img.src = imageSrc;
+      }
     }
   };
   
-  // Reset t-shirt position and settings
-  const resetTShirt = () => {
-    setTshirtPosition({ x: 0, y: 0 });
-    setTshirtScale(1);
-    setTshirtRotation(0);
-  };
-  
-  // Share captured image
+  // Handle share functionality
   const shareImage = async () => {
     if (!capturedImage) return;
     
-    if (navigator.share) {
-      try {
+    try {
+      if (navigator.share) {
         const blob = await fetch(capturedImage).then(r => r.blob());
-        const file = new File([blob], "virtual-try-on.png", { type: "image/png" });
+        const file = new File([blob], "loudfits-try-on.png", { type: "image/png" });
         
         await navigator.share({
-          title: `Virtual Try-On - ${product?.name || "Loudfits T-Shirt"}`,
+          title: `${product?.name} Virtual Try-On`,
           text: "Check out how this t-shirt looks on me!",
           files: [file]
         });
-      } catch (error) {
-        console.error("Error sharing:", error);
+        
         toast({
-          title: "Share Failed",
-          description: "Failed to share the image. Please try again.",
-          variant: "destructive",
+          title: "Shared Successfully",
+          description: "Your virtual try-on has been shared!",
+        });
+      } else {
+        // Fallback for browsers that don't support Web Share API
+        toast({
+          title: "Share Not Supported",
+          description: "Your browser doesn't support direct sharing. Try downloading the image instead.",
+          variant: "destructive"
         });
       }
-    } else {
+    } catch (error) {
+      console.error("Error sharing:", error);
       toast({
-        title: "Sharing Not Supported",
-        description: "Your browser doesn't support the Web Share API. Try downloading the image instead.",
-        variant: "destructive",
+        title: "Share Failed",
+        description: "Could not share the image. Please try again.",
+        variant: "destructive"
       });
     }
   };
   
-  // Handle download of captured image
+  // Handle download functionality
   const downloadImage = () => {
     if (!capturedImage) return;
     
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = capturedImage;
-    link.download = `virtual-try-on-${product?.name || "tshirt"}.png`;
+    link.download = `loudfits-${product?.name.toLowerCase().replace(/\s+/g, "-")}-try-on.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    toast({
+      title: "Download Complete",
+      description: "Your virtual try-on image has been downloaded.",
+    });
   };
-
-  // If product is loading, show skeleton UI
+  
+  // Handle mouse/touch events for dragging
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX,
+      y: e.clientY
+    });
+  };
+  
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    setIsDragging(true);
+    setDragStart({
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    });
+  };
+  
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    
+    const deltaX = e.clientX - dragStart.x;
+    const deltaY = e.clientY - dragStart.y;
+    
+    // Calculate new position as percentage of container width/height
+    const container = e.currentTarget.getBoundingClientRect();
+    const deltaXPercent = (deltaX / container.width) * 100;
+    const deltaYPercent = (deltaY / container.height) * 100;
+    
+    setTShirtPosition({
+      x: Math.max(0, Math.min(100, tShirtPosition.x + deltaXPercent)),
+      y: Math.max(0, Math.min(100, tShirtPosition.y + deltaYPercent))
+    });
+    
+    setDragStart({
+      x: e.clientX,
+      y: e.clientY
+    });
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    
+    const deltaX = e.touches[0].clientX - dragStart.x;
+    const deltaY = e.touches[0].clientY - dragStart.y;
+    
+    // Calculate new position as percentage of container width/height
+    const container = e.currentTarget.getBoundingClientRect();
+    const deltaXPercent = (deltaX / container.width) * 100;
+    const deltaYPercent = (deltaY / container.height) * 100;
+    
+    setTShirtPosition({
+      x: Math.max(0, Math.min(100, tShirtPosition.x + deltaXPercent)),
+      y: Math.max(0, Math.min(100, tShirtPosition.y + deltaYPercent))
+    });
+    
+    setDragStart({
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    });
+  };
+  
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+  
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+  
+  // Add and remove event listeners
+  useEffect(() => {
+    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("touchend", handleTouchEnd);
+    
+    return () => {
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, []);
+  
+  // Reset camera
+  const resetCamera = () => {
+    setCapturedImage(null);
+    setTShirtScale(50);
+    setTShirtPosition({ x: 50, y: 50 });
+    setTShirtRotation(0);
+  };
+  
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-2 mb-6">
-          <Button variant="outline" size="icon" onClick={() => navigate(`/product/${id}`)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <Skeleton className="h-8 w-40" />
+      <div className="flex items-center justify-center min-h-screen bg-white">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-gray-200 border-t-[#582A34] rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading virtual try-on...</p>
         </div>
-        <Skeleton className="h-[600px] w-full rounded-md" />
       </div>
     );
   }
-
-  // If error or no product found
+  
   if (error || !product) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
-        <p className="text-muted-foreground mb-6">
-          The product you're looking for doesn't exist or there was an error loading it.
-        </p>
-        <Button onClick={() => navigate('/shop')}>
-          Return to Shop
-        </Button>
+      <div className="flex items-center justify-center min-h-screen bg-white">
+        <div className="text-center max-w-md px-4">
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Error</h2>
+          <p className="text-gray-600 mb-4">We couldn't load the virtual try-on experience. Please try again later.</p>
+          <Button onClick={() => navigate(`/product/${id}`)} variant="outline">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Product
+          </Button>
+        </div>
       </div>
     );
   }
-
+  
   return (
-    <>
+    <div className="min-h-screen bg-gray-50 pt-16 pb-8 px-4 sm:px-6">
       <Helmet>
-        <title>Virtual Try-On | {product.name}</title>
-        <meta name="description" content={`Try on ${product.name} virtually with AR technology`} />
+        <title>Virtual Try On - {product.name} | Loudfits</title>
+        <meta name="description" content={`Try on ${product.name} virtually using your camera. See how this Loudfits t-shirt looks on you before buying.`} />
       </Helmet>
       
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Left column - AR View */}
-          <div className="w-full md:w-2/3">
-            <div className="flex items-center gap-2 mb-6">
-              <Button variant="outline" size="icon" onClick={() => navigate(`/product/${id}`)}>
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <h1 className="text-2xl font-bold">
-                Virtual Try-On: {product.name}
-              </h1>
-            </div>
-            
-            <div className="relative rounded-lg overflow-hidden bg-black aspect-[4/3] flex items-center justify-center">
-              {cameraActive ? (
-                <>
-                  {/* Webcam (hidden, used for video feed) */}
-                  <Webcam 
-                    ref={webcamRef}
-                    audio={false}
-                    videoConstraints={{
-                      facingMode: "user"
-                    }}
-                    className="absolute inset-0 w-full h-full object-cover opacity-0"
-                  />
-                  
-                  {/* Canvas for AR overlay */}
-                  <canvas 
-                    ref={canvasRef} 
-                    className="w-full h-full object-contain"
-                  />
-                  
-                  {/* AR controls overlay */}
-                  {showControls && (
-                    <div className="absolute bottom-4 right-4 flex gap-2">
-                      <Button 
-                        variant="secondary" 
-                        size="icon"
-                        onClick={captureImage}
-                      >
-                        <Camera className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="secondary" 
-                        size="icon"
-                        onClick={resetTShirt}
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="destructive" 
-                        size="icon"
-                        onClick={stopAR}
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                capturedImage ? (
-                  <div className="relative w-full h-full">
-                    <img 
-                      src={capturedImage} 
-                      alt="Virtual Try-On" 
-                      className="w-full h-full object-contain"
-                    />
-                    <div className="absolute bottom-4 right-4 flex gap-2">
-                      <Button 
-                        onClick={downloadImage}
-                        variant="secondary"
-                      >
-                        Download
-                      </Button>
-                      <Button 
-                        onClick={shareImage}
-                        variant="secondary"
-                      >
-                        <Share2 className="h-4 w-4 mr-2" />
-                        Share
-                      </Button>
-                      <Button 
-                        onClick={startAR}
-                        variant="default"
-                      >
-                        Try Again
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-8 text-center">
-                    <Camera className="h-16 w-16 text-gray-400 mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Virtual Try-On</h3>
-                    <p className="text-muted-foreground mb-6 max-w-md">
-                      See how this t-shirt looks on you using your camera. Adjust the position and size for the best fit.
-                    </p>
-                    <Button onClick={startAR}>
-                      Start Camera
-                    </Button>
-                  </div>
-                )
-              )}
-            </div>
-          </div>
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <Button 
+            onClick={handleBack} 
+            variant="ghost" 
+            className="flex items-center text-lg font-medium"
+          >
+            <ArrowLeft className="mr-2 h-5 w-5" />
+            {capturedImage ? 'Back to Camera' : 'Back to Product'}
+          </Button>
           
-          {/* Right column - Controls */}
-          <div className="w-full md:w-1/3">
-            {cameraActive && (
-              <div className="rounded-lg border p-4">
-                <h2 className="text-lg font-semibold mb-4">Adjust T-Shirt</h2>
-                <Tabs 
-                  defaultValue="position" 
-                  value={activeTab}
-                  onValueChange={setActiveTab}
-                  className="w-full"
-                >
-                  <TabsList className="grid grid-cols-3 mb-6">
-                    <TabsTrigger value="position">
-                      <MoveHorizontal className="h-4 w-4 mr-2" />
-                      Position
-                    </TabsTrigger>
-                    <TabsTrigger value="size">
-                      <ZoomIn className="h-4 w-4 mr-2" />
-                      Size
-                    </TabsTrigger>
-                    <TabsTrigger value="rotation">
-                      <RefreshCcw className="h-4 w-4 mr-2" />
-                      Rotation
-                    </TabsTrigger>
-                  </TabsList>
-
-                  {/* Position Controls */}
-                  <TabsContent value="position" className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <Label>Horizontal Position</Label>
-                          <span>{tshirtPosition.x}</span>
-                        </div>
-                        <Slider
-                          value={[tshirtPosition.x]}
-                          min={-200}
-                          max={200}
-                          step={1}
-                          onValueChange={(value) => 
-                            setTshirtPosition(prev => ({ ...prev, x: value[0] }))
-                          }
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <Label>Vertical Position</Label>
-                          <span>{tshirtPosition.y}</span>
-                        </div>
-                        <Slider
-                          value={[tshirtPosition.y]}
-                          min={-200}
-                          max={200}
-                          step={1}
-                          onValueChange={(value) => 
-                            setTshirtPosition(prev => ({ ...prev, y: value[0] }))
-                          }
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  {/* Size Controls */}
-                  <TabsContent value="size" className="space-y-6">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <Label>Size</Label>
-                        <span>{tshirtScale.toFixed(1)}x</span>
-                      </div>
-                      <Slider
-                        value={[tshirtScale]}
-                        min={0.5}
-                        max={2}
-                        step={0.1}
-                        onValueChange={(value) => setTshirtScale(value[0])}
-                      />
-                    </div>
-                  </TabsContent>
-
-                  {/* Rotation Controls */}
-                  <TabsContent value="rotation" className="space-y-6">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <Label>Rotation</Label>
-                        <span>{tshirtRotation}°</span>
-                      </div>
-                      <Slider
-                        value={[tshirtRotation]}
-                        min={-180}
-                        max={180}
-                        step={1}
-                        onValueChange={(value) => setTshirtRotation(value[0])}
-                      />
-                    </div>
-                  </TabsContent>
-                </Tabs>
-                
-                <div className="mt-6">
-                  <Button 
-                    onClick={resetTShirt} 
-                    variant="outline" 
-                    className="w-full"
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Reset Adjustments
-                  </Button>
-                </div>
-              </div>
-            )}
-            
-            {/* Product info */}
-            <div className="mt-6 rounded-lg border p-4">
-              <div className="aspect-square rounded-md overflow-hidden mb-4">
-                <img 
-                  src={product.images[0]} 
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <h3 className="font-semibold text-lg mb-1">{product.name}</h3>
-              <p className="font-bold text-xl mb-2">₹{product.price.toString()}</p>
-              <p className="text-sm text-muted-foreground mb-4">{product.description.substring(0, 100)}...</p>
-              <Button 
-                onClick={() => navigate(`/product/${id}`)}
-                variant="outline" 
-                className="w-full"
-              >
-                View Product Details
-              </Button>
+          <h1 className="text-xl font-bold text-center">
+            Virtual Try-On
+          </h1>
+          
+          <div className="w-[100px]"></div> {/* Spacer for alignment */}
+        </div>
+        
+        {/* Product Info */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+          <div className="flex items-center">
+            <div className="w-16 h-16 rounded overflow-hidden mr-4">
+              <img 
+                src={product.images?.[0] || ''} 
+                alt={product.name} 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div>
+              <h2 className="font-bold text-lg">{product.name}</h2>
+              <p className="text-[#582A34] font-medium">{product.price}</p>
             </div>
           </div>
         </div>
+        
+        {/* Main Content */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          {/* Camera View / Captured Image */}
+          <div 
+            className="relative bg-black w-full" 
+            style={{ height: "60vh", maxHeight: "600px" }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+          >
+            {!capturedImage ? (
+              <>
+                <Webcam
+                  ref={webcamRef}
+                  screenshotFormat="image/jpeg"
+                  className="w-full h-full object-cover"
+                  onUserMedia={() => setCameraReady(true)}
+                  videoConstraints={{
+                    facingMode: "user"
+                  }}
+                />
+                
+                {/* T-shirt Overlay */}
+                {product.images && product.images.length > 0 && (
+                  <div 
+                    className="absolute pointer-events-none"
+                    style={{
+                      width: `${tShirtScale}%`,
+                      left: `${tShirtPosition.x}%`,
+                      top: `${tShirtPosition.y}%`,
+                      transform: `translate(-50%, -50%) rotate(${tShirtRotation}deg)`
+                    }}
+                  >
+                    <img 
+                      src={product.images[0]} 
+                      alt="T-shirt overlay" 
+                      className="w-full h-auto"
+                      style={{ opacity: 0.9 }}
+                    />
+                  </div>
+                )}
+                
+                {/* Drag Instruction */}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+                  Drag to position
+                </div>
+              </>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-black">
+                <img 
+                  src={capturedImage} 
+                  alt="Captured virtual try-on" 
+                  className="max-w-full max-h-full"
+                />
+              </div>
+            )}
+          </div>
+          
+          {/* Canvas for image processing - hidden */}
+          <canvas 
+            ref={canvasRef} 
+            width={1280} 
+            height={720} 
+            className="hidden"
+          />
+          
+          {/* Controls */}
+          <div className="p-4 bg-white">
+            {!capturedImage ? (
+              <>
+                {/* Camera Controls */}
+                <div className="mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Size</span>
+                    <span className="text-sm text-gray-500">{tShirtScale}%</span>
+                  </div>
+                  <Slider
+                    value={[tShirtScale]}
+                    min={10}
+                    max={100}
+                    step={1}
+                    onValueChange={(values) => setTShirtScale(values[0])}
+                    className="mb-4"
+                  />
+                  
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Rotation</span>
+                    <span className="text-sm text-gray-500">{tShirtRotation}°</span>
+                  </div>
+                  <Slider
+                    value={[tShirtRotation]}
+                    min={-180}
+                    max={180}
+                    step={1}
+                    onValueChange={(values) => setTShirtRotation(values[0])}
+                    className="mb-4"
+                  />
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-4">
+                  <Button 
+                    onClick={resetCamera} 
+                    variant="outline"
+                    className="flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw className="h-5 w-5" />
+                    Reset
+                  </Button>
+                  
+                  <Button 
+                    onClick={captureImage}
+                    disabled={!cameraReady || isCapturing}
+                    className="bg-[#582A34] hover:bg-black text-white flex items-center justify-center gap-2"
+                  >
+                    <Camera className="h-5 w-5" />
+                    {isCapturing ? 'Processing...' : 'Capture'}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              /* Share & Download Buttons */
+              <div className="grid grid-cols-2 gap-4">
+                <Button 
+                  onClick={shareImage} 
+                  className="bg-black hover:bg-gray-800 text-white flex items-center justify-center gap-2"
+                >
+                  <Share2 className="h-5 w-5" />
+                  Share
+                </Button>
+                
+                <Button 
+                  onClick={downloadImage}
+                  className="bg-[#582A34] hover:bg-[#47222b] text-white flex items-center justify-center gap-2"
+                >
+                  <Download className="h-5 w-5" />
+                  Download
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Disclaimer */}
+        <div className="mt-6 text-sm text-gray-500 text-center">
+          <p>This virtual try-on feature uses your camera to simulate how the t-shirt might look on you. 
+          The actual product may differ slightly in appearance. No images are stored on our servers.</p>
+        </div>
       </div>
-    </>
+    </div>
   );
 };
 
-export default ARVirtualTryOn;
+export default VirtualTryOn;
