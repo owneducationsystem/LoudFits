@@ -54,80 +54,12 @@ const ProductDetail = () => {
     queryKey: ["/api/products"],
   });
 
-  // Fallback product for development/testing
-  const fallbackProduct: Product = {
-    id: parseInt(id || "1"),
-    name: "Abstract Design Tee",
-    description: "Stylish black t-shirt with abstract graphic design. This premium cotton t-shirt features a unique, artistic print that sets you apart from the crowd. The soft, breathable fabric ensures comfort all day long, while the bold design makes a statement without saying a word.",
-    price: "899" as any,
-    category: "printed-tees",
-    gender: "unisex",
-    sizes: ["S", "M", "L", "XL"],
-    colors: ["Black", "White", "Gray"],
-    images: [
-      "https://images.unsplash.com/photo-1527719327859-c6ce80353573?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=500",
-      "https://images.unsplash.com/photo-1503341733017-1901578f9f1e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=500",
-      "https://images.unsplash.com/photo-1576566588028-4147f3842f27?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=500"
-    ],
-    trending: true,
-    featured: false,
-    collection: "urban-streetwear",
-    inStock: true
-  };
+  // No fallback data - we'll handle loading and error states properly
 
-  // Fallback related products
-  const fallbackRelatedProducts: Product[] = [
-    {
-      id: 2,
-      name: "Geometric Print Tee",
-      description: "White t-shirt with minimal geometric design",
-      price: "799" as any,
-      category: "printed-tees",
-      gender: "unisex",
-      sizes: ["S", "M", "L", "XL"],
-      colors: ["White", "Black"],
-      images: ["https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=500"],
-      trending: true,
-      featured: true,
-      collection: "minimalist",
-      inStock: true
-    },
-    {
-      id: 3,
-      name: "Vintage Graphic Tee",
-      description: "Gray t-shirt with vintage-style graphic print",
-      price: "999" as any,
-      category: "printed-tees",
-      gender: "unisex",
-      sizes: ["S", "M", "L", "XL"],
-      colors: ["Gray", "Black"],
-      images: ["https://images.unsplash.com/photo-1554568218-0f1715e72254?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=500"],
-      trending: true,
-      featured: false,
-      collection: "vintage",
-      inStock: true
-    },
-    {
-      id: 4,
-      name: "Statement Logo Tee",
-      description: "Navy blue t-shirt with bold logo print",
-      price: "849" as any,
-      category: "printed-tees",
-      gender: "unisex",
-      sizes: ["S", "M", "L", "XL"],
-      colors: ["Navy", "Black", "White"],
-      images: ["https://images.unsplash.com/photo-1581655353564-df123a1eb820?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=500"],
-      trending: true,
-      featured: true,
-      collection: "urban-streetwear",
-      inStock: true
-    }
-  ];
-
-  const displayProduct = product || fallbackProduct;
+  // If product data is still loading or there's an error, we'll handle it in the rendering logic
   const displayRelatedProducts = (relatedProducts && relatedProducts.length > 0) 
     ? relatedProducts.filter(p => p.id !== parseInt(id || "1")).slice(0, 4) 
-    : fallbackRelatedProducts;
+    : [];
 
   if (!selectedSize && displayProduct.sizes.length > 0) {
     setSelectedSize(displayProduct.sizes[0]);
