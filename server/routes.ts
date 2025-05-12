@@ -925,6 +925,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
+  
+  // WebSocket stats API - Get real-time connection statistics
+  app.get("/api/admin/ws-stats", async (req, res) => {
+    try {
+      // Count total active connections
+      const totalConnections = wss.clients.size;
+      
+      // Count connections by type (admin, user, anonymous)
+      const connectionCounts: Record<string, number> = {};
+      
+      // Get all connected client IDs and count by type
+      Array.from(connectedClients.keys()).forEach(clientId => {
+        const type = clientId.split(':')[0];
+        connectionCounts[type] = (connectionCounts[type] || 0) + 1;
+      });
+      
+      // Get the most recent connections (last 5)
+      const recentConnections = Array.from(connectedClients.keys())
+        .slice(-5)
+        .reverse();
+      
+      res.json({
+        totalConnections,
+        activeConnections: {
+          total: connectedClients.size,
+          byType: connectionCounts
+        },
+        recentConnections,
+        serverUptime: process.uptime(), // Server uptime in seconds
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error fetching WebSocket stats:', error);
+      res.status(500).json({ message: "Failed to fetch WebSocket stats" });
+    }
+  });
 
   // WebSocket Events API - for sending events via HTTP (temporarily without auth for testing)
   app.post("/api/admin/events", async (req, res) => {

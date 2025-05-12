@@ -1,82 +1,104 @@
 import React from 'react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertCircle, CheckCircle2, WifiOff } from 'lucide-react';
+import { useWebSocket } from '@/context/WebSocketContext';
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from '@/components/ui/tooltip';
+import { 
+  AlertCircle, 
+  CheckCircle, 
+  RefreshCw, 
+  Wifi, 
+  WifiOff 
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AdminWebSocketIndicatorProps {
-  connected: boolean;
-  registered: boolean;
-  adminId?: number;
+  className?: string;
+  showLabel?: boolean;
 }
 
-const AdminWebSocketIndicator: React.FC<AdminWebSocketIndicatorProps> = ({
-  connected,
-  registered,
-  adminId,
-}) => {
-  const getStatusColor = () => {
-    if (connected && registered) return 'text-green-500';
-    if (connected) return 'text-yellow-500';
-    return 'text-red-500';
-  };
-
-  const getStatusIcon = () => {
-    if (connected && registered) {
-      return <CheckCircle2 className={`w-4 h-4 ${getStatusColor()}`} />;
-    }
-    if (connected) {
-      return <AlertCircle className={`w-4 h-4 ${getStatusColor()}`} />;
-    }
-    return <WifiOff className={`w-4 h-4 ${getStatusColor()}`} />;
-  };
-
-  const getStatusText = () => {
-    if (connected && registered) {
-      return `Connected to WebSocket (Admin ID: ${adminId})`;
-    }
-    if (connected) {
-      return 'Connected but not registered as admin yet';
-    }
-    return 'Disconnected from WebSocket server';
-  };
-  
-  const getStatusBadge = () => {
-    const baseClasses = "text-xs font-medium px-2 py-1 rounded-full";
-    
-    if (connected && registered) {
-      return `${baseClasses} bg-green-100 text-green-800`;
-    }
-    if (connected) {
-      return `${baseClasses} bg-yellow-100 text-yellow-800`;
-    }
-    return `${baseClasses} bg-red-100 text-red-800`;
-  };
+export function AdminWebSocketIndicator({ 
+  className, 
+  showLabel = false 
+}: AdminWebSocketIndicatorProps) {
+  const { connected, registered, reconnect } = useWebSocket();
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center cursor-help">
-            {getStatusIcon()}
-            <span className="ml-1.5 text-xs text-muted-foreground">
-              {connected && registered ? 'Connected' : connected ? 'Connecting...' : 'Disconnected'}
-            </span>
+          <div 
+            className={cn(
+              "flex items-center gap-2 cursor-pointer", 
+              className
+            )}
+            onClick={() => !connected && reconnect()}
+          >
+            <div className="relative">
+              {connected ? (
+                <>
+                  <Wifi 
+                    className="h-5 w-5 text-emerald-500" 
+                    aria-hidden="true" 
+                  />
+                  {registered ? (
+                    <CheckCircle 
+                      className="h-3 w-3 text-emerald-500 absolute -top-1 -right-1" 
+                      aria-hidden="true" 
+                    />
+                  ) : (
+                    <AlertCircle 
+                      className="h-3 w-3 text-amber-500 absolute -top-1 -right-1" 
+                      aria-hidden="true" 
+                    />
+                  )}
+                </>
+              ) : (
+                <>
+                  <WifiOff 
+                    className="h-5 w-5 text-destructive" 
+                    aria-hidden="true" 
+                  />
+                  <RefreshCw 
+                    className="h-3 w-3 text-muted-foreground absolute -top-1 -right-1 animate-spin" 
+                    aria-hidden="true" 
+                  />
+                </>
+              )}
+            </div>
+            {showLabel && (
+              <span className={cn(
+                "text-sm font-medium",
+                connected 
+                  ? registered 
+                    ? "text-emerald-500" 
+                    : "text-amber-500" 
+                  : "text-destructive"
+              )}>
+                {connected 
+                  ? registered 
+                    ? "Connected" 
+                    : "Connecting..." 
+                  : "Disconnected"}
+              </span>
+            )}
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <div className="flex flex-col items-center p-1">
-            <div className={getStatusBadge()}>
-              {connected && registered 
-                ? 'Real-time connection active' 
-                : connected 
-                ? 'Partially connected' 
-                : 'Connection offline'}
-            </div>
-            <p className="text-xs mt-1">{getStatusText()}</p>
-          </div>
+          <p>
+            {connected 
+              ? registered 
+                ? "WebSocket connected and registered" 
+                : "WebSocket connected but not registered"
+              : "WebSocket disconnected. Click to reconnect"}
+          </p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
-};
+}
 
 export default AdminWebSocketIndicator;

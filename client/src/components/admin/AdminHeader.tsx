@@ -1,7 +1,6 @@
 import React from 'react';
-import { useAdminWebSocket } from '@/hooks/use-admin-websocket';
-import AdminWebSocketIndicator from './AdminWebSocketIndicator';
 import { Link } from 'wouter';
+import { AdminWebSocketIndicator } from './AdminWebSocketIndicator';
 import { 
   LayoutDashboard, 
   ShoppingBag, 
@@ -18,12 +17,6 @@ interface AdminHeaderProps {
 }
 
 const AdminHeader: React.FC<AdminHeaderProps> = ({ adminId }) => {
-  // Get WebSocket connection status for indicator
-  const { connected, registered } = useAdminWebSocket({ 
-    adminId,
-    autoConnect: true 
-  });
-
   const menuItems = [
     { label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" />, href: '/admin/dashboard' },
     { label: 'Products', icon: <ShoppingBag className="h-4 w-4" />, href: '/admin/products' },
@@ -63,12 +56,8 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ adminId }) => {
 
         {/* Right side items */}
         <div className="flex items-center space-x-4">
-          {/* WebSocket connection indicator */}
-          <AdminWebSocketIndicator
-            connected={connected}
-            registered={registered}
-            adminId={adminId}
-          />
+          {/* WebSocket connection indicator with tooltip */}
+          <AdminWebSocketIndicator showLabel={false} />
           
           {/* Admin Info/Logout */}
           <div className="flex items-center">
