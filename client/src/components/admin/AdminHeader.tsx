@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Home, Package, Users, Settings, BarChart3, ShoppingCart, LogOut, Bell, Radio, LayoutDashboard, Waves, Terminal } from 'lucide-react';
+import { Home, Package, Users, Settings, BarChart3, ShoppingCart, LogOut, Bell, Radio, LayoutDashboard, Waves, Terminal, MinusCircle } from 'lucide-react';
 import GlobalWebSocketTest from './GlobalWebSocketTest';
 
 interface AdminHeaderProps {
@@ -90,6 +90,15 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ title = 'Admin Dashboard' }) 
             >
               <Terminal className="h-4 w-4 mr-2" />
               Basic
+            </Button>
+            
+            <Button
+              variant={location === '/admin/mini' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/admin/mini')}
+            >
+              <MinusCircle className="h-4 w-4 mr-2" />
+              Mini
             </Button>
             
             <Button

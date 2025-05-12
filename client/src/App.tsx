@@ -45,6 +45,7 @@ import AdminRealTime from "@/pages/AdminRealTime";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminSimple from "@/pages/AdminSimple";
 import AdminBasic from "@/pages/AdminBasic";
+import AdminMini from "@/pages/AdminMini";
 import AdminRoute from "@/components/layout/AdminRoute";
 
 import { useEffect, useState } from "react";
@@ -166,6 +167,9 @@ function App() {
                 </Route>
                 <Route path="/admin/basic">
                   <AdminRoute component={AdminBasic} />
+                </Route>
+                <Route path="/admin/mini">
+                  <AdminRoute component={AdminMini} />
                 </Route>
                 
                 <Route component={NotFound} />
