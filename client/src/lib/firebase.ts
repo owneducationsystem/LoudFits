@@ -9,6 +9,7 @@ import {
   sendPasswordResetEmail,
   signOut,
   onAuthStateChanged,
+  getRedirectResult,
   User,
   UserCredential
 } from "firebase/auth";
@@ -35,9 +36,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// Configure Google provider
+// Configure Google provider with additional parameters for Replit environment
 googleProvider.setCustomParameters({
-  prompt: 'select_account'
+  prompt: 'select_account',
+  // Allow redirect to Replit domain
+  redirect_uri: window.location.origin
 });
 
 // Authentication functions
@@ -86,6 +89,23 @@ export const logOut = async (): Promise<void> => {
 
 export const getCurrentUser = (): User | null => {
   return auth.currentUser;
+};
+
+// This function should be called on app initialization to handle redirect results
+export const handleAuthRedirect = async (): Promise<UserCredential | null> => {
+  try {
+    console.log("Checking for redirect result...");
+    const result = await getRedirectResult(auth);
+    if (result) {
+      console.log("Received redirect result:", result.user.email);
+      return result;
+    }
+    console.log("No redirect result found");
+    return null;
+  } catch (error) {
+    console.error("Error processing redirect result:", error);
+    throw error;
+  }
 };
 
 export { auth, onAuthStateChanged };

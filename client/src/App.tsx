@@ -22,7 +22,52 @@ import TrackOrder from "@/pages/TrackOrder";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsConditions from "@/pages/TermsConditions";
 
+import { useEffect, useState } from "react";
+import { handleAuthRedirect } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
+
 function App() {
+  const [isProcessingRedirect, setIsProcessingRedirect] = useState(true);
+  const { toast } = useToast();
+
+  // Handle redirect results from Firebase Authentication
+  useEffect(() => {
+    const processRedirect = async () => {
+      try {
+        const result = await handleAuthRedirect();
+        if (result) {
+          toast({
+            title: "Authentication Success",
+            description: `Welcome, ${result.user.displayName || result.user.email}!`,
+          });
+        }
+      } catch (error) {
+        console.error("Error handling redirect:", error);
+        toast({
+          title: "Authentication Error",
+          description: error instanceof Error ? error.message : "Failed to complete authentication",
+          variant: "destructive",
+        });
+      } finally {
+        setIsProcessingRedirect(false);
+      }
+    };
+
+    processRedirect();
+  }, [toast]);
+
+  if (isProcessingRedirect) {
+    // Show loading state while processing redirect
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-white">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-gray-200 border-t-[#582A34] rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Processing authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AuthProvider>
       <CartProvider>

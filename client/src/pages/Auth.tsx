@@ -192,6 +192,9 @@ const Auth = () => {
     }
   };
   
+  // Debug info for development/troubleshooting
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
+
   return (
     <>
       <Helmet>
@@ -221,9 +224,15 @@ const Auth = () => {
                 <Button
                   onClick={handleGoogleLogin}
                   variant="outline"
-                  className="w-full mb-6 py-6 flex items-center justify-center gap-2 border-gray-300"
+                  disabled={isSubmitting}
+                  className="w-full mb-6 py-6 flex items-center justify-center gap-2 border-gray-300 relative overflow-hidden group"
                 >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24">
+                  {isSubmitting && (
+                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+                      <div className="w-5 h-5 border-2 border-gray-200 border-t-[#582A34] rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                  <svg className="h-5 w-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
                     <path
                       fill="currentColor"
                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -242,7 +251,7 @@ const Auth = () => {
                     />
                     <path fill="none" d="M1 1h22v22H1z" />
                   </svg>
-                  Continue with Google
+                  {isSubmitting ? "Connecting to Google..." : "Continue with Google"}
                 </Button>
                 
                 <div className="relative mb-6">
@@ -367,9 +376,15 @@ const Auth = () => {
                 <Button
                   onClick={handleGoogleLogin}
                   variant="outline"
-                  className="w-full mb-6 py-6 flex items-center justify-center gap-2 border-gray-300"
+                  disabled={isSubmitting}
+                  className="w-full mb-6 py-6 flex items-center justify-center gap-2 border-gray-300 relative overflow-hidden group"
                 >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24">
+                  {isSubmitting && (
+                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+                      <div className="w-5 h-5 border-2 border-gray-200 border-t-[#582A34] rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                  <svg className="h-5 w-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
                     <path
                       fill="currentColor"
                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -388,7 +403,7 @@ const Auth = () => {
                     />
                     <path fill="none" d="M1 1h22v22H1z" />
                   </svg>
-                  Sign up with Google
+                  {isSubmitting ? "Connecting to Google..." : "Sign up with Google"}
                 </Button>
                 
                 <div className="relative mb-6">
@@ -540,6 +555,38 @@ const Auth = () => {
               </div>
             </TabsContent>
           </Tabs>
+          
+          {/* Debug information section - hidden by default */}
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => setShowDebugInfo(!showDebugInfo)}
+              className="text-xs text-gray-500 hover:text-[#582A34] underline"
+            >
+              {showDebugInfo ? "Hide" : "Show"} technical information
+            </button>
+            
+            {showDebugInfo && (
+              <div className="mt-4 p-4 bg-gray-100 rounded-md text-left text-xs">
+                <h3 className="font-bold mb-2">Debug Information</h3>
+                <div className="space-y-1 font-mono">
+                  <p>Current User: {currentUser ? `${currentUser.email} (${currentUser.uid})` : "None"}</p>
+                  <p>Authentication Error: {error || "None"}</p>
+                  <p>URL: {window.location.href}</p>
+                  <p>Origin: {window.location.origin}</p>
+                  <p>Firebase Project: {import.meta.env.VITE_FIREBASE_PROJECT_ID || "Not set"}</p>
+                  <div className="mt-2 pt-2 border-t border-gray-300">
+                    <p className="mb-1">Troubleshooting steps:</p>
+                    <ol className="list-decimal pl-4">
+                      <li>Check if Firebase project has Google auth enabled</li>
+                      <li>Verify {window.location.origin} is added to authorized domains in Firebase console</li>
+                      <li>Ensure popup windows are not blocked by the browser</li>
+                      <li>Try the redirect method instead of popup method</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>
