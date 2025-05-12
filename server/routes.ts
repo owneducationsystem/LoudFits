@@ -848,14 +848,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('close', () => {
       console.log('WebSocket client disconnected');
       
-      // Remove client from connected clients
-      for (const [clientId, client] of connectedClients.entries()) {
+      // Remove client from connected clients using Array.from to avoid TypeScript issues
+      Array.from(connectedClients.entries()).forEach(([clientId, client]) => {
         if (client === ws) {
           connectedClients.delete(clientId);
           console.log(`Client unregistered: ${clientId}`);
-          break;
         }
-      }
+      });
     });
     
     // Send initial connection confirmation
@@ -883,8 +882,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } else {
-      // Broadcast to all connected clients
-      connectedClients.forEach((client, clientId) => {
+      // Broadcast to all connected clients (using Array.from to avoid TypeScript issues)
+      Array.from(connectedClients.entries()).forEach(([clientId, client]) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(message);
         }

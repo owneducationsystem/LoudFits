@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Helmet } from "react-helmet";
 import { useToast } from "@/hooks/use-toast";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { formatPrice } from "@/lib/utils";
-import { Loader2, Check, CheckCircle, Truck, Calendar, Package, ArrowRight } from "lucide-react";
+import { Loader2, Check, CheckCircle, Truck, Calendar, Package, ArrowRight, Wifi } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { apiRequest } from "@/lib/queryClient";
@@ -56,6 +57,18 @@ const OrderConfirmation = () => {
   
   const [isLoading, setIsLoading] = useState(true);
   const [order, setOrder] = useState<OrderDetails | null>(null);
+  const [hasRealTimeUpdates, setHasRealTimeUpdates] = useState(false);
+  
+  // Set up WebSocket connection for real-time updates
+  const { isConnected, messages, getMessagesByType } = useWebSocket({
+    onOpen: () => {
+      setHasRealTimeUpdates(true);
+      console.log('Connected to real-time updates');
+    },
+    onClose: () => {
+      setHasRealTimeUpdates(false);
+    }
+  });
   
   // Fetch order details
   useEffect(() => {
@@ -100,11 +113,54 @@ const OrderConfirmation = () => {
     fetchOrderDetails();
   }, [params, navigate, toast]);
   
-  // Check payment status for pending payments
+  // Process WebSocket messages for real-time updates
+  useEffect(() => {
+    if (messages.length > 0 && order) {
+      // Get the latest payment_updated or order_updated message
+      const paymentMessages = getMessagesByType('payment_updated');
+      const orderMessages = getMessagesByType('order_updated');
+      
+      if (paymentMessages.length > 0 || orderMessages.length > 0) {
+        const latestMessage = [...paymentMessages, ...orderMessages]
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+        
+        if (latestMessage && latestMessage.data) {
+          const { payment, order: updatedOrder } = latestMessage.data;
+          
+          // Only update if this message is for our current order
+          if (payment && payment.orderId === order.id) {
+            console.log('Received real-time update for order:', payment);
+            
+            setOrder(prevOrder => {
+              if (!prevOrder) return null;
+              return {
+                ...prevOrder,
+                paymentStatus: updatedOrder?.paymentStatus || 
+                               (payment.status === 'completed' ? 'paid' : payment.status),
+                status: updatedOrder?.status || prevOrder.status
+              };
+            });
+            
+            // Show toast notification
+            toast({
+              title: `Payment ${payment.status}`,
+              description: `Your payment of ${formatPrice(payment.amount)} has been ${payment.status}`,
+              variant: payment.status === 'completed' ? 'default' : 'destructive'
+            });
+          }
+        }
+      }
+    }
+  }, [messages, order, getMessagesByType, toast]);
+
+  // Fall back to polling if WebSockets are not connected
   useEffect(() => {
     let interval: number | undefined;
     
-    if (order && order.paymentStatus === "pending") {
+    // Only use polling as a fallback if WebSocket is not connected
+    if (order && order.paymentStatus === "pending" && !hasRealTimeUpdates) {
+      console.log('Using fallback polling for payment status updates');
+      
       interval = window.setInterval(async () => {
         try {
           const response = await apiRequest("GET", `/api/payment/status/${order.id}`);
@@ -135,7 +191,7 @@ const OrderConfirmation = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [order]);
+  }, [order, hasRealTimeUpdates]);
   
   // Format date
   const formatDate = (dateString: string) => {
