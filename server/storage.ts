@@ -146,8 +146,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async countUsers(): Promise<number> {
-    const [result] = await db.select({ count: count() }).from(users);
-    return result.count;
+    const result = await db.select({ value: count() }).from(users);
+    return result[0]?.value || 0;
   }
 
   // Product methods
@@ -204,8 +204,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProduct(id: number): Promise<boolean> {
-    const result = await db.delete(products).where(eq(products.id, id));
-    return result.count > 0;
+    await db.delete(products).where(eq(products.id, id));
+    // Check if product still exists to determine if deletion was successful
+    const product = await this.getProduct(id);
+    return product === undefined;
   }
 
   async searchProducts(query: string): Promise<Product[]> {
@@ -306,7 +308,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async removeCartItem(cartId: number, productId: number): Promise<boolean> {
-    const result = await db
+    // First check if item exists
+    const existingItems = await db
+      .select()
+      .from(cartItems)
+      .where(
+        and(
+          eq(cartItems.cartId, cartId),
+          eq(cartItems.productId, productId)
+        )
+      );
+    
+    // Delete the item
+    await db
       .delete(cartItems)
       .where(
         and(
@@ -314,14 +328,25 @@ export class DatabaseStorage implements IStorage {
           eq(cartItems.productId, productId)
         )
       );
-    return result.count > 0;
+    
+    // Return true if item existed and was deleted
+    return existingItems.length > 0;
   }
 
   async clearCart(cartId: number): Promise<boolean> {
-    const result = await db
+    // First check if cart has items
+    const existingItems = await db
+      .select()
+      .from(cartItems)
+      .where(eq(cartItems.cartId, cartId));
+    
+    // Delete all items from the cart
+    await db
       .delete(cartItems)
       .where(eq(cartItems.cartId, cartId));
-    return result.count > 0;
+    
+    // Return true if there were items to delete
+    return existingItems.length > 0;
   }
 
   // Order methods
