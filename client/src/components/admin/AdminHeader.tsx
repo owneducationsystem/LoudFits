@@ -1,0 +1,102 @@
+import React from 'react';
+import { useLocation } from 'wouter';
+import { Button } from '@/components/ui/button';
+import { Home, Package, Users, Settings, BarChart3, ShoppingCart, LogOut, Bell, Radio } from 'lucide-react';
+
+interface AdminHeaderProps {
+  title?: string;
+}
+
+const AdminHeader: React.FC<AdminHeaderProps> = ({ title = 'Admin Dashboard' }) => {
+  const [location, navigate] = useLocation();
+  
+  return (
+    <header className="bg-white border-b">
+      <div className="container mx-auto px-4 py-3">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <h1 className="text-xl font-bold">{title}</h1>
+          </div>
+          
+          <nav className="hidden md:flex items-center space-x-1">
+            <Button
+              variant={location === '/admin' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/admin')}
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Dashboard
+            </Button>
+            
+            <Button
+              variant={location === '/admin/orders' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/admin/orders')}
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Orders
+            </Button>
+            
+            <Button
+              variant={location === '/admin/products' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/admin/products')}
+            >
+              <Package className="h-4 w-4 mr-2" />
+              Products
+            </Button>
+            
+            <Button
+              variant={location === '/admin/users' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/admin/users')}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Users
+            </Button>
+            
+            <Button
+              variant={location === '/admin/real-time' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/admin/real-time')}
+            >
+              <Radio className="h-4 w-4 mr-2" />
+              Real-Time
+            </Button>
+            
+            <Button
+              variant={location === '/admin/settings' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/admin/settings')}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </Button>
+          </nav>
+          
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+            >
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full" />
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/admin/login')}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default AdminHeader;
