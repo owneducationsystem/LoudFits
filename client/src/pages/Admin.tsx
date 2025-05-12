@@ -20,9 +20,7 @@ const AdminDashboard = () => {
     queryFn: async () => {
       try {
         // Send admin user ID in header for authorization
-        const response = await apiRequest("GET", "/api/admin/stats", null, {
-          headers: { "user-id": "1" } // In a real app, this would be the actual admin user ID
-        });
+        const response = await apiRequest("GET", "/api/admin/stats", null);
         return await response.json();
       } catch (error) {
         console.error("Failed to fetch admin stats:", error);
@@ -93,7 +91,7 @@ const AdminDashboard = () => {
                 <div>
                   <p className="text-2xl font-bold">{statsLoading ? "..." : stats.users}</p>
                   <p className="text-xs text-green-600 flex items-center">
-                    <TrendUp className="h-3 w-3 mr-1" /> +5.2% from last month
+                    <TrendingUp className="h-3 w-3 mr-1" /> +5.2% from last month
                   </p>
                 </div>
               </div>
@@ -112,7 +110,7 @@ const AdminDashboard = () => {
                 <div>
                   <p className="text-2xl font-bold">{statsLoading ? "..." : stats.products}</p>
                   <p className="text-xs text-green-600 flex items-center">
-                    <TrendUp className="h-3 w-3 mr-1" /> +2.4% from last month
+                    <TrendingUp className="h-3 w-3 mr-1" /> +2.4% from last month
                   </p>
                 </div>
               </div>
@@ -131,7 +129,7 @@ const AdminDashboard = () => {
                 <div>
                   <p className="text-2xl font-bold">{statsLoading ? "..." : stats.orders}</p>
                   <p className="text-xs text-red-600 flex items-center">
-                    <TrendDown className="h-3 w-3 mr-1" /> -1.5% from last month
+                    <TrendingDown className="h-3 w-3 mr-1" /> -1.5% from last month
                   </p>
                 </div>
               </div>
@@ -150,7 +148,7 @@ const AdminDashboard = () => {
                 <div>
                   <p className="text-2xl font-bold">₹45,231</p>
                   <p className="text-xs text-green-600 flex items-center">
-                    <TrendUp className="h-3 w-3 mr-1" /> +10.2% from last month
+                    <TrendingUp className="h-3 w-3 mr-1" /> +10.2% from last month
                   </p>
                 </div>
               </div>

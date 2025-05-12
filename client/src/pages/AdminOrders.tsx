@@ -131,14 +131,12 @@ const AdminOrders = () => {
     queryKey: ["/api/admin/orders", page, limit, search, statusFilter],
     queryFn: async () => {
       try {
-        // Send admin user ID in header for authorization
+        // Using the API request function with the proper signature
         let url = `/api/admin/orders?limit=${limit}&offset=${(page - 1) * limit}`;
         if (search) url += `&search=${search}`;
         if (statusFilter !== "all") url += `&status=${statusFilter}`;
         
-        const response = await apiRequest("GET", url, null, {
-          headers: { "user-id": "1" } // In a real app, this would be the actual admin user ID
-        });
+        const response = await apiRequest("GET", url);
         return await response.json();
       } catch (error) {
         console.error("Failed to fetch orders:", error);

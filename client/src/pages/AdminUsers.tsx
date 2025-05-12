@@ -66,10 +66,11 @@ const AdminUsers = () => {
     queryKey: ["/api/admin/users", page, limit, search],
     queryFn: async () => {
       try {
-        // Send admin user ID in header for authorization
-        const response = await apiRequest("GET", `/api/admin/users?limit=${limit}&offset=${(page - 1) * limit}${search ? `&search=${search}` : ""}`, null, {
-          headers: { "user-id": "1" } // In a real app, this would be the actual admin user ID
-        });
+        // Using the API request function with the proper signature
+        const response = await apiRequest(
+          "GET", 
+          `/api/admin/users?limit=${limit}&offset=${(page - 1) * limit}${search ? `&search=${search}` : ""}`
+        );
         return await response.json();
       } catch (error) {
         console.error("Failed to fetch users:", error);
