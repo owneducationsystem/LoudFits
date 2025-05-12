@@ -8,7 +8,9 @@ import {
   insertCartSchema,
   insertCartItemSchema,
   insertOrderSchema,
+  insertOrderItemSchema,
   insertTestimonialSchema,
+  insertAdminLogSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {

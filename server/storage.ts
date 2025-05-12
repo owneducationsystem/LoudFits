@@ -9,13 +9,19 @@ import {
   adminLogs, type AdminLog, type InsertAdminLog
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, or, like, count, sql, not, asc, isNull, isNotNull, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByFirebaseId(firebaseId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, userData: Partial<InsertUser>): Promise<User>;
+  getAllUsers(limit?: number, offset?: number): Promise<User[]>;
+  searchUsers(query: string): Promise<User[]>;
+  countUsers(): Promise<number>;
   
   // Product methods
   getAllProducts(): Promise<Product[]>;
@@ -23,17 +29,41 @@ export interface IStorage {
   getFeaturedProducts(): Promise<Product[]>;
   getTrendingProducts(): Promise<Product[]>;
   getProductsByCollection(collection: string): Promise<Product[]>;
+  createProduct(product: InsertProduct): Promise<Product>;
+  updateProduct(id: number, productData: Partial<InsertProduct>): Promise<Product>;
+  deleteProduct(id: number): Promise<boolean>;
+  searchProducts(query: string): Promise<Product[]>;
+  countProducts(): Promise<number>;
   
   // Cart methods
   getCartByUserId(userId: number): Promise<{ cart: Cart; items: CartItem[] } | undefined>;
   createCart(cart: InsertCart): Promise<Cart>;
   addItemToCart(item: InsertCartItem): Promise<CartItem>;
+  updateCartItem(cartId: number, productId: number, data: Partial<InsertCartItem>): Promise<CartItem>;
+  removeCartItem(cartId: number, productId: number): Promise<boolean>;
+  clearCart(cartId: number): Promise<boolean>;
   
   // Order methods
   createOrder(order: InsertOrder): Promise<Order>;
+  getOrderById(id: number): Promise<Order | undefined>;
+  getOrderByOrderNumber(orderNumber: string): Promise<Order | undefined>;
+  getOrdersByUserId(userId: number): Promise<Order[]>;
+  updateOrderStatus(id: number, status: string): Promise<Order>;
+  getAllOrders(limit?: number, offset?: number): Promise<Order[]>;
+  searchOrders(query: string): Promise<Order[]>;
+  countOrders(): Promise<number>;
+  getOrderItems(orderId: number): Promise<OrderItem[]>;
   
   // Testimonial methods
   getTestimonials(): Promise<Testimonial[]>;
+  createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial>;
+  getFeaturedTestimonials(): Promise<Testimonial[]>;
+  
+  // Admin log methods
+  createAdminLog(log: InsertAdminLog): Promise<AdminLog>;
+  getAdminLogs(limit?: number, offset?: number): Promise<AdminLog[]>;
+  getAdminLogsByUserId(userId: number): Promise<AdminLog[]>;
+  searchAdminLogs(query: string): Promise<AdminLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -47,10 +77,63 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
+  
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+  
+  async getUserByFirebaseId(firebaseId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.firebaseId, firebaseId));
+    return user;
+  }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+  
+  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        ...userData,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+  
+  async getAllUsers(limit = 10, offset = 0): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(users.id);
+  }
+  
+  async searchUsers(query: string): Promise<User[]> {
+    // Search across multiple fields
+    return await db
+      .select()
+      .from(users)
+      .where(
+        or(
+          like(users.username, `%${query}%`),
+          like(users.email, `%${query}%`),
+          like(users.firstName, `%${query}%`),
+          like(users.lastName, `%${query}%`)
+        )
+      );
+  }
+  
+  async countUsers(): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users);
+    return result.count;
   }
 
   // Product methods
@@ -74,6 +157,49 @@ export class DatabaseStorage implements IStorage {
   async getProductsByCollection(collection: string): Promise<Product[]> {
     return await db.select().from(products).where(eq(products.collection, collection));
   }
+  
+  async createProduct(product: InsertProduct): Promise<Product> {
+    const [createdProduct] = await db.insert(products).values(product).returning();
+    return createdProduct;
+  }
+  
+  async updateProduct(id: number, productData: Partial<InsertProduct>): Promise<Product> {
+    const [updatedProduct] = await db
+      .update(products)
+      .set(productData)
+      .where(eq(products.id, id))
+      .returning();
+    return updatedProduct;
+  }
+  
+  async deleteProduct(id: number): Promise<boolean> {
+    const result = await db
+      .delete(products)
+      .where(eq(products.id, id))
+      .returning({ id: products.id });
+    return result.length > 0;
+  }
+  
+  async searchProducts(query: string): Promise<Product[]> {
+    return await db
+      .select()
+      .from(products)
+      .where(
+        or(
+          like(products.name, `%${query}%`),
+          like(products.description, `%${query}%`),
+          like(products.category, `%${query}%`),
+          like(products.collection, `%${query}%`)
+        )
+      );
+  }
+  
+  async countProducts(): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(products);
+    return result.count;
+  }
 
   // Cart methods
   async getCartByUserId(userId: number): Promise<{ cart: Cart; items: CartItem[] } | undefined> {
@@ -90,8 +216,70 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addItemToCart(insertItem: InsertCartItem): Promise<CartItem> {
+    // Check if item already exists in cart
+    const [existingItem] = await db
+      .select()
+      .from(cartItems)
+      .where(
+        and(
+          eq(cartItems.cartId, insertItem.cartId),
+          eq(cartItems.productId, insertItem.productId),
+          eq(cartItems.size, insertItem.size),
+          eq(cartItems.color, insertItem.color)
+        )
+      );
+    
+    if (existingItem) {
+      // Update quantity if item exists
+      const [updatedItem] = await db
+        .update(cartItems)
+        .set({ 
+          quantity: existingItem.quantity + (insertItem.quantity || 1),
+          customization: insertItem.customization || existingItem.customization
+        })
+        .where(eq(cartItems.id, existingItem.id))
+        .returning();
+      return updatedItem;
+    }
+    
+    // Otherwise insert new item
     const [cartItem] = await db.insert(cartItems).values(insertItem).returning();
     return cartItem;
+  }
+  
+  async updateCartItem(cartId: number, productId: number, data: Partial<InsertCartItem>): Promise<CartItem> {
+    const [updatedItem] = await db
+      .update(cartItems)
+      .set(data)
+      .where(
+        and(
+          eq(cartItems.cartId, cartId),
+          eq(cartItems.productId, productId)
+        )
+      )
+      .returning();
+    return updatedItem;
+  }
+  
+  async removeCartItem(cartId: number, productId: number): Promise<boolean> {
+    const result = await db
+      .delete(cartItems)
+      .where(
+        and(
+          eq(cartItems.cartId, cartId),
+          eq(cartItems.productId, productId)
+        )
+      )
+      .returning({ id: cartItems.id });
+    return result.length > 0;
+  }
+  
+  async clearCart(cartId: number): Promise<boolean> {
+    const result = await db
+      .delete(cartItems)
+      .where(eq(cartItems.cartId, cartId))
+      .returning({ id: cartItems.id });
+    return result.length > 0;
   }
 
   // Order methods
@@ -99,10 +287,126 @@ export class DatabaseStorage implements IStorage {
     const [order] = await db.insert(orders).values(insertOrder).returning();
     return order;
   }
+  
+  async getOrderById(id: number): Promise<Order | undefined> {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    return order;
+  }
+  
+  async getOrderByOrderNumber(orderNumber: string): Promise<Order | undefined> {
+    const [order] = await db.select().from(orders).where(eq(orders.orderNumber, orderNumber));
+    return order;
+  }
+  
+  async getOrdersByUserId(userId: number): Promise<Order[]> {
+    return await db
+      .select()
+      .from(orders)
+      .where(eq(orders.userId, userId))
+      .orderBy(desc(orders.createdAt));
+  }
+  
+  async updateOrderStatus(id: number, status: string): Promise<Order> {
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ 
+        status,
+        updatedAt: new Date()
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    return updatedOrder;
+  }
+  
+  async getAllOrders(limit = 20, offset = 0): Promise<Order[]> {
+    return await db
+      .select()
+      .from(orders)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(orders.createdAt));
+  }
+  
+  async searchOrders(query: string): Promise<Order[]> {
+    return await db
+      .select()
+      .from(orders)
+      .where(
+        or(
+          like(orders.orderNumber, `%${query}%`),
+          like(orders.status, `%${query}%`),
+          like(orders.paymentMethod, `%${query}%`)
+        )
+      )
+      .orderBy(desc(orders.createdAt));
+  }
+  
+  async countOrders(): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(orders);
+    return result.count;
+  }
+  
+  async getOrderItems(orderId: number): Promise<OrderItem[]> {
+    return await db
+      .select()
+      .from(orderItems)
+      .where(eq(orderItems.orderId, orderId));
+  }
 
   // Testimonial methods
   async getTestimonials(): Promise<Testimonial[]> {
     return await db.select().from(testimonials);
+  }
+  
+  async createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial> {
+    const [newTestimonial] = await db.insert(testimonials).values(testimonial).returning();
+    return newTestimonial;
+  }
+  
+  async getFeaturedTestimonials(): Promise<Testimonial[]> {
+    return await db
+      .select()
+      .from(testimonials)
+      .where(eq(testimonials.featured, true));
+  }
+  
+  // Admin log methods
+  async createAdminLog(log: InsertAdminLog): Promise<AdminLog> {
+    const [adminLog] = await db.insert(adminLogs).values(log).returning();
+    return adminLog;
+  }
+  
+  async getAdminLogs(limit = 50, offset = 0): Promise<AdminLog[]> {
+    return await db
+      .select()
+      .from(adminLogs)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(adminLogs.createdAt));
+  }
+  
+  async getAdminLogsByUserId(userId: number): Promise<AdminLog[]> {
+    return await db
+      .select()
+      .from(adminLogs)
+      .where(eq(adminLogs.userId, userId))
+      .orderBy(desc(adminLogs.createdAt));
+  }
+  
+  async searchAdminLogs(query: string): Promise<AdminLog[]> {
+    return await db
+      .select()
+      .from(adminLogs)
+      .where(
+        or(
+          like(adminLogs.action, `%${query}%`),
+          like(adminLogs.entityType, `%${query}%`),
+          like(adminLogs.entityId, `%${query}%`)
+        )
+      )
+      .orderBy(desc(adminLogs.createdAt));
   }
 
   // Seed the database with initial data if it's empty
