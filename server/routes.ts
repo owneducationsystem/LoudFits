@@ -1,5 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { setupPaymentRoutes } from "./routes/payment";
 import { storage } from "./storage";
 import { z } from "zod";
@@ -806,5 +807,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupPaymentRoutes(app);
   
   const httpServer = createServer(app);
+  
+  // Set up WebSocket server for real-time updates
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws' 
+  });
+
+  // Store connected clients with their identifiers
+  const connectedClients = new Map<string, WebSocket>();
+
+  wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+    
+    // Handle client messages
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        
+        // Register client with identifier (userId, adminId, etc.)
+        if (data.type === 'register') {
+          const { id, role } = data;
+          const clientId = `${role}:${id}`;
+          connectedClients.set(clientId, ws);
+          console.log(`Client registered: ${clientId}`);
+          
+          // Confirm registration to client
+          ws.send(JSON.stringify({ 
+            type: 'registered', 
+            success: true, 
+            timestamp: new Date().toISOString() 
+          }));
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+    
+    // Handle disconnection
+    ws.on('close', () => {
+      console.log('WebSocket client disconnected');
+      
+      // Remove client from connected clients
+      for (const [clientId, client] of connectedClients.entries()) {
+        if (client === ws) {
+          connectedClients.delete(clientId);
+          console.log(`Client unregistered: ${clientId}`);
+          break;
+        }
+      }
+    });
+    
+    // Send initial connection confirmation
+    ws.send(JSON.stringify({ 
+      type: 'connected', 
+      message: 'Connected to Loudfits WebSocket Server',
+      timestamp: new Date().toISOString()
+    }));
+  });
+  
+  // Helper function to broadcast event to specific clients
+  global.broadcastEvent = (event: string, data: any, recipients?: string[]) => {
+    const message = JSON.stringify({
+      type: event,
+      data,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Send to specific recipients if specified
+    if (recipients && recipients.length > 0) {
+      recipients.forEach(recipientId => {
+        const client = connectedClients.get(recipientId);
+        if (client && client.readyState === WebSocket.OPEN) {
+          client.send(message);
+        }
+      });
+    } else {
+      // Broadcast to all connected clients
+      connectedClients.forEach((client, clientId) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(message);
+        }
+      });
+    }
+  };
+  
+  // Make WebSocket server available to other modules
+  global.wss = wss;
+  
   return httpServer;
 }
