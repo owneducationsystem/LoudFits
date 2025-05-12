@@ -47,6 +47,8 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   const { data: product, isLoading, error } = useQuery<Product>({
     queryKey: [`/api/products/${id}`],
@@ -78,6 +80,9 @@ const ProductDetail = () => {
     setCurrentImageIndex((prevIndex) => 
       prevIndex === product.images.length - 1 ? 0 : prevIndex + 1
     );
+    // Reset zoom when changing images
+    setZoomLevel(1);
+    setIsZoomed(false);
   };
 
   const prevImage = () => {
@@ -86,6 +91,28 @@ const ProductDetail = () => {
     setCurrentImageIndex((prevIndex) => 
       prevIndex === 0 ? product.images.length - 1 : prevIndex - 1
     );
+    // Reset zoom when changing images
+    setZoomLevel(1);
+    setIsZoomed(false);
+  };
+  
+  const handleZoomIn = () => {
+    if (zoomLevel < 2.5) {
+      setZoomLevel(prev => prev + 0.5);
+      setIsZoomed(true);
+    }
+  };
+  
+  const handleZoomOut = () => {
+    if (zoomLevel > 1) {
+      setZoomLevel(prev => Math.max(1, prev - 0.5));
+      setIsZoomed(zoomLevel - 0.5 > 1);
+    }
+  };
+  
+  const resetZoom = () => {
+    setZoomLevel(1);
+    setIsZoomed(false);
   };
 
   const incrementQuantity = () => {
@@ -222,18 +249,25 @@ const ProductDetail = () => {
           <div className="relative">
             {/* Main Image */}
             <div className="relative overflow-hidden rounded-md bg-gray-100 h-[500px]">
-              <AnimatePresence mode="wait">
-                <motion.img
-                  key={currentImageIndex}
-                  src={product.images[currentImageIndex]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                />
-              </AnimatePresence>
+              <div className={`w-full h-full ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`} 
+                onClick={() => isZoomed ? resetZoom() : handleZoomIn()}>
+                <AnimatePresence mode="wait">
+                  <motion.img
+                    key={currentImageIndex}
+                    src={product.images[currentImageIndex]}
+                    alt={product.name}
+                    className="w-full h-full object-cover transition-transform duration-300"
+                    style={{ 
+                      transform: `scale(${zoomLevel})`,
+                      transformOrigin: 'center'
+                    }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </AnimatePresence>
+              </div>
               
               {/* Navigation Arrows */}
               <button
@@ -251,6 +285,26 @@ const ProductDetail = () => {
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
+              
+              {/* Zoom Controls */}
+              <div className="absolute bottom-2 right-2 flex gap-2">
+                <button
+                  className="bg-white/80 p-2 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleZoomOut}
+                  disabled={zoomLevel <= 1}
+                  aria-label="Zoom out"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <button
+                  className="bg-white/80 p-2 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleZoomIn}
+                  disabled={zoomLevel >= 2.5}
+                  aria-label="Zoom in"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             {/* Thumbnail Navigation */}

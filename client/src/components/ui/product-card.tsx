@@ -12,6 +12,7 @@ interface ProductCardProps {
 
 const ProductCard = ({ product }: ProductCardProps) => {
   const { addToCart } = useCartContext();
+  const { addToWishlist, isInWishlist, removeFromWishlist } = useWishlistContext();
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -66,18 +67,24 @@ const ProductCard = ({ product }: ProductCardProps) => {
                 <ShoppingBag className="h-5 w-5" />
               </button>
               <button 
-                className="text-[#445672] hover:text-[#582A34] transition-colors"
+                className={`${isInWishlist(product.id) ? 'text-[#582A34]' : 'text-[#445672]'} hover:text-[#582A34] transition-colors`}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  toast({
-                    title: "Added to wishlist",
-                    description: `${product.name} has been added to your wishlist.`,
-                  });
+                  
+                  if (isInWishlist(product.id)) {
+                    removeFromWishlist(product.id);
+                    toast({
+                      title: "Removed from wishlist",
+                      description: `${product.name} has been removed from your wishlist.`,
+                    });
+                  } else {
+                    addToWishlist(product.id, product.name);
+                  }
                 }}
-                aria-label="Add to wishlist"
+                aria-label={isInWishlist(product.id) ? "Remove from wishlist" : "Add to wishlist"}
               >
-                <Heart className="h-5 w-5" />
+                <Heart className={`h-5 w-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
               </button>
             </div>
           </div>
