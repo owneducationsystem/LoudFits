@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import globalWebSocket from '@/lib/globalWebSocket';
 
 interface AdminWebSocketOptions {
   reconnectInterval?: number;
@@ -14,13 +15,9 @@ interface UseAdminWebSocketReturn {
   setAdminId: (id: number) => void;
 }
 
-// Extend WebSocket to include our custom pingInterval
-interface EnhancedWebSocket extends WebSocket {
-  pingInterval?: NodeJS.Timeout;
-}
-
 /**
  * Hook for WebSocket communication in admin pages
+ * This hook uses the global WebSocket service for stable connections
  */
 export function useAdminWebSocket({
   reconnectInterval = 3000,
@@ -29,155 +26,105 @@ export function useAdminWebSocket({
 }: AdminWebSocketOptions = {}): UseAdminWebSocketReturn {
   const [connected, setConnected] = useState(false);
   const [registered, setRegistered] = useState(false);
-  const socketRef = useRef<EnhancedWebSocket | null>(null);
   const adminIdRef = useRef(adminId);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  /**
-   * Setup WebSocket connection
-   */
-  const setupWebSocket = useCallback(() => {
-    // Clear any existing reconnection timeout
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-
-    // Close existing connection
-    if (socketRef.current) {
-      socketRef.current.close();
-      socketRef.current = null;
-    }
-
-    // Reset state
-    setRegistered(false);
-
-    try {
-      // Determine WebSocket URL (secure if page is secure)
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+  // Initialize and configure the global WebSocket service
+  useEffect(() => {
+    // Configure service with potentially better settings
+    globalWebSocket.configure({
+      reconnectInterval: reconnectInterval,
+      pingInterval: 15000, // 15 seconds ping interval
+      debug: true         // Enable debug logging
+    });
+    
+    // Set up event listeners
+    const events = globalWebSocket.getEventEmitter();
+    
+    // Define handlers as separate functions so we can reference them for cleanup
+    const handleConnected = () => {
+      console.log('Admin WebSocket connected');
+      setConnected(true);
       
-      // Create WebSocket
-      const socket = new WebSocket(wsUrl) as EnhancedWebSocket;
-      socketRef.current = socket;
-
-      // Connection opened
-      socket.addEventListener('open', () => {
-        setConnected(true);
-        console.log('WebSocket connection established');
-        
-        // Register as admin
-        if (adminIdRef.current) {
-          sendMessage('register', { adminId: adminIdRef.current, role: 'admin' });
-        }
-        
-        // Setup ping interval to keep connection alive
-        const pingInterval = setInterval(() => {
-          if (socket.readyState === WebSocket.OPEN) {
-            console.log('Sending ping to keep connection alive');
-            socket.send(JSON.stringify({ 
-              type: 'ping', 
-              data: { timestamp: new Date().toISOString() } 
-            }));
-          } else {
-            clearInterval(pingInterval);
-          }
-        }, 30000); // Send ping every 30 seconds
-        
-        // Store the interval for cleanup
-        socket.pingInterval = pingInterval;
+      // Register with the server
+      globalWebSocket.register({ 
+        adminId: adminIdRef.current, 
+        role: 'admin' 
       });
-
-      // Connection closed
-      socket.addEventListener('close', () => {
-        setConnected(false);
-        setRegistered(false);
-        console.log('WebSocket connection closed');
-        
-        // Clear ping interval if it exists
-        if (socket.pingInterval) {
-          clearInterval(socket.pingInterval);
-        }
-        
-        // Attempt to reconnect with exponential backoff
-        if (autoConnect) {
-          // Use a shorter reconnect time for first few attempts, then longer
-          const actualReconnectTime = reconnectTimeoutRef.current ? 
-            Math.min(reconnectInterval * 2, 10000) : // Increase up to 10 seconds max
-            reconnectInterval; // Start with default
-          
-          console.log(`Reconnecting in ${actualReconnectTime}ms...`);
-          reconnectTimeoutRef.current = setTimeout(setupWebSocket, actualReconnectTime);
-        }
-      });
-
-      // Connection error
-      socket.addEventListener('error', (error) => {
-        console.error('WebSocket error:', error);
-        setConnected(false);
-        setRegistered(false);
-      });
-
-      // Listen for messages
-      socket.addEventListener('message', (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          // Handle admin registration confirmation
-          if (data.type === 'registered') {
-            setRegistered(true);
-            console.log(`Registered as admin:${adminIdRef.current}`);
-          }
-          
-          // Dispatch messages to any listeners
-          window.dispatchEvent(
-            new CustomEvent('admin-ws-message', { detail: event })
-          );
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      });
-    } catch (error) {
-      console.error('Error setting up WebSocket:', error);
+    };
+    
+    const handleDisconnected = () => {
+      console.log('Admin WebSocket disconnected');
+      setConnected(false);
+      setRegistered(false);
+    };
+    
+    const handleRegistered = (clientId: string) => {
+      console.log(`Admin WebSocket registered as ${clientId}`);
+      setRegistered(true);
+    };
+    
+    const handleError = (error: any) => {
+      console.error('Admin WebSocket error:', error);
     }
+    
+    // Forward messages to legacy event system
+    const handleMessage = (data: any) => {
+      // Create a synthetic MessageEvent for compatibility
+      const syntheticEvent = {
+        data: JSON.stringify(data),
+        type: 'message',
+        target: null
+      } as unknown as MessageEvent;
+      
+      // Dispatch to window for components listening with addEventListener
+      window.dispatchEvent(
+        new CustomEvent('admin-ws-message', { detail: syntheticEvent })
+      );
+    };
+    
+    // Register event handlers
+    events.on('connected', handleConnected);
+    events.on('disconnected', handleDisconnected);
+    events.on('registered', handleRegistered);
+    events.on('error', handleError);
+    events.on('message', handleMessage);
+    
+    // Connect if autoConnect is true
+    if (autoConnect) {
+      globalWebSocket.connect();
+    }
+    
+    // Cleanup event listeners on unmount
+    return () => {
+      // Remove event listeners
+      events.removeListener('connected', handleConnected);
+      events.removeListener('disconnected', handleDisconnected);
+      events.removeListener('registered', handleRegistered);
+      events.removeListener('error', handleError);
+      events.removeListener('message', handleMessage);
+      // Don't disconnect as other components might be using it
+    };
   }, [autoConnect, reconnectInterval]);
+
+  // Update ref and register when adminId prop changes
+  useEffect(() => {
+    adminIdRef.current = adminId;
+    
+    // Re-register with new ID if connected
+    if (connected && globalWebSocket.isConnected()) {
+      globalWebSocket.register({ 
+        adminId, 
+        role: 'admin' 
+      });
+    }
+  }, [adminId, connected]);
 
   /**
    * Send a message via WebSocket
    */
-  const sendMessage = useCallback((type: string, data: any = {}) => {
-    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-      console.warn('WebSocket not connected, message not sent');
-      return;
-    }
-
-    try {
-      const message = JSON.stringify({
-        type,
-        data,
-      });
-      
-      socketRef.current.send(message);
-      return true;
-    } catch (error) {
-      console.error('Error sending WebSocket message:', error);
-      return false;
-    }
-  }, []);
-
-  /**
-   * Send a message using current socket
-   */
   const send = useCallback((type: string, data: any = {}) => {
-    return sendMessage(type, data);
-  }, [sendMessage]);
-
-  /**
-   * Manually reconnect
-   */
-  const reconnect = useCallback(() => {
-    setupWebSocket();
-  }, [setupWebSocket]);
+    return globalWebSocket.send(type, data);
+  }, []);
 
   /**
    * Update admin ID
@@ -186,38 +133,20 @@ export function useAdminWebSocket({
     adminIdRef.current = id;
     
     // Re-register with new ID if connected
-    if (connected && socketRef.current) {
-      sendMessage('register', { adminId: id });
+    if (globalWebSocket.isConnected()) {
+      globalWebSocket.register({ 
+        adminId: id, 
+        role: 'admin' 
+      });
     }
-  }, [connected, sendMessage]);
+  }, []);
 
-  // Initialize WebSocket on mount
-  useEffect(() => {
-    if (autoConnect) {
-      setupWebSocket();
-    }
-
-    // Cleanup
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      
-      if (socketRef.current) {
-        socketRef.current.close();
-      }
-    };
-  }, [autoConnect, setupWebSocket]);
-
-  // Update ref when adminId prop changes
-  useEffect(() => {
-    adminIdRef.current = adminId;
-    
-    // Re-register with new ID if connected
-    if (connected && socketRef.current) {
-      sendMessage('register', { adminId });
-    }
-  }, [adminId, connected, sendMessage]);
+  /**
+   * Manually reconnect
+   */
+  const reconnect = useCallback(() => {
+    globalWebSocket.connect();
+  }, []);
 
   return {
     connected,

@@ -35,62 +35,87 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
   
   // Set up WebSocket connection
   useEffect(() => {
-    console.log('WebSocketProvider mounted, using global WebSocket');
+    console.log('WebSocketProvider mounted, initializing global WebSocket service');
     
-    // Set the admin ID
-    globalWebSocket.setAdminId(adminId);
+    // Configure the global WebSocket with better settings
+    globalWebSocket.configure({
+      reconnectInterval: 2000, // 2 seconds initial reconnect
+      pingInterval: 15000,     // 15 seconds ping interval
+      debug: true              // Enable debug logging
+    });
     
-    // Add status listener
-    const handleStatusChange = (status: boolean) => {
-      console.log('WebSocket connection status changed:', status);
-      setConnected(status);
+    // Set up event listeners
+    const events = globalWebSocket.getEventEmitter();
+    
+    // Define handlers as separate functions so we can reference them for cleanup
+    const handleConnected = () => {
+      console.log('WebSocket connected');
+      setConnected(true);
+      
+      // Register with the server
+      globalWebSocket.register({ 
+        adminId: adminId, 
+        role: 'admin' 
+      });
     };
     
-    // Add message listener
-    const handleMessage = (event: MessageEvent) => {
-      try {
-        const message = JSON.parse(event.data);
-        
-        // Handle registration confirmation
-        if (message.type === 'registered') {
-          console.log('Registration confirmed');
-          setRegistered(true);
-        }
-      } catch (error) {
-        console.error('Error processing WebSocket message:', error);
-      }
+    const handleDisconnected = () => {
+      console.log('WebSocket disconnected');
+      setConnected(false);
+      setRegistered(false);
     };
     
-    // Register listeners
-    globalWebSocket.addStatusChangeListener(handleStatusChange);
-    globalWebSocket.addMessageListener(handleMessage);
+    const handleRegistered = (clientId: string) => {
+      console.log(`WebSocket registered as ${clientId}`);
+      setRegistered(true);
+    };
     
-    // Ensure connection is established
-    globalWebSocket.initWebSocket();
+    const handleError = (error: any) => {
+      console.error('WebSocket error:', error);
+    };
+    
+    // Register event handlers
+    events.on('connected', handleConnected);
+    events.on('disconnected', handleDisconnected);
+    events.on('registered', handleRegistered);
+    events.on('error', handleError);
+    
+    // Start connection
+    globalWebSocket.connect();
     
     // Clean up on unmount
     return () => {
-      console.log('WebSocketProvider unmounting, removing listeners');
-      globalWebSocket.removeStatusChangeListener(handleStatusChange);
-      globalWebSocket.removeMessageListener(handleMessage);
+      // Remove event listeners
+      events.removeListener('connected', handleConnected);
+      events.removeListener('disconnected', handleDisconnected);
+      events.removeListener('registered', handleRegistered);
+      events.removeListener('error', handleError);
+      // Don't disconnect as other components might be using it
     };
   }, []);
   
   // Update admin ID when it changes
   useEffect(() => {
     console.log('Setting admin ID in global WebSocket:', adminId);
-    globalWebSocket.setAdminId(adminId);
+    
+    // Register with new admin ID if already connected
+    if (globalWebSocket.isConnected()) {
+      globalWebSocket.register({ 
+        adminId: adminId, 
+        role: 'admin' 
+      });
+    }
   }, [adminId]);
   
   // Send message via WebSocket
   const sendMessage = (type: string, data?: any) => {
-    globalWebSocket.sendMessage(type, data);
+    return globalWebSocket.send(type, data);
   };
   
   // Handle reconnection
   const reconnect = () => {
     console.log('Manual reconnection requested');
-    globalWebSocket.initWebSocket();
+    globalWebSocket.connect();
   };
   
   // Update local admin ID
