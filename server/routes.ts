@@ -721,6 +721,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedOrder = await storage.updateOrderStatus(orderId, status);
+      
+      // Send real-time notifications via WebSocket if available
+      if (typeof global.broadcastEvent === 'function' && updatedOrder) {
+        // Notify specific user
+        const userRecipient = `user:${updatedOrder.userId}`;
+        
+        // Broadcast order update event to the user
+        global.broadcastEvent('order_updated', {
+          order: updatedOrder,
+        }, [userRecipient]);
+        
+        // Also broadcast to all admins with a different event type
+        global.broadcastEvent('admin_order_updated', {
+          order: updatedOrder,
+        }, ['admin:*']);
+        
+        console.log(`Real-time order status update sent for order: ${updatedOrder.orderNumber}`);
+      }
+      
       res.json(updatedOrder);
     } catch (error) {
       res.status(500).json({ message: "Failed to update order status" });
@@ -876,9 +895,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Send to specific recipients if specified
     if (recipients && recipients.length > 0) {
       recipients.forEach(recipientId => {
-        const client = connectedClients.get(recipientId);
-        if (client && client.readyState === WebSocket.OPEN) {
-          client.send(message);
+        // Handle wildcard recipients (e.g., 'admin:*')
+        if (recipientId.endsWith(':*')) {
+          const prefix = recipientId.split(':*')[0];
+          // Find all clients with matching prefix
+          Array.from(connectedClients.entries()).forEach(([clientId, client]) => {
+            if (clientId.startsWith(prefix) && client.readyState === WebSocket.OPEN) {
+              client.send(message);
+              console.log(`Broadcast ${event} to wildcard recipient: ${clientId}`);
+            }
+          });
+        } else {
+          // Regular recipient
+          const client = connectedClients.get(recipientId);
+          if (client && client.readyState === WebSocket.OPEN) {
+            client.send(message);
+            console.log(`Broadcast ${event} to recipient: ${recipientId}`);
+          }
         }
       });
     } else {
@@ -886,6 +919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       Array.from(connectedClients.entries()).forEach(([clientId, client]) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(message);
+          console.log(`Broadcast ${event} to all clients including: ${clientId}`);
         }
       });
     }

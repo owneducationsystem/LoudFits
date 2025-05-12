@@ -132,7 +132,7 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
       global.broadcastEvent('admin_payment_updated', {
         order: order,
         payment: paymentUpdate
-      });
+      }, ['admin:*']);
       
       console.log(`Real-time payment notification sent for order: ${order.orderNumber}`);
     }
