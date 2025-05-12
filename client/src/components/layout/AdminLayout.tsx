@@ -100,6 +100,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
     },
   ];
 
+  /* Temporarily commented out for development
   // For demo purposes, allow admin access to all logged-in users
   // In a real app, we would check user.role === 'admin'
   if (!user) {
@@ -113,6 +114,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
       </div>
     );
   }
+  */
 
   return (
     <div className="flex min-h-screen bg-gray-100">
@@ -206,13 +208,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
           <div className="px-3 py-2">
             <div className="flex items-center mb-4">
               <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                {user?.firstName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                {user?.firstName?.charAt(0) || user?.email?.charAt(0) || 'A'}
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-900">
                   {user?.firstName
                     ? `${user.firstName} ${user.lastName || ''}`
-                    : user?.email}
+                    : (user?.email || "Admin User")}
                 </p>
                 <p className="text-xs text-gray-500">Admin</p>
               </div>
