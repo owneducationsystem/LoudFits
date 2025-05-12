@@ -846,18 +846,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Register client with identifier (userId, adminId, etc.)
         if (data.type === 'register') {
-          const { id, role } = data.data;
-          const clientId = `${role}:${id}`;
-          connectedClients.set(clientId, ws);
-          console.log(`Client registered: ${clientId}`);
-          
-          // Confirm registration to client
-          ws.send(JSON.stringify({ 
-            type: 'registered', 
-            success: true, 
-            timestamp: new Date().toISOString(),
-            data: { clientId }
-          }));
+          try {
+            let clientId;
+            
+            // Handle both data formats for backward compatibility
+            if (data.data && (data.data.id !== undefined || data.data.role !== undefined)) {
+              // New format: { type: 'register', data: { id, role } }
+              const { id, role } = data.data;
+              clientId = `${role}:${id}`;
+            } else if (data.id !== undefined || data.role !== undefined) {
+              // Old format: { type: 'register', id, role }
+              const { id, role } = data;
+              clientId = `${role}:${id}`;
+            } else {
+              // Fallback format if no specific ID
+              clientId = `client:${Math.floor(Math.random() * 1000)}`;
+              console.log(`Using fallback client ID: ${clientId}`);
+            }
+            
+            // Store client connection
+            connectedClients.set(clientId, ws);
+            console.log(`Client registered: ${clientId}`);
+            
+            // Confirm registration to client
+            ws.send(JSON.stringify({ 
+              type: 'registered', 
+              success: true, 
+              timestamp: new Date().toISOString(),
+              data: { clientId }
+            }));
+          } catch (error) {
+            console.error('Error registering client:', error, 'Message was:', data);
+            ws.send(JSON.stringify({
+              type: 'error',
+              error: 'Registration failed',
+              timestamp: new Date().toISOString()
+            }));
+          }
         }
       } catch (error) {
         console.error('WebSocket message error:', error);
