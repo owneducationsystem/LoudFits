@@ -86,9 +86,9 @@ const AdminLogin = () => {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username</FormLabel>
+                    <FormLabel>Username or Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="Username" {...field} />
+                      <Input placeholder="Enter username or email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

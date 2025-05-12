@@ -406,15 +406,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Username and password are required" });
       }
       
-      // Find user by username
-      const user = await storage.getUserByUsername(username);
+      // Try to find user by username or email
+      let user = await storage.getUserByUsername(username);
+      
+      // If not found by username, try to find by email
+      if (!user) {
+        user = await storage.getUserByEmail(username);
+      }
       
       // For security, use a consistent response time whether successful or not
       const delayResponse = () => new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
       
       // Always use same generic error message to prevent username enumeration
       if (!user || user.role !== "admin") {
-        console.log(`Admin login attempt failed for username: "${username}" from IP: ${ipAddress}`);
+        console.log(`Admin login attempt failed for username/email: "${username}" from IP: ${ipAddress}`);
         await delayResponse();
         return res.status(401).json({ message: "Invalid credentials" });
       }
