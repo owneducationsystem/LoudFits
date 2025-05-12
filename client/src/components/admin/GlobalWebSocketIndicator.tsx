@@ -57,29 +57,21 @@ const GlobalWebSocketIndicatorInner: React.FC<GlobalWebSocketIndicatorProps> = (
  * A wrapper component that ensures the WebSocketProvider is available
  */
 const GlobalWebSocketIndicator: React.FC<GlobalWebSocketIndicatorProps> = (props) => {
-  // Check if WebSocketProvider is available in the context
-  const [hasProvider, setHasProvider] = useState<boolean>(false);
-  
-  useEffect(() => {
-    try {
-      // Try to use the WebSocket context
-      useWebSocket();
-      setHasProvider(true);
-    } catch (error) {
-      console.error('WebSocketProvider not found in context:', error);
-      setHasProvider(false);
-    }
-  }, []);
-  
-  if (!hasProvider) {
+  // We can't check for the provider this way because hooks can't be called conditionally
+  // Instead, we'll wrap it in a try/catch block
+  try {
+    // This will throw an error if WebSocketProvider is not in context
+    useWebSocket();
+    return <GlobalWebSocketIndicatorInner {...props} />;
+  } catch (error) {
+    // If WebSocketProvider is not available, create a standalone one
+    console.log('WebSocketProvider not found in context, creating a local one');
     return (
       <WebSocketProvider>
         <GlobalWebSocketIndicatorInner {...props} />
       </WebSocketProvider>
     );
   }
-  
-  return <GlobalWebSocketIndicatorInner {...props} />;
 };
 
 export default GlobalWebSocketIndicator;

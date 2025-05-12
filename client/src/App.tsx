@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { WishlistProvider } from "@/context/WishlistContext";
+import { WebSocketProvider } from "@/context/WebSocketContext";
 
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -98,102 +99,108 @@ function App() {
     );
   }
 
+  const router = (
+    <Switch>
+      <Route path="/" component={Home} />
+      <Route path="/shop" component={Shop} />
+      <Route path="/product/:id" component={ProductDetail} />
+      <Route path="/customize" component={Customize} />
+      <Route path="/cart" component={Cart} />
+      <Route path="/login" component={Auth} />
+      <Route path="/signup" component={Auth} />
+      <Route path="/search" component={Search} />
+      <Route path="/wishlist" component={Wishlist} />
+      <Route path="/size-guide" component={SizeGuide} />
+      <Route path="/faqs" component={FAQ} />
+      <Route path="/shipping-returns" component={ShippingReturns} />
+      <Route path="/contact" component={Contact} />
+      <Route path="/track-order" component={TrackOrder} />
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
+      <Route path="/terms-conditions" component={TermsConditions} />
+      <Route path="/account" component={Account} />
+      <Route path="/orders" component={Orders} />
+      <Route path="/checkout" component={Checkout} />
+      <Route path="/order-confirmation/:orderId" component={OrderConfirmation} />
+      <Route path="/payment-failed/:orderId" component={PaymentFailed} />
+      <Route path="/payment-error" component={PaymentError} />
+      <Route path="/test-phonepe" component={TestPhonePe} />
+      
+      {/* Admin Routes - Protected */}
+      <Route path="/admin/login" component={AdminLogin} />
+      <Route path="/admin">
+        <AdminRoute component={Admin} />
+      </Route>
+      <Route path="/admin/dashboard">
+        <AdminRoute component={AdminDashboard} />
+      </Route>
+      <Route path="/admin/users">
+        <AdminRoute component={AdminUsers} />
+      </Route>
+      <Route path="/admin/orders">
+        <AdminRoute component={AdminOrders} />
+      </Route>
+      <Route path="/admin/products/add">
+        <AdminRoute component={AdminAddProductSimple} />
+      </Route>
+      <Route path="/admin/products/edit/:id">
+        <AdminRoute component={AdminEditProduct} />
+      </Route>
+      <Route path="/admin/products/categories">
+        <AdminRoute component={AdminCategories} />
+      </Route>
+      <Route path="/admin/products">
+        <AdminRoute component={AdminProducts} />
+      </Route>
+      <Route path="/admin/users/add">
+        <AdminRoute component={AdminAddUser} />
+      </Route>
+      <Route path="/admin/settings">
+        <AdminRoute component={AdminSettings} />
+      </Route>
+      <Route path="/admin/real-time">
+        <AdminRoute component={AdminRealTime} />
+      </Route>
+      <Route path="/admin/simple">
+        <AdminRoute component={AdminSimple} />
+      </Route>
+      <Route path="/admin/basic">
+        <AdminRoute component={AdminBasic} />
+      </Route>
+      <Route path="/admin/mini">
+        <AdminRoute component={AdminMini} />
+      </Route>
+      <Route path="/admin/real-time-fixed">
+        <AdminRoute component={AdminRealTimeFixed} />
+      </Route>
+      <Route path="/admin/ws-only">
+        <AdminRoute component={AdminWsOnly} />
+      </Route>
+      <Route path="/admin/debug">
+        <AdminRoute component={AdminDebug} />
+      </Route>
+      
+      <Route component={NotFound} />
+    </Switch>
+  );
+
   return (
     <AuthProvider>
-      <CartProvider>
-        <WishlistProvider>
-          <TooltipProvider>
-            <div className="flex flex-col min-h-screen">
-              <Header />
-              <main className="flex-grow">
-              <Switch>
-                <Route path="/" component={Home} />
-                <Route path="/shop" component={Shop} />
-                <Route path="/product/:id" component={ProductDetail} />
-                <Route path="/customize" component={Customize} />
-                <Route path="/cart" component={Cart} />
-                <Route path="/login" component={Auth} />
-                <Route path="/signup" component={Auth} />
-                <Route path="/search" component={Search} />
-                <Route path="/wishlist" component={Wishlist} />
-                <Route path="/size-guide" component={SizeGuide} />
-                <Route path="/faqs" component={FAQ} />
-                <Route path="/shipping-returns" component={ShippingReturns} />
-                <Route path="/contact" component={Contact} />
-                <Route path="/track-order" component={TrackOrder} />
-                <Route path="/privacy-policy" component={PrivacyPolicy} />
-                <Route path="/terms-conditions" component={TermsConditions} />
-                <Route path="/account" component={Account} />
-                <Route path="/orders" component={Orders} />
-                <Route path="/checkout" component={Checkout} />
-                <Route path="/order-confirmation/:orderId" component={OrderConfirmation} />
-                <Route path="/payment-failed/:orderId" component={PaymentFailed} />
-                <Route path="/payment-error" component={PaymentError} />
-                <Route path="/test-phonepe" component={TestPhonePe} />
-                
-                {/* Admin Routes - Protected */}
-                <Route path="/admin/login" component={AdminLogin} />
-                <Route path="/admin">
-                  <AdminRoute component={Admin} />
-                </Route>
-                <Route path="/admin/dashboard">
-                  <AdminRoute component={AdminDashboard} />
-                </Route>
-                <Route path="/admin/users">
-                  <AdminRoute component={AdminUsers} />
-                </Route>
-                <Route path="/admin/orders">
-                  <AdminRoute component={AdminOrders} />
-                </Route>
-                <Route path="/admin/products/add">
-                  <AdminRoute component={AdminAddProductSimple} />
-                </Route>
-                <Route path="/admin/products/edit/:id">
-                  <AdminRoute component={AdminEditProduct} />
-                </Route>
-                <Route path="/admin/products/categories">
-                  <AdminRoute component={AdminCategories} />
-                </Route>
-                <Route path="/admin/products">
-                  <AdminRoute component={AdminProducts} />
-                </Route>
-                <Route path="/admin/users/add">
-                  <AdminRoute component={AdminAddUser} />
-                </Route>
-                <Route path="/admin/settings">
-                  <AdminRoute component={AdminSettings} />
-                </Route>
-                <Route path="/admin/real-time">
-                  <AdminRoute component={AdminRealTime} />
-                </Route>
-                <Route path="/admin/simple">
-                  <AdminRoute component={AdminSimple} />
-                </Route>
-                <Route path="/admin/basic">
-                  <AdminRoute component={AdminBasic} />
-                </Route>
-                <Route path="/admin/mini">
-                  <AdminRoute component={AdminMini} />
-                </Route>
-                <Route path="/admin/real-time-fixed">
-                  <AdminRoute component={AdminRealTimeFixed} />
-                </Route>
-                <Route path="/admin/ws-only">
-                  <AdminRoute component={AdminWsOnly} />
-                </Route>
-                <Route path="/admin/debug">
-                  <AdminRoute component={AdminDebug} />
-                </Route>
-                
-                <Route component={NotFound} />
-              </Switch>
-            </main>
-            <Footer />
-            </div>
-            <Toaster />
-          </TooltipProvider>
-        </WishlistProvider>
-      </CartProvider>
+      <WebSocketProvider>
+        <CartProvider>
+          <WishlistProvider>
+            <TooltipProvider>
+              <div className="flex flex-col min-h-screen">
+                <Header />
+                <main className="flex-grow">
+                  {router}
+                </main>
+                <Footer />
+              </div>
+              <Toaster />
+            </TooltipProvider>
+          </WishlistProvider>
+        </CartProvider>
+      </WebSocketProvider>
     </AuthProvider>
   );
 }
