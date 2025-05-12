@@ -135,15 +135,28 @@ export function useWebSocket(options: WebSocketOptions = {}) {
   
   // Connect when the component mounts
   useEffect(() => {
-    connect();
+    let isMounted = true;
+    
+    const initiateConnection = async () => {
+      // Small delay to give the component time to fully mount
+      await new Promise(resolve => setTimeout(resolve, 300));
+      if (isMounted) {
+        console.log('Initiating WebSocket connection...');
+        connect();
+      }
+    };
+    
+    initiateConnection();
     
     // Clean up the connection when the component unmounts
     return () => {
-      if (socket && socket.readyState === WebSocket.OPEN) {
+      isMounted = false;
+      if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+        console.log('Closing WebSocket connection...');
         socket.close(1000, 'Component unmounted');
       }
     };
-  }, [connect, socket]);
+  }, [connect]);
   
   // Send a message through the WebSocket
   const sendMessage = useCallback((type: string, data: any) => {

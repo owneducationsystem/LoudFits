@@ -49,7 +49,7 @@ const AdminRealTime: React.FC = () => {
   const [adminId, setAdminId] = useState<number>(1); // Default admin ID
   
   // Set up WebSocket connection
-  const { isConnected, messages, sendMessage, getMessagesByType } = useWebSocket({
+  const { isConnected, messages, sendMessage, getMessagesByType, connect } = useWebSocket({
     onOpen: () => {
       // Register as admin with server
       const clientId = `admin:${adminId}`;
@@ -62,13 +62,31 @@ const AdminRealTime: React.FC = () => {
       });
     },
     onClose: () => {
+      console.log('WebSocket disconnected in AdminRealTime');
       toast({
         title: 'WebSocket Disconnected',
-        description: 'Real-time updates are paused',
+        description: 'Attempting to reconnect...',
         variant: 'destructive'
       });
+      
+      // Try to reconnect after a short delay
+      setTimeout(() => {
+        if (!isConnected) {
+          console.log('Manually reconnecting WebSocket...');
+          connect();
+        }
+      }, 2000);
     }
   });
+  
+  // Register effect to handle admin registration when connection is established
+  useEffect(() => {
+    if (isConnected) {
+      console.log('Connection established, registering admin...');
+      const clientId = `admin:${adminId}`;
+      sendMessage('register', { id: clientId, role: 'admin' });
+    }
+  }, [isConnected, adminId, sendMessage]);
   
   // Fetch orders on load
   useEffect(() => {
