@@ -175,8 +175,7 @@ const AdminOrders = () => {
       await apiRequest(
         "PATCH", 
         `/api/admin/orders/${selectedOrder.id}`, 
-        { status: newStatus },
-        { headers: { "user-id": "1" } }
+        { status: newStatus }
       );
       
       // Update the order in the local state

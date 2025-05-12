@@ -39,7 +39,9 @@ const logAdminAction = async (req: Request, res: Response, next: NextFunction) =
   const originalSend = res.send;
   
   res.send = function(body: any) {
-    const userId = parseInt(req.headers['user-id'] as string);
+    // Get current user info from session or cookie if available
+    // For now, hardcode admin user ID = 1 for demonstration
+    const userId = 1; 
     const action = req.method;
     const path = req.path;
     const entityType = path.split('/')[2]; // Assumes path format: /api/entityType/...
@@ -62,8 +64,8 @@ const logAdminAction = async (req: Request, res: Response, next: NextFunction) =
       userAgent: req.get('user-agent')
     }).catch(err => console.error('Failed to log admin action:', err));
     
-    originalSend.apply(res, arguments);
-    return res;
+    // Call the original send method with the body
+    return originalSend.call(res, body);
   };
   
   next();
