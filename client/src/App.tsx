@@ -112,8 +112,8 @@ function App() {
   }
 
   // Wrap components in Suspense for lazy loading
-  const wrapInSuspense = (Component) => {
-    return (props) => (
+  const wrapInSuspense = (Component: React.ComponentType<any>) => {
+    return (props: any) => (
       <Suspense fallback={<PageLoading />}>
         <Component {...props} />
       </Suspense>
@@ -121,12 +121,11 @@ function App() {
   };
 
   // Handle admin route with suspense
-  const wrapInAdminRouteSuspense = (Component) => {
-    return (props) => (
+  const wrapInAdminRouteSuspense = (Component: React.ComponentType<any>) => {
+    const WrappedComponent = (props: any) => <Component {...props} />;
+    return (props: any) => (
       <Suspense fallback={<PageLoading />}>
-        <AdminRoute>
-          <Component {...props} />
-        </AdminRoute>
+        <AdminRoute component={WrappedComponent} />
       </Suspense>
     );
   };
