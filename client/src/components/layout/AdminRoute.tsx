@@ -59,9 +59,8 @@ const AdminRoute = ({ component: Component, ...rest }: AdminRouteProps) => {
     );
   }
   
-  // TEMPORARY: Skip authentication check for development
-  // In production, this would redirect to login if not admin
-  if (false && !isAdmin) {
+  // Redirect to login if not an admin
+  if (!isAdmin) {
     return <Redirect to="/admin/login" />;
   }
   

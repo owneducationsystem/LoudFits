@@ -103,12 +103,17 @@ function App() {
                 <Route path="/account" component={Account} />
                 <Route path="/orders" component={Orders} />
                 
-                {/* Admin Routes */}
+                {/* Admin Routes - Protected */}
                 <Route path="/admin/login" component={AdminLogin} />
-                {/* Temporarily accessing admin routes directly for testing */}
-                <Route path="/admin" component={Admin} />
-                <Route path="/admin/users" component={AdminUsers} />
-                <Route path="/admin/orders" component={AdminOrders} />
+                <Route path="/admin">
+                  {(params) => <AdminRoute component={Admin} {...params} />}
+                </Route>
+                <Route path="/admin/users">
+                  {(params) => <AdminRoute component={AdminUsers} {...params} />}
+                </Route>
+                <Route path="/admin/orders">
+                  {(params) => <AdminRoute component={AdminOrders} {...params} />}
+                </Route>
                 
                 <Route component={NotFound} />
               </Switch>

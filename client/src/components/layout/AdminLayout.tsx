@@ -100,21 +100,18 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
     },
   ];
 
-  /* Temporarily commented out for development
-  // For demo purposes, allow admin access to all logged-in users
-  // In a real app, we would check user.role === 'admin'
+  // Require admin authentication to access admin panel
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Access Denied</h1>
           <p className="text-gray-600 mb-8">You don't have permission to access the admin panel.</p>
-          <Button onClick={() => navigate('/')}>Return to Home</Button>
+          <Button onClick={() => navigate('/admin/login')}>Login as Admin</Button>
         </div>
       </div>
     );
   }
-  */
 
   return (
     <div className="flex min-h-screen bg-gray-100">
