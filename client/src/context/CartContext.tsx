@@ -1,13 +1,28 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Product } from "@shared/schema";
 
+interface DesignPosition {
+  vertical: number;
+  horizontal: number;
+  size: number;
+  rotation: number;
+  flipped: boolean;
+}
+
 export interface Customization {
-  image: string;
+  frontImage: string;
+  backImage?: string | null;
   verticalPosition: number;
   horizontalPosition: number;
   size: number;
   rotation: number;
   flipped: boolean;
+  frontDesign?: DesignPosition | null;
+  backDesign?: DesignPosition | null;
+  
+  // Legacy field for compatibility
+  image?: string;
+  position?: number;
 }
 
 export interface CartItem {

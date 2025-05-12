@@ -40,6 +40,11 @@ const Customize = () => {
   const [imageSize, setImageSize] = useState([50]); // 50% size - 0 to 100
   const [rotation, setRotation] = useState([0]); // Rotation angle in degrees
   const [isFlipped, setIsFlipped] = useState(false); // Whether the image is flipped horizontally
+  const [view, setView] = useState<'front' | 'back'>('front'); // Current view - front or back
+  const [frontImage, setFrontImage] = useState<string | null>(null); // Image for front side
+  const [backImage, setBackImage] = useState<string | null>(null); // Image for back side
+  const [frontPosition, setFrontPosition] = useState({ vertical: 50, horizontal: 50, size: 50, rotation: 0, flipped: false });
+  const [backPosition, setBackPosition] = useState({ vertical: 50, horizontal: 50, size: 50, rotation: 0, flipped: false });
   const [isLoading, setIsLoading] = useState(false);
   
   // Fetch product if ID is provided
@@ -61,7 +66,7 @@ const Customize = () => {
   const availableSizes = ["S", "M", "L", "XL", "XXL"];
 
   // Handle file upload
-  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -90,27 +95,64 @@ const Customize = () => {
     // Convert to base64 for preview
     const reader = new FileReader();
     reader.onload = () => {
-      setUploadedImage(reader.result as string);
+      const imageData = reader.result as string;
+      
+      if (side === 'front') {
+        setFrontImage(imageData);
+        // Legacy state update for compatibility
+        setUploadedImage(imageData);
+      } else {
+        setBackImage(imageData);
+      }
+      
       setIsLoading(false);
+      // Set the view to the side we just uploaded
+      setView(side);
     };
     reader.readAsDataURL(file);
   };
 
   // Clear uploaded image
-  const clearImage = () => {
-    setUploadedImage(null);
+  const clearImage = (side: 'front' | 'back') => {
+    if (side === 'front') {
+      setFrontImage(null);
+      setUploadedImage(null); // Legacy state update
+    } else {
+      setBackImage(null);
+    }
+    
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
   // Reset position, size, rotation and flip
-  const resetCustomization = () => {
+  const resetCustomization = (side: 'front' | 'back' = 'front') => {
+    // Always update the legacy state for compatibility
     setVerticalPosition([50]);
     setHorizontalPosition([50]);
     setImageSize([50]);
     setRotation([0]);
     setIsFlipped(false);
+    
+    // Update the correct side's state
+    if (side === 'front') {
+      setFrontPosition({
+        vertical: 50,
+        horizontal: 50,
+        size: 50,
+        rotation: 0,
+        flipped: false
+      });
+    } else {
+      setBackPosition({
+        vertical: 50,
+        horizontal: 50,
+        size: 50,
+        rotation: 0,
+        flipped: false
+      });
+    }
   };
 
   // Add to cart
@@ -157,12 +199,27 @@ const Customize = () => {
       color: selectedColor,
       product: baseProduct,
       customization: {
-        image: uploadedImage,
+        frontImage: frontImage || uploadedImage,
+        backImage: backImage,
         verticalPosition: verticalPosition[0],
         horizontalPosition: horizontalPosition[0],
         size: imageSize[0],
         rotation: rotation[0],
-        flipped: isFlipped
+        flipped: isFlipped,
+        frontDesign: frontImage ? {
+          vertical: frontPosition.vertical,
+          horizontal: frontPosition.horizontal,
+          size: frontPosition.size,
+          rotation: frontPosition.rotation,
+          flipped: frontPosition.flipped
+        } : null,
+        backDesign: backImage ? {
+          vertical: backPosition.vertical,
+          horizontal: backPosition.horizontal,
+          size: backPosition.size,
+          rotation: backPosition.rotation,
+          flipped: backPosition.flipped
+        } : null
       }
     });
 
@@ -204,6 +261,33 @@ const Customize = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* Preview Section */}
           <div className="flex flex-col items-center">
+            {/* Front/Back Toggle */}
+            <div className="mb-4 flex justify-center">
+              <div className="bg-gray-100 rounded-full p-1 flex">
+                <button
+                  className={`py-2 px-4 rounded-full transition-colors ${
+                    view === 'front' 
+                      ? 'bg-white shadow-md text-black' 
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                  onClick={() => setView('front')}
+                >
+                  Front View
+                </button>
+                <button
+                  className={`py-2 px-4 rounded-full transition-colors ${
+                    view === 'back' 
+                      ? 'bg-white shadow-md text-black' 
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                  onClick={() => setView('back')}
+                >
+                  Back View
+                </button>
+              </div>
+            </div>
+            
+            {/* T-shirt Preview */}
             <div 
               className="relative w-full max-w-md h-[500px] rounded-lg overflow-hidden flex items-center justify-center"
               style={{ backgroundColor: tshirtColors.find(c => c.name === selectedColor)?.hex || "#FFFFFF" }}
@@ -218,12 +302,27 @@ const Customize = () => {
                   strokeWidth: "2"
                 }}
               >
-                <path d="M100,50 L60,80 L60,150 L30,150 L50,350 L250,350 L270,150 L240,150 L240,80 L200,50 L180,20 L120,20 L100,50 Z" />
-                <path d="M100,50 L150,60 L200,50" />
+                {view === 'front' ? (
+                  <>
+                    <path d="M100,50 L60,80 L60,150 L30,150 L50,350 L250,350 L270,150 L240,150 L240,80 L200,50 L180,20 L120,20 L100,50 Z" />
+                    <path d="M100,50 L150,60 L200,50" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M100,50 L60,80 L60,150 L30,150 L50,350 L250,350 L270,150 L240,150 L240,80 L200,50 L180,20 L120,20 L100,50 Z" />
+                  </>
+                )}
               </svg>
               
-              {/* Uploaded Image */}
-              {uploadedImage && (
+              {/* Side label indicator */}
+              <div 
+                className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-xs font-bold"
+              >
+                {view === 'front' ? 'FRONT' : 'BACK'}
+              </div>
+              
+              {/* Uploaded Image - Front */}
+              {view === 'front' && frontImage && (
                 <motion.div
                   className="absolute"
                   style={{ 
@@ -255,12 +354,67 @@ const Customize = () => {
                       
                       setHorizontalPosition([safeX]);
                       setVerticalPosition([safeY]);
+                      
+                      // Update front position state
+                      setFrontPosition({
+                        ...frontPosition,
+                        vertical: safeY,
+                        horizontal: safeX
+                      });
                     }
                   }}
                 >
                   <img
-                    src={uploadedImage}
-                    alt="Your design"
+                    src={frontImage}
+                    alt="Your front design"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </motion.div>
+              )}
+              
+              {/* Uploaded Image - Back */}
+              {view === 'back' && backImage && (
+                <motion.div
+                  className="absolute"
+                  style={{ 
+                    top: `${backPosition.vertical}%`,
+                    left: `${backPosition.horizontal}%`,
+                    transform: `translate(-50%, -50%) scale(${backPosition.size / 50}) rotate(${backPosition.rotation}deg) ${backPosition.flipped ? 'scaleX(-1)' : ''}`,
+                    maxWidth: "60%",
+                    maxHeight: "60%"
+                  }}
+                  drag
+                  dragConstraints={{
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    left: 0
+                  }}
+                  onDragEnd={(e, info) => {
+                    // Update position based on drag end position
+                    const target = e.target as HTMLDivElement;
+                    const container = target.parentElement;
+                    if (container) {
+                      const rect = container.getBoundingClientRect();
+                      const x = (info.point.x - rect.left) / rect.width * 100;
+                      const y = (info.point.y - rect.top) / rect.height * 100;
+                      
+                      // Constrain within safe boundaries (20-80%)
+                      const safeX = Math.max(20, Math.min(80, x));
+                      const safeY = Math.max(20, Math.min(80, y));
+                      
+                      // Update back position state
+                      setBackPosition({
+                        ...backPosition,
+                        vertical: safeY,
+                        horizontal: safeX
+                      });
+                    }
+                  }}
+                >
+                  <img
+                    src={backImage}
+                    alt="Your back design"
                     className="max-w-full max-h-full object-contain"
                   />
                 </motion.div>
@@ -273,12 +427,12 @@ const Customize = () => {
                 </div>
               )}
               
-              {/* Empty state prompt */}
-              {!uploadedImage && !isLoading && (
+              {/* Empty state prompt - based on current view */}
+              {((view === 'front' && !frontImage) || (view === 'back' && !backImage)) && !isLoading && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6" style={{ color: selectedColor === "White" ? "#000000" : "#FFFFFF" }}>
                   <Upload className="h-12 w-12 mb-4 opacity-70" />
                   <p className="text-lg font-semibold opacity-70">
-                    Upload your design
+                    Upload your {view} design
                   </p>
                   <p className="text-sm opacity-50">
                     Your image will appear here
@@ -329,13 +483,13 @@ const Customize = () => {
               <TabsContent value="design" className="space-y-6 pt-4">
                 {/* Upload Button */}
                 <div>
-                  <h3 className="font-bold mb-3">Upload Your Design</h3>
+                  <h3 className="font-bold mb-3">Upload {view === 'front' ? 'Front' : 'Back'} Design</h3>
                   <div className="flex gap-3">
                     <Input
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
-                      onChange={handleFileUpload}
+                      onChange={(e) => handleFileUpload(e, view)}
                       className="hidden"
                     />
                     <Button
@@ -344,20 +498,20 @@ const Customize = () => {
                       className="flex-1 bg-black hover:bg-[#582A34]"
                     >
                       <Upload className="h-4 w-4 mr-2" />
-                      Upload Image
+                      Upload {view === 'front' ? 'Front' : 'Back'} Image
                     </Button>
                     
-                    {uploadedImage && (
+                    {(view === 'front' && frontImage) || (view === 'back' && backImage) ? (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={clearImage}
+                        onClick={() => clearImage(view)}
                         className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
                       >
                         <X className="h-4 w-4 mr-2" />
                         Clear
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                   <p className="text-sm text-gray-500 mt-2">
                     Max file size: 5MB. Supported formats: JPG, PNG, SVG

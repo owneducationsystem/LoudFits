@@ -182,31 +182,41 @@ const Cart = () => {
                               alt={item.product.name}
                               className="w-full h-full object-cover"
                             />
-                          ) : item.customization?.image ? (
+                          ) : item.customization?.frontImage || item.customization?.image ? (
                             <div 
                               className="w-full h-full flex items-center justify-center"
                               style={{ backgroundColor: item.color.toLowerCase() }}
                             >
+                              {/* Front design */}
                               <div
                                 style={{
                                   position: 'relative',
-                                  top: `${item.customization.verticalPosition !== undefined ? 
-                                    (item.customization.verticalPosition - 50) / 2 : 
-                                    (item.customization.position !== undefined ? (item.customization.position - 50) / 2 : 0)}%`,
-                                  left: `${item.customization.horizontalPosition !== undefined ? 
-                                    (item.customization.horizontalPosition - 50) / 2 : 0}%`,
+                                  top: `${item.customization.frontDesign ? 
+                                    (item.customization.frontDesign.vertical - 50) / 2 : 
+                                    (item.customization.verticalPosition !== undefined ? 
+                                      (item.customization.verticalPosition - 50) / 2 : 
+                                      (item.customization.position !== undefined ? (item.customization.position - 50) / 2 : 0))}%`,
+                                  left: `${item.customization.frontDesign ?
+                                    (item.customization.frontDesign.horizontal - 50) / 2 :
+                                    (item.customization.horizontalPosition !== undefined ? 
+                                      (item.customization.horizontalPosition - 50) / 2 : 0)}%`,
                                   transform: `
-                                    scale(${item.customization.size ? item.customization.size / 70 : 0.7}) 
-                                    rotate(${item.customization.rotation !== undefined ? item.customization.rotation : 0}deg)
-                                    ${item.customization.flipped !== undefined && item.customization.flipped ? 'scaleX(-1)' : ''}
+                                    scale(${item.customization.frontDesign ? 
+                                      item.customization.frontDesign.size / 70 : 
+                                      (item.customization.size ? item.customization.size / 70 : 0.7)}) 
+                                    rotate(${item.customization.frontDesign ?
+                                      item.customization.frontDesign.rotation :
+                                      (item.customization.rotation !== undefined ? item.customization.rotation : 0)}deg)
+                                    ${(item.customization.frontDesign && item.customization.frontDesign.flipped) ||
+                                      (item.customization.flipped !== undefined && item.customization.flipped) ? 'scaleX(-1)' : ''}
                                   `,
                                   maxWidth: '80%',
                                   maxHeight: '80%'
                                 }}
                               >
                                 <img
-                                  src={item.customization.image}
-                                  alt="Custom design"
+                                  src={item.customization.frontImage || item.customization.image}
+                                  alt="Custom design (front)"
                                   className="max-w-full max-h-full object-contain"
                                 />
                               </div>
@@ -241,9 +251,15 @@ const Cart = () => {
                               </svg>
                               <span className="font-medium">Custom Design</span>
                               <span className="text-gray-500 ml-1">
-                                ({Math.round(item.customization.size)}% size
-                                {item.customization.rotation !== undefined ? `, ${item.customization.rotation}° rotation` : ''}
-                                {item.customization.flipped !== undefined && item.customization.flipped ? ', flipped' : ''}
+                                {item.customization.frontImage && item.customization.backImage ? 'Front & Back' : 'Front Only'}
+                                {item.customization.frontDesign 
+                                  ? ` (${Math.round(item.customization.frontDesign.size)}% size${
+                                     item.customization.frontDesign.rotation ? `, ${item.customization.frontDesign.rotation}° rotation` : ''}${
+                                     item.customization.frontDesign.flipped ? ', flipped' : ''})`
+                                  : ` (${Math.round(item.customization.size)}% size${
+                                     item.customization.rotation !== undefined ? `, ${item.customization.rotation}° rotation` : ''}${
+                                     item.customization.flipped !== undefined && item.customization.flipped ? ', flipped' : ''})`
+                                }
                               </span>
                             </div>
                           )}
