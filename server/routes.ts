@@ -820,6 +820,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch statistics" });
     }
   });
+  
+  // WebSocket Events API - GET for fetching events, POST for sending
+  app.get("/api/admin/events", isAdmin, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      
+      // Fetch admin logs related to events
+      const logs = await storage.searchAdminLogs('BROADCAST_EVENT');
+      
+      // Format logs as events
+      const events = logs.map(log => {
+        try {
+          const details = JSON.parse(log.details);
+          return {
+            id: log.id.toString(),
+            type: log.action.replace('BROADCAST_EVENT:', ''),
+            message: `Event sent by admin ${log.userId}`,
+            timestamp: log.createdAt,
+            data: details.data || null
+          };
+        } catch (e) {
+          return {
+            id: log.id.toString(),
+            type: log.action.replace('BROADCAST_EVENT:', ''),
+            message: `Event sent by admin ${log.userId}`,
+            timestamp: log.createdAt,
+          };
+        }
+      });
+      
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      res.status(500).json({ message: "Failed to fetch events" });
+    }
+  });
+  
+  // WebSocket Events API - for sending events via HTTP
+  app.post("/api/admin/events", isAdmin, logAdminAction, async (req, res) => {
+    try {
+      const { event, data, recipients } = req.body;
+      
+      if (!event) {
+        return res.status(400).json({ message: "Event type is required" });
+      }
+      
+      // Use the global broadcast function
+      global.broadcastEvent(event, data || {}, recipients);
+      
+      // Log event in admin logs
+      const adminId = req.headers['admin-id'] as string;
+      await storage.createAdminLog({
+        userId: parseInt(adminId),
+        action: `BROADCAST_EVENT:${event}`,
+        entityType: 'event',
+        entityId: `${Date.now()}`,
+        details: JSON.stringify({
+          data,
+          recipients,
+          timestamp: new Date().toISOString()
+        }),
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.get('user-agent') || 'unknown'
+      });
+      
+      res.status(200).json({ 
+        success: true, 
+        message: `Event "${event}" broadcasted successfully`,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error broadcasting event:", error);
+      res.status(500).json({ message: "Failed to broadcast event" });
+    }
+  });
 
   // Initialize server
   // Set up PhonePe payment routes
