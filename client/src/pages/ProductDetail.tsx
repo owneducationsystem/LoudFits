@@ -51,6 +51,8 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  const imageRef = useRef<HTMLDivElement>(null);
 
   const { data: product, isLoading, error } = useQuery<Product>({
     queryKey: [`/api/products/${id}`],
@@ -102,6 +104,7 @@ const ProductDetail = () => {
     if (zoomLevel < 2.5) {
       setZoomLevel(prev => prev + 0.5);
       setIsZoomed(true);
+      setDragPosition({ x: 0, y: 0 }); // Reset position when zooming in
     }
   };
   
@@ -109,12 +112,53 @@ const ProductDetail = () => {
     if (zoomLevel > 1) {
       setZoomLevel(prev => Math.max(1, prev - 0.5));
       setIsZoomed(zoomLevel - 0.5 > 1);
+      
+      // If zooming all the way out, reset drag position
+      if (zoomLevel - 0.5 <= 1) {
+        setDragPosition({ x: 0, y: 0 });
+      }
     }
   };
   
   const resetZoom = () => {
     setZoomLevel(1);
     setIsZoomed(false);
+    setDragPosition({ x: 0, y: 0 });
+  };
+  
+  // Handle drag start for the image
+  const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isZoomed) return;
+    
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startDragX = dragPosition.x;
+    const startDragY = dragPosition.y;
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!imageRef.current) return;
+      
+      // Calculate boundaries based on zoom level
+      const maxDrag = (zoomLevel - 1) * 100; // Maximum drag distance in pixels
+      
+      // Calculate new position
+      const newX = startDragX + (moveEvent.clientX - startX);
+      const newY = startDragY + (moveEvent.clientY - startY);
+      
+      // Apply boundaries
+      const boundedX = Math.max(-maxDrag, Math.min(maxDrag, newX));
+      const boundedY = Math.max(-maxDrag, Math.min(maxDrag, newY));
+      
+      setDragPosition({ x: boundedX, y: boundedY });
+    };
+    
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
 
   const incrementQuantity = () => {
