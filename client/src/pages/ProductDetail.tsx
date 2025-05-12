@@ -54,30 +54,35 @@ const ProductDetail = () => {
     queryKey: ["/api/products"],
   });
 
-  // No fallback data - we'll handle loading and error states properly
+  // No fallback data - only use authenticated data
 
-  // If product data is still loading or there's an error, we'll handle it in the rendering logic
-  const displayRelatedProducts = (relatedProducts && relatedProducts.length > 0) 
-    ? relatedProducts.filter(p => p.id !== parseInt(id || "1")).slice(0, 4) 
+  // Get related products from the same collection, excluding current product
+  const filteredRelatedProducts = (relatedProducts && relatedProducts.length > 0 && product) 
+    ? relatedProducts.filter(p => p.id !== product.id).slice(0, 4) 
     : [];
 
-  if (!selectedSize && displayProduct.sizes.length > 0) {
-    setSelectedSize(displayProduct.sizes[0]);
+  // Set initial size and color when product data is loaded
+  if (product && !selectedSize && product.sizes && product.sizes.length > 0) {
+    setSelectedSize(product.sizes[0]);
   }
 
-  if (!selectedColor && displayProduct.colors.length > 0) {
-    setSelectedColor(displayProduct.colors[0]);
+  if (product && !selectedColor && product.colors && product.colors.length > 0) {
+    setSelectedColor(product.colors[0]);
   }
 
   const nextImage = () => {
+    if (!product || !product.images) return;
+    
     setCurrentImageIndex((prevIndex) => 
-      prevIndex === displayProduct.images.length - 1 ? 0 : prevIndex + 1
+      prevIndex === product.images.length - 1 ? 0 : prevIndex + 1
     );
   };
 
   const prevImage = () => {
+    if (!product || !product.images) return;
+    
     setCurrentImageIndex((prevIndex) => 
-      prevIndex === 0 ? displayProduct.images.length - 1 : prevIndex - 1
+      prevIndex === 0 ? product.images.length - 1 : prevIndex - 1
     );
   };
 
@@ -108,17 +113,19 @@ const ProductDetail = () => {
       return;
     }
 
+    if (!product) return;
+    
     addToCart({
-      productId: displayProduct.id,
+      productId: product.id,
       quantity,
       size: selectedSize,
       color: selectedColor,
-      product: displayProduct
+      product: product
     });
 
     toast({
       title: "Added to cart",
-      description: `${displayProduct.name} has been added to your cart.`,
+      description: `${product.name} has been added to your cart.`,
     });
   };
 
@@ -128,13 +135,16 @@ const ProductDetail = () => {
   };
 
   const handleCustomize = () => {
-    navigate(`/customize?productId=${displayProduct.id}`);
+    if (!product) return;
+    navigate(`/customize?productId=${product.id}`);
   };
 
   const handleAddToWishlist = () => {
+    if (!product) return;
+    
     toast({
       title: "Added to wishlist",
-      description: `${displayProduct.name} has been added to your wishlist.`,
+      description: `${product.name} has been added to your wishlist.`,
     });
   };
 
