@@ -13,7 +13,8 @@ import {
   Ruler,
   Upload,
   Plus,
-  Minus
+  Minus,
+  Camera
 } from "lucide-react";
 import { 
   Tabs, 
@@ -210,6 +211,11 @@ const ProductDetail = () => {
   const handleCustomize = () => {
     if (!product) return;
     navigate(`/customize?productId=${product.id}`);
+  };
+  
+  const handleVirtualTryOn = () => {
+    if (!product) return;
+    navigate(`/virtual-try-on/${product.id}`);
   };
 
   const handleAddToWishlist = () => {
