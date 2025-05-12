@@ -68,23 +68,30 @@ const MobileMenu = ({ isOpen, onClose, links }: MobileMenuProps) => {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="md:hidden fixed inset-0 bg-black z-50 overflow-y-auto"
+          className="md:hidden fixed inset-0 bg-black/95 backdrop-blur-md z-50 overflow-y-auto"
           initial="hidden"
           animate="visible"
           exit="exit"
           variants={menuVariants}
         >
           <div className="relative p-4 h-full flex flex-col">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-8 pb-4 border-b border-gray-800">
               <Link href="/" className="flex items-center" onClick={onClose}>
-                <img src={logoImage} alt="Loudfits" className="h-10 w-auto" />
+                <div className="relative bg-white/10 backdrop-blur-sm rounded-xl p-2 border border-white/20 shadow-md transform hover:scale-105 transition-transform">
+                  <img 
+                    src={logoImage} 
+                    alt="Loudfits" 
+                    className="h-10 w-auto"
+                    style={{ filter: "drop-shadow(0 0 8px rgba(255,255,255,0.3))" }}
+                  />
+                </div>
               </Link>
               <button
                 onClick={onClose}
-                className="text-white hover:text-[#582A34] transition-colors p-1"
+                className="text-white bg-gray-800 hover:bg-[#582A34] transition-colors p-2 rounded-full"
                 aria-label="Close menu"
               >
-                <X size={24} />
+                <X size={22} />
               </button>
             </div>
 
@@ -98,15 +105,15 @@ const MobileMenu = ({ isOpen, onClose, links }: MobileMenuProps) => {
                   variants={itemVariants}
                 >
                   {link.hasSubmenu ? (
-                    <div>
+                    <div className="mb-2">
                       <button
-                        className="w-full flex justify-between items-center py-4 border-b border-gray-800 hover:text-[#582A34] transition-colors"
+                        className="w-full flex justify-between items-center py-4 px-2 mb-1 border-b border-gray-800 hover:text-[#582A34] transition-colors rounded-md"
                         onClick={() => toggleSubmenu(link.name)}
                       >
-                        <span>{link.name}</span>
+                        <span className="font-medium tracking-wide">{link.name}</span>
                         <ChevronDown className={cn(
                           "h-4 w-4 transition-transform duration-200",
-                          expandedMenus.includes(link.name) && "transform rotate-180"
+                          expandedMenus.includes(link.name) && "transform rotate-180 text-[#582A34]"
                         )} />
                       </button>
                       {expandedMenus.includes(link.name) && link.submenu && (
@@ -115,13 +122,13 @@ const MobileMenu = ({ isOpen, onClose, links }: MobileMenuProps) => {
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
                           transition={{ duration: 0.3 }}
-                          className="bg-gray-900 pl-4"
+                          className="bg-gray-900/60 backdrop-blur-sm rounded-md ml-4 overflow-hidden border-l-2 border-[#582A34]/40"
                         >
                           {link.submenu.map((subItem) => (
                             <Link
                               key={subItem.name}
                               href={subItem.path}
-                              className="block py-3 border-b border-gray-800 text-gray-300 hover:text-white pl-2"
+                              className="block py-3 px-4 border-b border-gray-800/70 text-gray-300 hover:text-white hover:bg-[#582A34]/20 transition-colors"
                               onClick={onClose}
                             >
                               {subItem.name}
@@ -133,27 +140,56 @@ const MobileMenu = ({ isOpen, onClose, links }: MobileMenuProps) => {
                   ) : (
                     <Link
                       href={link.path}
-                      className="block py-4 border-b border-gray-800 hover:text-[#582A34] transition-colors"
+                      className="block py-4 px-2 mb-2 border-b border-gray-800 hover:text-[#582A34] hover:bg-gray-900/40 transition-colors rounded-md"
                       onClick={onClose}
                     >
-                      {link.name}
+                      <span className="font-medium tracking-wide">{link.name}</span>
                     </Link>
                   )}
                 </motion.div>
               ))}
             </div>
 
-            <div className="mt-8 flex flex-col space-y-4 text-gray-400 text-sm">
-              <Link href="/privacy-policy" className="hover:text-white transition-colors" onClick={onClose}>
-                Privacy Policy
-              </Link>
-              <Link href="/terms-conditions" className="hover:text-white transition-colors" onClick={onClose}>
-                Terms & Conditions
-              </Link>
+            <div className="mt-8 p-4 bg-gray-900/30 backdrop-blur-sm rounded-lg border border-gray-800/50">
+              <h3 className="font-semibold text-[#582A34] mb-3">Quick Links</h3>
+              <div className="grid grid-cols-2 gap-4 text-gray-300 text-sm">
+                <Link 
+                  href="/privacy-policy" 
+                  className="hover:text-white transition-colors flex items-center gap-2" 
+                  onClick={onClose}
+                >
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#582A34]"></div>
+                  Privacy Policy
+                </Link>
+                <Link 
+                  href="/terms-conditions" 
+                  className="hover:text-white transition-colors flex items-center gap-2" 
+                  onClick={onClose}
+                >
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#582A34]"></div>
+                  Terms & Conditions
+                </Link>
+                <Link 
+                  href="/contact" 
+                  className="hover:text-white transition-colors flex items-center gap-2" 
+                  onClick={onClose}
+                >
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#582A34]"></div>
+                  Contact Us
+                </Link>
+                <Link 
+                  href="/track-order" 
+                  className="hover:text-white transition-colors flex items-center gap-2" 
+                  onClick={onClose}
+                >
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#582A34]"></div>
+                  Track Order
+                </Link>
+              </div>
             </div>
 
-            <div className="mt-auto text-center text-white text-sm py-6">
-              <p>© {new Date().getFullYear()} Loudfits</p>
+            <div className="mt-auto text-center text-gray-400 text-sm py-6 border-t border-gray-800/50 mt-8">
+              <p>© {new Date().getFullYear()} Loudfits. All rights reserved.</p>
             </div>
           </div>
         </motion.div>
