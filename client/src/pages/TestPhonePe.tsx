@@ -115,6 +115,27 @@ const TestPhonePe = () => {
                   </div>
                 </div>
                 
+                <div className="bg-slate-50 p-4 rounded-lg mb-4">
+                  <h3 className="font-medium text-lg mb-2">Test Order Number</h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Generated order number for testing:
+                  </p>
+                  
+                  {orderNumber ? (
+                    <div className="bg-white border border-slate-200 p-3 rounded text-lg font-mono">
+                      {orderNumber}
+                    </div>
+                  ) : (
+                    <div className="animate-pulse h-10 bg-slate-200 rounded"></div>
+                  )}
+                  
+                  <div className="mt-3">
+                    <p className="text-xs text-gray-500">
+                      Generated at: {testResults.orderNumber?.timestamp || 'Loading...'}
+                    </p>
+                  </div>
+                </div>
+                
                 <div className="bg-green-50 p-4 rounded-lg">
                   <h3 className="font-medium text-lg mb-2">Test Payments</h3>
                   <p className="text-sm text-gray-600 mb-4">
@@ -124,18 +145,84 @@ const TestPhonePe = () => {
                   <div className="flex flex-wrap gap-3 mt-2">
                     <Button 
                       className="bg-[#582A34] hover:bg-black flex items-center"
-                      onClick={() => {
-                        toast({
-                          title: 'Coming Soon',
-                          description: 'Test payment functionality will be implemented soon',
-                        });
+                      onClick={async () => {
+                        try {
+                          const response = await fetch('/api/payment/test-create', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ amount: 100 })
+                          });
+                          
+                          if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                          }
+                          
+                          const data = await response.json();
+                          setTestResults(prev => ({ ...prev, testPayment: data }));
+                          
+                          if (data.success) {
+                            toast({
+                              title: 'Test Payment Created',
+                              description: `Order: ${data.data.orderNumber}, Txn ID: ${data.data.merchantTransactionId}`,
+                            });
+                            
+                            // Direct to the mock payment page
+                            window.location.href = data.data.paymentUrl;
+                          } else {
+                            throw new Error(data.error || 'Failed to create test payment');
+                          }
+                        } catch (err: any) {
+                          toast({
+                            title: 'Error Creating Test Payment',
+                            description: err.message || 'An unknown error occurred',
+                            variant: 'destructive',
+                          });
+                        }
                       }}
                     >
                       <span>Test Payment</span>
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
+                    <Button 
+                      variant="outline"
+                      className="flex items-center"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch('/api/payment/test-order-number');
+                          const data = await response.json();
+                          setOrderNumber(data.orderNumber);
+                          setTestResults(prev => ({ ...prev, orderNumber: data }));
+                          
+                          toast({
+                            title: 'New Order Number Generated',
+                            description: `Order number: ${data.orderNumber}`,
+                          });
+                        } catch (err: any) {
+                          toast({
+                            title: 'Error',
+                            description: err.message || 'Failed to generate new order number',
+                            variant: 'destructive',
+                          });
+                        }
+                      }}
+                    >
+                      <span>Generate New Order Number</span>
+                    </Button>
                   </div>
                 </div>
+                
+                {testResults.testPayment && (
+                  <div className="bg-blue-50 p-4 rounded-lg mt-4 border border-blue-100">
+                    <h3 className="font-medium text-lg mb-2">Test Payment Details</h3>
+                    <div className="bg-white p-3 rounded border border-blue-200 overflow-x-auto">
+                      <pre className="text-xs font-mono">
+                        {JSON.stringify(testResults.testPayment, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

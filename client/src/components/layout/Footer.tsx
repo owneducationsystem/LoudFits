@@ -137,7 +137,16 @@ const Footer = () => {
         </div>
 
         <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-500 text-sm">
-          <p>© {new Date().getFullYear()} Loudfits. All rights reserved.</p>
+          <p>
+            © {new Date().getFullYear()} Loudfits. All rights reserved.
+            {process.env.NODE_ENV !== 'production' && (
+              <span className="ml-1">
+                (<Link href="/test-phonepe" className="text-gray-400 hover:text-gray-300 underline text-[10px]">
+                  Test PhonePe
+                </Link>)
+              </span>
+            )}
+          </p>
           <div className="mt-4 flex justify-center space-x-6">
             <Link href="/privacy-policy" className="hover:text-white transition-colors">
               Privacy Policy

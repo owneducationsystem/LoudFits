@@ -40,6 +40,163 @@ export function setupPaymentRoutes(app: Express) {
         timestamp: new Date().toISOString()
       });
     });
+    
+    // Test endpoint for creating a dummy payment request
+    app.post("/api/payment/test-create", async (req, res) => {
+      try {
+        const { amount = 100, success = true } = req.body;
+        
+        const orderNumber = generateOrderNumber();
+        const merchantTransactionId = `TEST${Date.now()}${Math.floor(Math.random() * 1000)}`;
+        
+        // App base URL for redirects
+        const appBaseUrl = `${req.protocol}://${req.get('host')}`;
+        
+        console.log(`[TEST] Creating test payment for amount: ${amount}, orderNumber: ${orderNumber}`);
+        console.log(`[TEST] Using redirect base URL: ${appBaseUrl}`);
+        
+        // Create a mock order in the database (optional)
+        const mockOrder = {
+          orderNumber,
+          userId: req.user?.id || 1, // Default to first user if no auth
+          total: amount,
+          status: 'pending',
+          paymentStatus: 'pending',
+          email: req.user?.email || 'test@example.com',
+          shippingAddress: '123 Test Street, Test City, Test Country',
+          phone: '1234567890',
+          name: req.user?.name || 'Test User'
+        };
+        
+        // We'll return all the data that would be used to create a real payment
+        // without actually making the PhonePe API call
+        res.json({
+          success: true,
+          testPayment: true,
+          data: {
+            orderNumber,
+            merchantTransactionId,
+            amount,
+            redirectUrl: `${appBaseUrl}/payment/callback?merchantTransactionId=${merchantTransactionId}&transactionId=PHTST${Date.now()}&code=${success ? 'PAYMENT_SUCCESS' : 'PAYMENT_ERROR'}`,
+            callbackUrl: `${appBaseUrl}/api/payment/webhook`,
+            paymentUrl: `${appBaseUrl}/test-phonepe/mock-payment?txnId=${merchantTransactionId}&amount=${amount}&success=${success}`,
+            timestamp: new Date().toISOString(),
+            mockOrder
+          }
+        });
+      } catch (error: any) {
+        console.error(`[TEST] Error creating test payment:`, error);
+        res.status(500).json({ 
+          success: false, 
+          error: error.message || "Unknown error during test payment creation"
+        });
+      }
+    });
+    
+    // Mock payment page for simulating PhonePe payment process
+    app.get("/test-phonepe/mock-payment", (req, res) => {
+      const { txnId, amount, success = "true" } = req.query;
+      const isSuccess = success === "true";
+      
+      // Return a simple HTML page to simulate the payment gateway
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>PhonePe Mock Payment</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+              text-align: center;
+            }
+            .card {
+              border: 1px solid #ddd;
+              border-radius: 8px;
+              padding: 20px;
+              margin-top: 20px;
+              background-color: #f9f9f9;
+            }
+            .phonepe-header {
+              background-color: #5f259f;
+              color: white;
+              padding: 10px;
+              border-radius: 8px 8px 0 0;
+              margin: -20px -20px 20px -20px;
+            }
+            .amount {
+              font-size: 24px;
+              font-weight: bold;
+              margin: 20px 0;
+            }
+            .button {
+              background-color: #5f259f;
+              color: white;
+              border: none;
+              padding: 10px 20px;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 16px;
+              margin-top: 20px;
+            }
+            .button.success {
+              background-color: #28a745;
+            }
+            .button.error {
+              background-color: #dc3545;
+            }
+            .txn-id {
+              font-size: 12px;
+              color: #666;
+              margin-top: 20px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="phonepe-header">
+              <h2>PhonePe Payment (Test Mode)</h2>
+            </div>
+            <p>You are about to make a payment via PhonePe</p>
+            <div class="amount">₹${amount}</div>
+            <p>Transaction ID: ${txnId}</p>
+            <div>
+              <button class="button success" onclick="simulatePayment(true)">Pay Now (Success)</button>
+              <button class="button error" onclick="simulatePayment(false)">Pay Now (Failure)</button>
+            </div>
+            <p class="txn-id">This is a test payment page for development purposes only.</p>
+          </div>
+          
+          <script>
+            function simulatePayment(isSuccess) {
+              // Simulate payment processing delay
+              document.body.innerHTML = '<div style="text-align:center; margin-top:50px;"><h2>Processing Payment...</h2><p>Please wait...</p><div style="width:50px; height:50px; border:5px solid #f3f3f3; border-top:5px solid #5f259f; border-radius:50%; margin:20px auto; animation:spin 1s linear infinite;"></div></div>';
+              
+              setTimeout(() => {
+                const redirectUrl = window.location.origin + "/payment/callback?merchantTransactionId=${txnId}&transactionId=PHTST" + Date.now() + "&code=" + (isSuccess ? "PAYMENT_SUCCESS" : "PAYMENT_ERROR");
+                window.location.href = redirectUrl;
+              }, 2000);
+            }
+            
+            document.addEventListener('DOMContentLoaded', () => {
+              // Auto-select the success or failure based on the URL parameter
+              const defaultSuccess = ${isSuccess};
+              if (defaultSuccess !== undefined) {
+                // Auto-submit after a short delay to simulate the payment flow
+                setTimeout(() => {
+                  simulatePayment(defaultSuccess);
+                }, 1500);
+              }
+            });
+          </script>
+        </body>
+        </html>
+      `);
+    });
     app.get("/api/payment/config", (req, res) => {
       res.json({
         merchantId: process.env.PHONEPE_MERCHANT_ID || "Missing",
