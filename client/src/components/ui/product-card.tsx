@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { ShoppingBag, Heart } from "lucide-react";
 import { useCartContext } from "@/context/CartContext";
+import { useWishlistContext } from "@/context/WishlistContext";
 import { Product } from "@shared/schema";
 import { toast } from "@/hooks/use-toast";
 

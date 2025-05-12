@@ -15,6 +15,7 @@ const Header = () => {
   const [, navigate] = useLocation();
   const { cartItems } = useCartContext();
   const { currentUser, logout } = useAuth();
+  const { wishlistItems, totalItems: wishlistCount } = useWishlistContext();
   const { toast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -332,6 +333,15 @@ const Header = () => {
             aria-label="Wishlist"
           >
             <Heart className="h-[22px] w-[22px] text-gray-600 group-hover:text-[#582A34] transition-colors" />
+            {wishlistCount > 0 && (
+              <motion.span 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-1 -right-1 bg-[#582A34] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center shadow-md"
+              >
+                {wishlistCount}
+              </motion.span>
+            )}
             <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs bg-white text-gray-700 shadow-md px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-gray-200">
               Wishlist
             </span>

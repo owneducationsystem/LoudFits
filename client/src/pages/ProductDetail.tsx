@@ -31,6 +31,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCartContext } from "@/context/CartContext";
+import { useWishlistContext } from "@/context/WishlistContext";
 import { Product } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import ProductCarousel from "@/components/ui/product-carousel";
@@ -40,6 +41,7 @@ const ProductDetail = () => {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { addToCart } = useCartContext();
+  const { addToWishlist, isInWishlist, removeFromWishlist } = useWishlistContext();
   
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string>("");
@@ -142,10 +144,15 @@ const ProductDetail = () => {
   const handleAddToWishlist = () => {
     if (!product) return;
     
-    toast({
-      title: "Added to wishlist",
-      description: `${product.name} has been added to your wishlist.`,
-    });
+    if (isInWishlist(product.id)) {
+      removeFromWishlist(product.id);
+      toast({
+        title: "Removed from wishlist",
+        description: `${product.name} has been removed from your wishlist.`,
+      });
+    } else {
+      addToWishlist(product.id, product.name);
+    }
   };
 
   const handleShare = () => {
@@ -283,10 +290,12 @@ const ProductDetail = () => {
                 </button>
                 <button
                   onClick={handleAddToWishlist}
-                  className="text-gray-600 hover:text-[#582A34] transition-colors"
-                  aria-label="Add to wishlist"
+                  className={`${isInWishlist(product?.id || 0) ? 'text-[#582A34]' : 'text-gray-600'} hover:text-[#582A34] transition-colors`}
+                  aria-label={isInWishlist(product?.id || 0) ? "Remove from wishlist" : "Add to wishlist"}
                 >
-                  <Heart className="h-5 w-5" />
+                  <Heart 
+                    className={`h-5 w-5 ${isInWishlist(product?.id || 0) ? 'fill-current' : ''}`} 
+                  />
                 </button>
               </div>
             </div>
