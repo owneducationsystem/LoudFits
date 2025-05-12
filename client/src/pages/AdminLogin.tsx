@@ -88,7 +88,7 @@ const AdminLogin = () => {
                   <FormItem>
                     <FormLabel>Username</FormLabel>
                     <FormControl>
-                      <Input placeholder="admin" {...field} />
+                      <Input placeholder="Username (admin)" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -105,7 +105,7 @@ const AdminLogin = () => {
                       <div className="relative">
                         <Input 
                           type={showPassword ? "text" : "password"} 
-                          placeholder="••••••••" 
+                          placeholder="Password (admin@123)" 
                           {...field} 
                         />
                         <Button

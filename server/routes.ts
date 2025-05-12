@@ -15,30 +15,25 @@ import {
 
 // Middleware to check if user is admin
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
-  // Temporarily disable auth checks for development/testing
-  // This allows direct access to admin routes
-  return next();
-  
-  /* 
-  // Real authentication (uncomment for production)
   try {
-    // In a real app, you'd use authentication middleware and JWT
-    // For now, we'll just check if the user exists and has the admin role
-    const userId = req.headers['user-id'] as string;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+    // Get admin user ID from request headers
+    const adminId = req.headers['admin-id'] as string;
+    if (!adminId) {
+      return res.status(401).json({ message: "Unauthorized - Admin ID missing" });
     }
     
-    const user = await storage.getUser(parseInt(userId));
+    // Verify user exists and has admin role
+    const user = await storage.getUser(parseInt(adminId));
     if (!user || user.role !== 'admin') {
       return res.status(403).json({ message: "Forbidden - Admin access required" });
     }
     
+    // User is authenticated as admin, proceed
     next();
   } catch (error) {
+    console.error("Admin authentication error:", error);
     res.status(500).json({ message: "Authentication error" });
   }
-  */
 };
 
 // Middleware to log admin actions
@@ -389,22 +384,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Username and password are required" });
       }
       
-      // Find user by username
+      // Find user by username (should be 'admin')
       const user = await storage.getUserByUsername(username);
       
       // Check if user exists and is an admin
       if (!user || user.role !== "admin") {
+        console.log("Admin login attempt failed: Invalid credentials or not authorized");
         return res.status(401).json({ message: "Invalid credentials or not authorized" });
       }
       
-      // In a real app, we would compare hashed passwords
-      // For demo purposes, we'll just compare the plain text
+      // Check that the password matches what we've set (admin@123)
       if (user.password !== password) {
+        console.log("Admin login attempt failed: Invalid password");
         return res.status(401).json({ message: "Invalid credentials" });
       }
       
-      // Return user information (excluding password)
+      // Successful login - Return user information (excluding password)
       const { password: _, ...userWithoutPassword } = user;
+      console.log(`Admin login successful for ${username}`);
       
       res.json({ 
         user: userWithoutPassword,

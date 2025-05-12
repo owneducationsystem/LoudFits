@@ -12,9 +12,27 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  // Set up headers
+  let headers: Record<string, string> = data ? { "Content-Type": "application/json" } : {};
+  
+  // Add admin-id header for admin routes
+  if (url.includes('/api/admin')) {
+    try {
+      const adminUserData = localStorage.getItem("adminUser");
+      if (adminUserData) {
+        const adminUser = JSON.parse(adminUserData);
+        if (adminUser && adminUser.id) {
+          headers["admin-id"] = adminUser.id.toString();
+        }
+      }
+    } catch (error) {
+      console.error("Error adding admin authentication:", error);
+    }
+  }
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
