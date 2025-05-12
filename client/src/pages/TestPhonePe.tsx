@@ -240,6 +240,88 @@ const TestPhonePe = () => {
                     </div>
                   </div>
                   
+                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mt-4">
+                    <h4 className="font-medium text-base mb-2">Test Live API</h4>
+                    <p className="text-sm text-gray-600 mb-3">Test the actual checkout flow using the API</p>
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700 w-full"
+                      onClick={async () => {
+                        try {
+                          // Create mock cart data for testing
+                          const testOrderData = {
+                            amount: {
+                              subtotal: "999",
+                              tax: "99.9",
+                              shipping: "0",
+                              discount: "0",
+                              total: "1098.9"
+                            },
+                            cartItems: [
+                              {
+                                productId: 1,
+                                quantity: 1,
+                                size: "M",
+                                color: "Black",
+                                product: {
+                                  id: 1,
+                                  name: "Test Product",
+                                  price: "999",
+                                  description: "Test description",
+                                  images: ["https://example.com/image.jpg"]
+                                }
+                              }
+                            ],
+                            shippingAddress: "123 Test Street, Test City, Test State, 12345",
+                            shippingMethod: "standard",
+                            paymentMethod: "phonepe"
+                          };
+                          
+                          toast({
+                            title: 'Testing API',
+                            description: 'Initiating payment through the API...',
+                          });
+                          
+                          const response = await fetch('/api/payment/initiate', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(testOrderData)
+                          });
+                          
+                          if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+                          }
+                          
+                          const data = await response.json();
+                          setTestResults(prev => ({ ...prev, apiTest: data }));
+                          
+                          if (data.success && data.paymentUrl) {
+                            toast({
+                              title: 'Payment Initiated',
+                              description: `Order: ${data.order.orderNumber}, redirecting to payment gateway...`,
+                            });
+                            
+                            // Redirect to payment URL
+                            window.location.href = data.paymentUrl;
+                          } else {
+                            throw new Error(data.error || 'Failed to initiate payment');
+                          }
+                        } catch (err: any) {
+                          console.error('API test error:', err);
+                          toast({
+                            title: 'Error Testing API',
+                            description: err.message || 'An unknown error occurred',
+                            variant: 'destructive',
+                          });
+                        }
+                      }}
+                    >
+                      Test Full Checkout
+                    </Button>
+                  </div>
+                  
                   <div className="mt-6">
                     <Button 
                       variant="outline"

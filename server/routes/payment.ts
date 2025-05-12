@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { Express } from "express";
-import { User } from "@shared/schema";
+import { User, Payment, Order } from "@shared/schema";
 import crypto from "crypto";
 import { PhonePeService } from "../services/phonePeService";
 import { storage } from "../storage";
@@ -51,6 +51,61 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   
   return res.status(401).json({ error: "Unauthorized access" });
 };
+
+// Helper function to update payment status based on PhonePe response
+async function updatePaymentStatus(payment: Payment, status: any): Promise<{
+  success: boolean;
+  order?: Order;
+  error?: string;
+}> {
+  try {
+    if (!payment) {
+      throw new Error("Payment record not found");
+    }
+    
+    let newStatus: string;
+    
+    if (status.success && status.code === "PAYMENT_SUCCESS") {
+      newStatus = "completed";
+      
+      // Update order status
+      await storage.updateOrderStatus(payment.orderId, "processing");
+      await storage.updateOrderPaymentStatus(payment.orderId, "paid");
+      
+    } else if (status.code === "PAYMENT_PENDING") {
+      newStatus = "pending";
+      
+    } else {
+      newStatus = "failed";
+      
+      // Update order status
+      await storage.updateOrderStatus(payment.orderId, "cancelled");
+      await storage.updateOrderPaymentStatus(payment.orderId, "failed");
+    }
+    
+    // Update payment record
+    await storage.updatePaymentStatus(payment.id, newStatus);
+    await storage.updatePaymentDetails(payment.id, {
+      gatewayResponse: status,
+      gatewayErrorCode: status.code !== "PAYMENT_SUCCESS" ? status.code : null,
+      gatewayErrorMessage: status.code !== "PAYMENT_SUCCESS" ? status.message : null,
+      paymentDate: newStatus === "completed" ? new Date() : null
+    });
+    
+    // Get the updated order
+    const order = await storage.getOrderById(payment.orderId);
+    
+    if (!order) {
+      throw new Error("Order not found after updating payment status");
+    }
+    
+    return { success: true, order };
+    
+  } catch (error: any) {
+    console.error("Error updating payment status:", error);
+    return { success: false, error: error.message };
+  }
+}
 
 export function setupPaymentRoutes(app: Express) {
   // Debug endpoint for PhonePe configuration (for development only)
@@ -345,6 +400,109 @@ export function setupPaymentRoutes(app: Express) {
     }
   });
   
+  // Payment status endpoint to check payment status
+  app.get("/api/payment/status/:orderId", async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      
+      if (isNaN(orderId)) {
+        return res.status(400).json({ success: false, error: "Invalid order ID" });
+      }
+      
+      // Get order
+      const order = await storage.getOrderById(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ success: false, error: "Order not found" });
+      }
+      
+      // Get the latest payment for this order
+      const payments = await storage.getPaymentsByOrderId(orderId);
+      
+      if (!payments || payments.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          error: "No payment found for this order",
+          order
+        });
+      }
+      
+      // Sort payments by created date to get the latest
+      const latestPayment = payments.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0];
+      
+      // If payment is already completed or failed, just return the current status
+      if (latestPayment.status === "completed" || latestPayment.status === "failed") {
+        return res.json({
+          success: true,
+          paymentStatus: latestPayment.status,
+          order
+        });
+      }
+      
+      // If payment is pending or initiated, check with payment gateway
+      let paymentStatus;
+      
+      try {
+        // For test transactions, we can just return success
+        if (latestPayment.merchantTransactionId.startsWith('TEST')) {
+          paymentStatus = {
+            success: true,
+            code: "PAYMENT_SUCCESS",
+            message: "Payment successful (test payment)",
+            data: { merchantId: latestPayment.merchantTransactionId }
+          };
+        } else {
+          // Check with PhonePe
+          paymentStatus = await PhonePeService.checkPaymentStatus(latestPayment.merchantTransactionId);
+        }
+        
+        // Update payment status
+        const result = await updatePaymentStatus(latestPayment, paymentStatus);
+        
+        if (result.success && result.order) {
+          return res.json({
+            success: true,
+            paymentStatus: latestPayment.status,
+            order: result.order
+          });
+        } else {
+          return res.status(500).json({
+            success: false,
+            error: result.error || "Failed to update payment status",
+            order
+          });
+        }
+        
+      } catch (error: any) {
+        console.error("Error checking payment status:", error);
+        
+        // In development, just return the current status
+        if (process.env.NODE_ENV !== 'production') {
+          return res.json({
+            success: true,
+            paymentStatus: latestPayment.status,
+            order,
+            warning: "Could not check payment status with gateway"
+          });
+        }
+        
+        return res.status(500).json({
+          success: false,
+          error: error.message || "Failed to check payment status",
+          order
+        });
+      }
+    } catch (error: any) {
+      console.error("Payment status check error:", error);
+      return res.status(500).json({
+        success: false,
+        error: error.message || "An error occurred while checking payment status"
+      });
+    }
+  });
+
   // Payment callback route (user is redirected here after payment)
   app.all("/api/payment/callback", async (req, res) => {
     // Get parameters from either query params (GET) or body (POST)
@@ -434,46 +592,23 @@ export function setupPaymentRoutes(app: Express) {
         throw new Error("Payment record not found");
       }
       
-      let newStatus;
-      let paymentStatusMessage;
+      // Update payment status using the helper function
+      const result = await updatePaymentStatus(payment, paymentStatus);
       
-      if (paymentStatus.success && paymentStatus.code === "PAYMENT_SUCCESS") {
-        newStatus = "completed";
-        paymentStatusMessage = "Payment completed successfully";
-        
-        // Update order status
-        await storage.updateOrderStatus(payment.orderId, "processing");
-        
-      } else if (paymentStatus.code === "PAYMENT_PENDING") {
-        newStatus = "pending";
-        paymentStatusMessage = "Payment is still processing";
-        
-      } else {
-        newStatus = "failed";
-        paymentStatusMessage = "Payment failed or was cancelled";
-        
-        // Update order status
-        await storage.updateOrderStatus(payment.orderId, "cancelled");
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update payment status");
       }
       
-      // Update payment record
-      await storage.updatePaymentStatus(payment.id, newStatus);
-      await storage.updatePaymentDetails(payment.id, {
-        gatewayResponse: paymentStatus,
-        gatewayErrorCode: paymentStatus.code !== "PAYMENT_SUCCESS" ? paymentStatus.code : null,
-        gatewayErrorMessage: paymentStatus.code !== "PAYMENT_SUCCESS" ? paymentStatus.message : null,
-        paymentDate: newStatus === "completed" ? new Date() : null
-      });
-      
-      // Redirect user to order confirmation or failure page
-      if (newStatus === "completed") {
+      // Determine redirect based on payment status
+      if (result.order?.paymentStatus === "paid") {
         res.redirect(`/order-confirmation/${payment.orderId}`);
       } else {
-        res.redirect(`/payment-failed/${payment.orderId}?reason=${encodeURIComponent(paymentStatusMessage)}`);
+        const reason = paymentStatus.message || "Payment was not completed successfully";
+        res.redirect(`/payment-error?message=${encodeURIComponent(reason)}`);
       }
       
       // Log payment callback
-      console.log(`Payment callback processed: orderId=${payment.orderId}, status=${newStatus}`);
+      console.log(`Payment callback processed: orderId=${payment.orderId}, status=${result.order?.paymentStatus}`);
       
     } catch (error: any) {
       console.error("Payment callback error:", error);
