@@ -38,44 +38,41 @@ const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
 
 // Middleware to log admin actions
 const logAdminAction = async (req: Request, res: Response, next: NextFunction) => {
-  // Simply pass through for now
-  return next();
-  
-  /*
   const originalSend = res.send;
   
   res.send = function(body: any) {
-    // Get current user info from session or cookie if available
-    // For now, hardcode admin user ID = 1 for demonstration
-    const userId = 3; // Use the ID of our admin user
-    const action = req.method;
-    const path = req.path;
-    const entityType = path.split('/')[2]; // Assumes path format: /api/entityType/...
-    const entityId = req.params.id || 'multiple';
-    
-    // Create admin log
-    storage.createAdminLog({
-      userId,
-      action: `${action} ${path}`,
-      entityType,
-      entityId,
-      details: JSON.stringify({
-        requestBody: req.body,
-        params: req.params,
-        query: req.query,
-        ip: req.ip,
+    // Get admin user ID from request headers
+    const adminId = req.headers['admin-id'] as string;
+    if (adminId) {
+      const userId = parseInt(adminId);
+      const action = req.method;
+      const path = req.path;
+      const entityType = path.split('/')[2]; // Assumes path format: /api/entityType/...
+      const entityId = req.params.id || 'multiple';
+      
+      // Create admin log
+      storage.createAdminLog({
+        userId,
+        action: `${action} ${path}`,
+        entityType,
+        entityId,
+        details: JSON.stringify({
+          requestBody: req.body,
+          params: req.params,
+          query: req.query,
+          ip: req.ip,
+          userAgent: req.get('user-agent')
+        }),
+        ipAddress: req.ip,
         userAgent: req.get('user-agent')
-      }),
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent')
-    }).catch(err => console.error('Failed to log admin action:', err));
+      }).catch(err => console.error('Failed to log admin action:', err));
+    }
     
     // Call the original send method with the body
     return originalSend.call(res, body);
   };
   
   next();
-  */
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {

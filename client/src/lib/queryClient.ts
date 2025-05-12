@@ -47,7 +47,27 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    const url = queryKey[0] as string;
+    // Set up headers for admin authentication
+    let headers: Record<string, string> = {};
+    
+    // Add admin-id header for admin routes
+    if (url.includes('/api/admin')) {
+      try {
+        const adminUserData = localStorage.getItem("adminUser");
+        if (adminUserData) {
+          const adminUser = JSON.parse(adminUserData);
+          if (adminUser && adminUser.id) {
+            headers["admin-id"] = adminUser.id.toString();
+          }
+        }
+      } catch (error) {
+        console.error("Error adding admin authentication:", error);
+      }
+    }
+    
+    const res = await fetch(url, {
+      headers,
       credentials: "include",
     });
 
