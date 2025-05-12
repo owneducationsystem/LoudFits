@@ -118,6 +118,7 @@ const getPaymentStatusColor = (status: string) => {
 
 const AdminOrders = () => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -190,10 +191,23 @@ const AdminOrders = () => {
         queryKey: ["/api/admin/orders"]
       });
       
+      // Show success toast notification
+      toast({
+        title: "Order Status Updated",
+        description: `Order #${selectedOrder.orderNumber} status changed to ${newStatus}`,
+        variant: "default"
+      });
+      
       setIsUpdateStatusDialogOpen(false);
     } catch (error) {
       console.error("Failed to update order status:", error);
-      alert("Failed to update order status. Please try again.");
+      
+      // Show error toast notification
+      toast({
+        title: "Update Failed",
+        description: "Failed to update order status. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
