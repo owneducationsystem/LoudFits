@@ -563,6 +563,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Update existing product from admin panel
+  app.patch("/api/admin/products/:id", isAdmin, logAdminAction, async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      if (isNaN(productId)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      // Check if product exists
+      const existingProduct = await storage.getProduct(productId);
+      if (!existingProduct) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      // Validate product data
+      const productData = req.body;
+      
+      // Update the product
+      const updatedProduct = await storage.updateProduct(productId, productData);
+      
+      // Return the updated product
+      res.json(updatedProduct);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid product data", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to update product" });
+    }
+  });
+  
   // Categories API endpoints
   // For now, these are placeholders since we don't yet have category tables in the database schema
   app.get("/api/admin/categories", isAdmin, logAdminAction, async (req, res) => {
