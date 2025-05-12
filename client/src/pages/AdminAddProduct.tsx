@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Save, ArrowLeft, Plus, X, Upload } from "lucide-react";
+import { Save, ArrowLeft, Plus, X, Upload, ImagePlus } from "lucide-react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,9 @@ const AdminAddProduct = () => {
   const [colorInput, setColorInput] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
+  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const [uploadPreviews, setUploadPreviews] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const allSizes = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
   const allCategories = ["Graphic Tees", "Printed Shirts", "Typography", "Abstract", "Artists", "Limited Edition"];
@@ -118,6 +121,74 @@ const AdminAddProduct = () => {
     const newImages = (watchedImages || []).filter(i => i !== url);
     setValue("images", newImages, { shouldValidate: true });
     setImageUrls(newImages);
+  };
+  
+  // Handle file input change for image uploads
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    // Convert FileList to array and filter for image files only
+    const newFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+    
+    // Check maximum file size (5MB)
+    const validFiles = newFiles.filter(file => file.size <= 5 * 1024 * 1024);
+    
+    if (validFiles.length < newFiles.length) {
+      toast({
+        title: "File size exceeded",
+        description: "Some images were skipped because they exceed the 5MB limit.",
+        variant: "destructive",
+      });
+    }
+    
+    if (validFiles.length === 0) return;
+    
+    // Create and add the local preview URLs
+    const newPreviews = validFiles.map(file => URL.createObjectURL(file));
+    
+    setUploadedImages(prev => [...prev, ...validFiles]);
+    setUploadPreviews(prev => [...prev, ...newPreviews]);
+    
+    // Combine all images (URLs and file previews) for the form value
+    const allImages = [...imageUrls, ...newPreviews];
+    setValue("images", allImages, { shouldValidate: true });
+    
+    // Reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
+  // Handle removing uploaded image preview
+  const handleRemoveUploadedImage = (index: number) => {
+    setUploadPreviews(prev => {
+      const newPreviews = [...prev];
+      // Clean up the URL object
+      URL.revokeObjectURL(newPreviews[index]); 
+      newPreviews.splice(index, 1);
+      return newPreviews;
+    });
+    
+    setUploadedImages(prev => {
+      const newFiles = [...prev];
+      newFiles.splice(index, 1);
+      return newFiles;
+    });
+    
+    // Update the form value with remaining images
+    const allImages = [
+      ...imageUrls, 
+      ...uploadPreviews.filter((_, i) => i !== index)
+    ];
+    setValue("images", allImages, { shouldValidate: true });
+  };
+  
+  // Trigger file input click
+  const handleImageUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
   
   const onSubmit = async (values: AddProductFormValues) => {
