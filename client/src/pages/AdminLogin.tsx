@@ -52,11 +52,11 @@ const AdminLogin = () => {
       
       // Redirect to admin dashboard
       navigate("/admin");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Admin login failed:", error);
       toast({
         title: "Login Failed",
-        description: "Invalid credentials. Please try again.",
+        description: error.message || "Authentication failed. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -75,7 +75,7 @@ const AdminLogin = () => {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl text-center">Admin Login</CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to access the admin dashboard
+            Secure login - Authorized personnel only
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -88,7 +88,7 @@ const AdminLogin = () => {
                   <FormItem>
                     <FormLabel>Username</FormLabel>
                     <FormControl>
-                      <Input placeholder="Username (admin)" {...field} />
+                      <Input placeholder="Username" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -105,7 +105,7 @@ const AdminLogin = () => {
                       <div className="relative">
                         <Input 
                           type={showPassword ? "text" : "password"} 
-                          placeholder="Password (admin@123)" 
+                          placeholder="Password" 
                           {...field} 
                         />
                         <Button

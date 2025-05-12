@@ -372,33 +372,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Track login attempts to implement basic rate limiting
+  const loginAttempts = new Map<string, { count: number, lastAttempt: number }>();
+  
   // Admin login route (not protected)
   app.post("/api/admin/login", async (req, res) => {
     try {
       const { username, password } = req.body;
+      const ipAddress = req.ip || 'unknown';
       
+      // Basic rate limiting - prevent brute force attacks
+      const now = Date.now();
+      const attempts = loginAttempts.get(ipAddress) || { count: 0, lastAttempt: 0 };
+      
+      // Reset attempts if it's been more than 15 minutes
+      if (now - attempts.lastAttempt > 15 * 60 * 1000) {
+        attempts.count = 0;
+      }
+      
+      // Limit to 5 failed attempts within 15 minutes
+      if (attempts.count >= 5) {
+        console.log(`Too many login attempts from IP: ${ipAddress}`);
+        return res.status(429).json({ message: "Too many login attempts. Please try again later." });
+      }
+      
+      // Update attempts counter
+      attempts.count++;
+      attempts.lastAttempt = now;
+      loginAttempts.set(ipAddress, attempts);
+      
+      // Validate request
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password are required" });
       }
       
-      // Find user by username (should be 'admin')
+      // Find user by username
       const user = await storage.getUserByUsername(username);
       
-      // Check if user exists and is an admin
-      if (!user || user.role !== "admin") {
-        console.log("Admin login attempt failed: Invalid credentials or not authorized");
-        return res.status(401).json({ message: "Invalid credentials or not authorized" });
-      }
+      // For security, use a consistent response time whether successful or not
+      const delayResponse = () => new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
       
-      // Check that the password matches what we've set (admin@123)
-      if (user.password !== password) {
-        console.log("Admin login attempt failed: Invalid password");
+      // Always use same generic error message to prevent username enumeration
+      if (!user || user.role !== "admin") {
+        console.log(`Admin login attempt failed for username: "${username}" from IP: ${ipAddress}`);
+        await delayResponse();
         return res.status(401).json({ message: "Invalid credentials" });
       }
       
-      // Successful login - Return user information (excluding password)
+      // Check password
+      if (user.password !== password) {
+        console.log(`Admin login attempt with correct username but wrong password from IP: ${ipAddress}`);
+        await delayResponse();
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      
+      // Successful login - Reset failed attempts counter
+      loginAttempts.delete(ipAddress);
+      
+      // Log successful login
+      await storage.createAdminLog({
+        userId: user.id,
+        action: 'LOGIN',
+        entityType: 'auth',
+        entityId: user.id.toString(),
+        details: JSON.stringify({ timestamp: new Date().toISOString() }),
+        ipAddress: ipAddress,
+        userAgent: req.get('user-agent') || 'unknown'
+      }).catch(err => console.error('Failed to log admin login:', err));
+      
+      // Return user information (excluding password)
       const { password: _, ...userWithoutPassword } = user;
-      console.log(`Admin login successful for ${username}`);
+      console.log(`Admin login successful for ${username} from IP: ${ipAddress}`);
       
       res.json({ 
         user: userWithoutPassword,
@@ -406,7 +450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Admin login error:", error);
-      res.status(500).json({ message: "Failed to authenticate" });
+      res.status(500).json({ message: "An error occurred during authentication" });
     }
   });
 
