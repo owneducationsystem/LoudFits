@@ -52,6 +52,7 @@ import AdminRealTimeFixed from "@/pages/AdminRealTimeFixed";
 import AdminWsOnly from "@/pages/AdminWsOnly";
 import AdminDebug from "@/pages/AdminDebug";
 import AdminRoute from "@/components/layout/AdminRoute";
+import WebSocketTest from "@/pages/WebSocketTest";
 
 import { useEffect, useState } from "react";
 import { handleAuthRedirect } from "@/lib/firebase";
@@ -124,6 +125,7 @@ function App() {
       <Route path="/payment-failed/:orderId" component={PaymentFailed} />
       <Route path="/payment-error" component={PaymentError} />
       <Route path="/test-phonepe" component={TestPhonePe} />
+      <Route path="/websocket-test" component={WebSocketTest} />
       
       {/* Admin Routes - Protected */}
       <Route path="/admin/login" component={AdminLogin} />
@@ -157,7 +159,19 @@ function App() {
       <Route path="/admin/settings">
         <AdminRoute component={AdminSettings} />
       </Route>
-      {/* Admin routes cleaned up - removed test pages */}
+      {/* Admin testing and development routes */}
+      <Route path="/admin/realtime-fixed">
+        <AdminRoute component={AdminRealTimeFixed} />
+      </Route>
+      <Route path="/admin/realtime">
+        <AdminRoute component={AdminRealTime} />
+      </Route>
+      <Route path="/admin/debug">
+        <AdminRoute component={AdminDebug} />
+      </Route>
+      <Route path="/admin/wsonly">
+        <AdminRoute component={AdminWsOnly} />
+      </Route>
       
       <Route component={NotFound} />
     </Switch>

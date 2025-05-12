@@ -11,6 +11,9 @@ import { Loader2, Wifi, WifiOff, RefreshCw, Zap, Bell, CheckCircle2 } from 'luci
 import { apiRequest } from '@/lib/queryClient';
 import AdminHeader from '../components/admin/AdminHeader';
 import WebSocketKeepAlive from '../components/admin/WebSocketKeepAlive';
+import { AdminWebSocketStats } from '../components/admin/AdminWebSocketStats';
+import { Textarea } from '@/components/ui/textarea';
+import { useWebSocket } from '@/context/WebSocketContext';
 
 interface Order {
   id: number;
@@ -35,7 +38,10 @@ const AdminRealTimeFixed: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<WebSocketMessage[]>([]);
   const [adminId, setAdminId] = useState<number>(1); // Default admin ID
+  const [testEventType, setTestEventType] = useState<string>('test_event');
+  const [testEventPayload, setTestEventPayload] = useState<string>('{"message": "Hello from admin panel"}');
   const { toast } = useToast();
+  const { connected, registered, reconnect, sendMessage } = useWebSocket();
 
   // Fetch orders on component mount
   useEffect(() => {
@@ -88,6 +94,30 @@ const AdminRealTimeFixed: React.FC = () => {
     fetchOrders().catch(() => fetchSingleOrder());
   }, [toast]); // Removed selectedOrder dependency to prevent repeated API calls
 
+  // Send test event via WebSocket
+  const sendTestEvent = () => {
+    try {
+      // Validate JSON
+      const payload = JSON.parse(testEventPayload);
+      
+      // Send message through WebSocket context
+      sendMessage(testEventType, payload);
+      
+      // Show success toast
+      toast({
+        title: 'Event Sent',
+        description: `Sent "${testEventType}" event successfully`,
+      });
+    } catch (error) {
+      // Show error toast for invalid JSON
+      toast({
+        title: 'Invalid JSON',
+        description: 'Please enter valid JSON for the event payload',
+        variant: 'destructive',
+      });
+    }
+  };
+  
   // Format date for display
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -153,7 +183,7 @@ const AdminRealTimeFixed: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminHeader title="Real-Time Monitor (Fixed)" />
+      <AdminHeader adminId={adminId} />
       
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
@@ -162,7 +192,10 @@ const AdminRealTimeFixed: React.FC = () => {
             <p className="text-gray-500">Fixed WebSocket implementation</p>
           </div>
           
-          <WebSocketKeepAlive adminId={adminId} interval={10000} />
+          <div className="flex items-center gap-3">
+            <AdminWebSocketStats />
+            <WebSocketKeepAlive adminId={adminId} interval={10000} />
+          </div>
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

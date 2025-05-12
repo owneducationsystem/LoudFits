@@ -18,6 +18,10 @@ import { cn } from '@/lib/utils';
 interface AdminWebSocketIndicatorProps {
   className?: string;
   showLabel?: boolean;
+  // These props are for backward compatibility
+  connected?: boolean;
+  registered?: boolean;
+  adminId?: number;
 }
 
 export function AdminWebSocketIndicator({ 

@@ -113,6 +113,9 @@ class GlobalWebSocketService {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws`;
       
+      // Log the WebSocket URL for debugging
+      console.log('Attempting to connect to WebSocket URL:', wsUrl);
+      
       // Create WebSocket
       const socket = new WebSocket(wsUrl) as EnhancedWebSocket;
       this.socket = socket;
