@@ -10,6 +10,7 @@ import Home from "@/pages/Home";
 import Shop from "@/pages/Shop";
 import ProductDetail from "@/pages/ProductDetail";
 import Customize from "@/pages/Customize";
+import VirtualTryOn from "@/pages/VirtualTryOn";
 import Cart from "@/pages/Cart";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/not-found";
@@ -97,6 +98,7 @@ function App() {
                 <Route path="/shop" component={Shop} />
                 <Route path="/product/:id" component={ProductDetail} />
                 <Route path="/customize" component={Customize} />
+                <Route path="/virtual-try-on/:id" component={VirtualTryOn} />
                 <Route path="/cart" component={Cart} />
                 <Route path="/login" component={Auth} />
                 <Route path="/signup" component={Auth} />

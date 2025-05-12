@@ -554,19 +554,35 @@ const ProductDetail = () => {
                 </Button>
               </motion.div>
               
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button
-                  onClick={handleCustomize}
-                  variant="outline"
-                  className="w-full border-black text-black hover:bg-black hover:text-white transition-colors py-6 flex items-center justify-center gap-2"
+              <div className="grid grid-cols-2 gap-3">
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <Upload className="h-5 w-5" />
-                  CUSTOMIZE THIS TEE
-                </Button>
-              </motion.div>
+                  <Button
+                    onClick={handleCustomize}
+                    variant="outline"
+                    className="w-full border-black text-black hover:bg-black hover:text-white transition-colors py-6 flex items-center justify-center gap-2"
+                  >
+                    <Upload className="h-5 w-5" />
+                    CUSTOMIZE
+                  </Button>
+                </motion.div>
+                
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button
+                    onClick={handleVirtualTryOn}
+                    variant="outline"
+                    className="w-full border-black text-black hover:bg-black hover:text-white transition-colors py-6 flex items-center justify-center gap-2"
+                  >
+                    <Camera className="h-5 w-5" />
+                    TRY IT ON
+                  </Button>
+                </motion.div>
+              </div>
             </div>
 
             {/* Shipping Info */}
