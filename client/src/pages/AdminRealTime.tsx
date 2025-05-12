@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useWebSocket } from '@/hooks/use-websocket';
-import { Loader2, Wifi, WifiOff, RefreshCw, Zap, Bell, CheckCircle2 } from 'lucide-react';
+import { Loader2, RefreshCw, Zap, Bell, CheckCircle2 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import AdminHeader from '../components/admin/AdminHeader';
+import AdminWebSocket from '../components/admin/AdminWebSocket';
 
 interface Order {
   id: number;
@@ -48,45 +48,28 @@ const AdminRealTime: React.FC = () => {
   const [notifications, setNotifications] = useState<WebSocketMessage[]>([]);
   const [adminId, setAdminId] = useState<number>(1); // Default admin ID
   
-  // Set up WebSocket connection
-  const { isConnected, messages, sendMessage, getMessagesByType, connect } = useWebSocket({
-    onOpen: () => {
-      // Register as admin with server
-      const clientId = `admin:${adminId}`;
-      console.log('Registering with WebSocket server as:', clientId);
-      sendMessage('register', { id: clientId, role: 'admin' });
-      
-      toast({
-        title: 'WebSocket Connected',
-        description: 'You are now receiving real-time updates',
-      });
-    },
-    onClose: () => {
-      console.log('WebSocket disconnected in AdminRealTime');
-      toast({
-        title: 'WebSocket Disconnected',
-        description: 'Attempting to reconnect...',
-        variant: 'destructive'
+  // Handle received WebSocket messages
+  const handleWebSocketMessage = (message: WebSocketMessage) => {
+    console.log('Message received in AdminRealTime:', message);
+    
+    // Add to notifications - limit to 10 most recent
+    if (message.type.includes('admin_') || message.type.includes('_updated')) {
+      setNotifications(prev => {
+        const combined = [message, ...prev];
+        // Remove duplicates based on timestamp
+        const unique = combined.filter((msg, index, self) => 
+          index === self.findIndex(m => m.timestamp === msg.timestamp)
+        );
+        // Return most recent 10
+        return unique.slice(0, 10);
       });
       
-      // Try to reconnect after a short delay
-      setTimeout(() => {
-        if (!isConnected) {
-          console.log('Manually reconnecting WebSocket...');
-          connect();
-        }
-      }, 2000);
+      // Update selected order if it matches
+      if (selectedOrder && message.data.order && message.data.order.id === selectedOrder.id) {
+        setSelectedOrder(message.data.order);
+      }
     }
-  });
-  
-  // Register effect to handle admin registration when connection is established
-  useEffect(() => {
-    if (isConnected) {
-      console.log('Connection established, registering admin...');
-      const clientId = `admin:${adminId}`;
-      sendMessage('register', { id: clientId, role: 'admin' });
-    }
-  }, [isConnected, adminId, sendMessage]);
+  };
   
   // Fetch orders on load
   useEffect(() => {
@@ -131,46 +114,7 @@ const AdminRealTime: React.FC = () => {
     }
   }, [toast, selectedOrder, orders.length]);
   
-  // Process incoming WebSocket messages
-  useEffect(() => {
-    // Get admin-specific messages
-    const adminOrderMessages = getMessagesByType('admin_order_updated');
-    const adminPaymentMessages = getMessagesByType('admin_payment_updated');
-    
-    if (adminOrderMessages.length > 0 || adminPaymentMessages.length > 0) {
-      // Combine and sort messages by timestamp (newest first)
-      const newMessages = [...adminOrderMessages, ...adminPaymentMessages]
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      
-      // Add to notifications - limit to 10 most recent
-      setNotifications(prev => {
-        const combined = [...newMessages, ...prev];
-        // Remove duplicates based on timestamp
-        const unique = combined.filter((message, index, self) => 
-          index === self.findIndex(m => m.timestamp === message.timestamp)
-        );
-        // Return most recent 10
-        return unique.slice(0, 10);
-      });
-      
-      // Update selected order if it matches
-      if (selectedOrder) {
-        const relevantOrderMsg = adminOrderMessages.find(msg => 
-          msg.data.order && msg.data.order.id === selectedOrder.id
-        );
-        
-        const relevantPaymentMsg = adminPaymentMessages.find(msg => 
-          msg.data.payment && msg.data.payment.orderId === selectedOrder.id
-        );
-        
-        if (relevantOrderMsg) {
-          setSelectedOrder(relevantOrderMsg.data.order);
-        } else if (relevantPaymentMsg && relevantPaymentMsg.data.order) {
-          setSelectedOrder(relevantPaymentMsg.data.order);
-        }
-      }
-    }
-  }, [messages, getMessagesByType, selectedOrder]);
+  // No need for additional WebSocket effect as we now handle messages in handleWebSocketMessage
   
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -252,17 +196,10 @@ const AdminRealTime: React.FC = () => {
           </div>
           
           <div className="flex items-center space-x-2">
-            {isConnected ? (
-              <Badge className="flex items-center gap-1 bg-green-500">
-                <Wifi className="h-3 w-3" />
-                <span>Connected</span>
-              </Badge>
-            ) : (
-              <Badge className="flex items-center gap-1 bg-red-500">
-                <WifiOff className="h-3 w-3" />
-                <span>Disconnected</span>
-              </Badge>
-            )}
+            <AdminWebSocket 
+              adminId={adminId}
+              onMessage={handleWebSocketMessage}
+            />
           </div>
         </div>
         
@@ -478,11 +415,16 @@ const AdminRealTime: React.FC = () => {
                     />
                     <Button
                       onClick={() => {
-                        const clientId = `admin:${adminId}`;
-                        sendMessage('register', { id: clientId, role: 'admin' });
-                        toast({
-                          title: 'Registered as Admin',
-                          description: `WebSocket registered with ID: ${clientId}`,
+                        // This will actually just trigger a reload of the AdminWebSocket component
+                        setAdminId(prevId => {
+                          const newId = prevId;
+                          
+                          toast({
+                            title: 'Admin ID Updated',
+                            description: `WebSocket will register with ID: admin:${newId}`,
+                          });
+                          
+                          return newId;
                         });
                       }}
                     >
