@@ -14,6 +14,11 @@ interface UseAdminWebSocketReturn {
   setAdminId: (id: number) => void;
 }
 
+// Extend WebSocket to include our custom pingInterval
+interface EnhancedWebSocket extends WebSocket {
+  pingInterval?: NodeJS.Timeout;
+}
+
 /**
  * Hook for WebSocket communication in admin pages
  */
@@ -24,7 +29,7 @@ export function useAdminWebSocket({
 }: AdminWebSocketOptions = {}): UseAdminWebSocketReturn {
   const [connected, setConnected] = useState(false);
   const [registered, setRegistered] = useState(false);
-  const socketRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<EnhancedWebSocket | null>(null);
   const adminIdRef = useRef(adminId);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -53,7 +58,7 @@ export function useAdminWebSocket({
       const wsUrl = `${protocol}//${window.location.host}/ws`;
       
       // Create WebSocket
-      const socket = new WebSocket(wsUrl);
+      const socket = new WebSocket(wsUrl) as EnhancedWebSocket;
       socketRef.current = socket;
 
       // Connection opened
@@ -63,8 +68,24 @@ export function useAdminWebSocket({
         
         // Register as admin
         if (adminIdRef.current) {
-          sendMessage('register', { adminId: adminIdRef.current });
+          sendMessage('register', { adminId: adminIdRef.current, role: 'admin' });
         }
+        
+        // Setup ping interval to keep connection alive
+        const pingInterval = setInterval(() => {
+          if (socket.readyState === WebSocket.OPEN) {
+            console.log('Sending ping to keep connection alive');
+            socket.send(JSON.stringify({ 
+              type: 'ping', 
+              data: { timestamp: new Date().toISOString() } 
+            }));
+          } else {
+            clearInterval(pingInterval);
+          }
+        }, 30000); // Send ping every 30 seconds
+        
+        // Store the interval for cleanup
+        socket.pingInterval = pingInterval;
       });
 
       // Connection closed
@@ -73,10 +94,20 @@ export function useAdminWebSocket({
         setRegistered(false);
         console.log('WebSocket connection closed');
         
-        // Attempt to reconnect
+        // Clear ping interval if it exists
+        if (socket.pingInterval) {
+          clearInterval(socket.pingInterval);
+        }
+        
+        // Attempt to reconnect with exponential backoff
         if (autoConnect) {
-          console.log(`Reconnecting in ${reconnectInterval}ms...`);
-          reconnectTimeoutRef.current = setTimeout(setupWebSocket, reconnectInterval);
+          // Use a shorter reconnect time for first few attempts, then longer
+          const actualReconnectTime = reconnectTimeoutRef.current ? 
+            Math.min(reconnectInterval * 2, 10000) : // Increase up to 10 seconds max
+            reconnectInterval; // Start with default
+          
+          console.log(`Reconnecting in ${actualReconnectTime}ms...`);
+          reconnectTimeoutRef.current = setTimeout(setupWebSocket, actualReconnectTime);
         }
       });
 
