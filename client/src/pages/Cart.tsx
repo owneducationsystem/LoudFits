@@ -18,6 +18,7 @@ const Cart = () => {
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [discount, setDiscount] = useState(0);
+  const [viewSides, setViewSides] = useState<Record<string, 'front' | 'back'>>({});
 
   // Calculate subtotal
   const subtotal = cartItems.reduce((total, item) => {
@@ -41,6 +42,24 @@ const Cart = () => {
     toast({
       title: "Item removed",
       description: "The item has been removed from your cart.",
+    });
+  };
+  
+  // Generate a unique key for an item to track its view state
+  const getItemKey = (item: CartItem) => {
+    return `${item.productId}-${item.size}-${item.color}`;
+  };
+  
+  // Toggle between front and back view for a customized item
+  const toggleItemView = (item: CartItem) => {
+    if (!item.customization?.frontImage || !item.customization?.backImage) return;
+    
+    const itemKey = getItemKey(item);
+    const currentView = viewSides[itemKey] || 'front';
+    
+    setViewSides({
+      ...viewSides,
+      [itemKey]: currentView === 'front' ? 'back' : 'front'
     });
   };
 
@@ -182,44 +201,91 @@ const Cart = () => {
                               alt={item.product.name}
                               className="w-full h-full object-cover"
                             />
-                          ) : item.customization?.frontImage || item.customization?.image ? (
+                          ) : item.customization?.frontImage || item.customization?.backImage || item.customization?.image ? (
                             <div 
-                              className="w-full h-full flex items-center justify-center"
+                              className="w-full h-full flex items-center justify-center relative"
                               style={{ backgroundColor: item.color.toLowerCase() }}
                             >
-                              {/* Front design */}
-                              <div
-                                style={{
-                                  position: 'relative',
-                                  top: `${item.customization.frontDesign ? 
-                                    (item.customization.frontDesign.vertical - 50) / 2 : 
-                                    (item.customization.verticalPosition !== undefined ? 
-                                      (item.customization.verticalPosition - 50) / 2 : 
-                                      (item.customization.position !== undefined ? (item.customization.position - 50) / 2 : 0))}%`,
-                                  left: `${item.customization.frontDesign ?
-                                    (item.customization.frontDesign.horizontal - 50) / 2 :
-                                    (item.customization.horizontalPosition !== undefined ? 
-                                      (item.customization.horizontalPosition - 50) / 2 : 0)}%`,
-                                  transform: `
-                                    scale(${item.customization.frontDesign ? 
-                                      item.customization.frontDesign.size / 70 : 
-                                      (item.customization.size ? item.customization.size / 70 : 0.7)}) 
-                                    rotate(${item.customization.frontDesign ?
-                                      item.customization.frontDesign.rotation :
-                                      (item.customization.rotation !== undefined ? item.customization.rotation : 0)}deg)
-                                    ${(item.customization.frontDesign && item.customization.frontDesign.flipped) ||
-                                      (item.customization.flipped !== undefined && item.customization.flipped) ? 'scaleX(-1)' : ''}
-                                  `,
-                                  maxWidth: '80%',
-                                  maxHeight: '80%'
-                                }}
-                              >
-                                <img
-                                  src={item.customization.frontImage || item.customization.image}
-                                  alt="Custom design (front)"
-                                  className="max-w-full max-h-full object-contain"
-                                />
-                              </div>
+                              {/* View indicator with toggle functionality */}
+                              {item.customization?.frontImage && item.customization?.backImage && (
+                                <div 
+                                  onClick={() => toggleItemView(item)}
+                                  className="absolute top-0 left-0 right-0 flex justify-center text-xs text-white p-1 bg-black bg-opacity-50 cursor-pointer hover:bg-opacity-70"
+                                >
+                                  {viewSides[getItemKey(item)] === 'back' ? 'Back view (click for front)' : 'Front view (click for back)'}
+                                </div>
+                              )}
+                              
+                              {/* Front design - shown when in front view or no back design */}
+                              {(!item.customization?.backImage || viewSides[getItemKey(item)] !== 'back') && (
+                                <div
+                                  style={{
+                                    position: 'relative',
+                                    top: `${item.customization?.frontDesign ? 
+                                      (item.customization.frontDesign.vertical - 50) / 2 : 
+                                      (item.customization?.verticalPosition !== undefined ? 
+                                        (item.customization.verticalPosition - 50) / 2 : 
+                                        (item.customization?.position !== undefined ? (item.customization.position - 50) / 2 : 0))}%`,
+                                    left: `${item.customization?.frontDesign ?
+                                      (item.customization.frontDesign.horizontal - 50) / 2 :
+                                      (item.customization?.horizontalPosition !== undefined ? 
+                                        (item.customization.horizontalPosition - 50) / 2 : 0)}%`,
+                                    transform: `
+                                      scale(${item.customization?.frontDesign ? 
+                                        item.customization.frontDesign.size / 70 : 
+                                        (item.customization?.size ? item.customization.size / 70 : 0.7)}) 
+                                      rotate(${item.customization?.frontDesign ?
+                                        item.customization.frontDesign.rotation :
+                                        (item.customization?.rotation !== undefined ? item.customization.rotation : 0)}deg)
+                                      ${(item.customization?.frontDesign && item.customization.frontDesign.flipped) ||
+                                        (item.customization?.flipped !== undefined && item.customization.flipped) ? 'scaleX(-1)' : ''}
+                                    `,
+                                    maxWidth: '80%',
+                                    maxHeight: '80%'
+                                  }}
+                                  onClick={() => {
+                                    if (item.customization?.backImage) toggleItemView(item);
+                                  }}
+                                  className={item.customization?.backImage ? "cursor-pointer" : ""}
+                                >
+                                  <img
+                                    src={item.customization?.frontImage || item.customization?.image}
+                                    alt="Custom design (front)"
+                                    className="max-w-full max-h-full object-contain"
+                                  />
+                                </div>
+                              )}
+                              
+                              {/* Back design - shown when in back view */}
+                              {item.customization?.backImage && viewSides[getItemKey(item)] === 'back' && (
+                                <div
+                                  style={{
+                                    position: 'relative',
+                                    top: `${item.customization.backDesign ? 
+                                      (item.customization.backDesign.vertical - 50) / 2 : 50}%`,
+                                    left: `${item.customization.backDesign ?
+                                      (item.customization.backDesign.horizontal - 50) / 2 : 50}%`,
+                                    transform: `
+                                      translate(-50%, -50%)
+                                      scale(${item.customization.backDesign ? 
+                                        item.customization.backDesign.size / 70 : 0.7}) 
+                                      rotate(${item.customization.backDesign ?
+                                        item.customization.backDesign.rotation : 0}deg)
+                                      ${item.customization.backDesign?.flipped ? 'scaleX(-1)' : ''}
+                                    `,
+                                    maxWidth: '80%',
+                                    maxHeight: '80%'
+                                  }}
+                                  onClick={() => toggleItemView(item)}
+                                  className="cursor-pointer"
+                                >
+                                  <img
+                                    src={item.customization.backImage}
+                                    alt="Custom design (back)"
+                                    className="max-w-full max-h-full object-contain"
+                                  />
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gray-200">

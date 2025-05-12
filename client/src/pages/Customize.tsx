@@ -525,13 +525,13 @@ const Customize = () => {
                   </p>
                 </div>
                 
-                {/* Adjustments (only displayed if image is uploaded) */}
-                {uploadedImage && (
+                {/* Adjustments (displayed based on the current view) */}
+                {((view === 'front' && frontImage) || (view === 'back' && backImage)) && (
                   <>
                     {/* Image Size Slider */}
                     <div>
                       <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-bold">Design Size</h3>
+                        <h3 className="font-bold">{view === 'front' ? 'Front' : 'Back'} Design Size</h3>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -546,8 +546,15 @@ const Customize = () => {
                         </Button>
                       </div>
                       <Slider
-                        value={imageSize}
-                        onValueChange={setImageSize}
+                        value={view === 'front' ? imageSize : [backPosition.size]}
+                        onValueChange={(value) => {
+                          if (view === 'front') {
+                            setImageSize(value);
+                            setFrontPosition({...frontPosition, size: value[0]});
+                          } else {
+                            setBackPosition({...backPosition, size: value[0]});
+                          }
+                        }}
                         min={10}
                         max={100}
                         step={1}
@@ -561,10 +568,17 @@ const Customize = () => {
                     
                     {/* Vertical Position Slider */}
                     <div>
-                      <h3 className="font-bold mb-2">Vertical Position</h3>
+                      <h3 className="font-bold mb-2">{view === 'front' ? 'Front' : 'Back'} Vertical Position</h3>
                       <Slider
-                        value={verticalPosition}
-                        onValueChange={setVerticalPosition}
+                        value={view === 'front' ? verticalPosition : [backPosition.vertical]}
+                        onValueChange={(value) => {
+                          if (view === 'front') {
+                            setVerticalPosition(value);
+                            setFrontPosition({...frontPosition, vertical: value[0]});
+                          } else {
+                            setBackPosition({...backPosition, vertical: value[0]});
+                          }
+                        }}
                         min={20}
                         max={80}
                         step={1}
@@ -578,10 +592,17 @@ const Customize = () => {
                     
                     {/* Horizontal Position Slider */}
                     <div>
-                      <h3 className="font-bold mb-2">Horizontal Position</h3>
+                      <h3 className="font-bold mb-2">{view === 'front' ? 'Front' : 'Back'} Horizontal Position</h3>
                       <Slider
-                        value={horizontalPosition}
-                        onValueChange={setHorizontalPosition}
+                        value={view === 'front' ? horizontalPosition : [backPosition.horizontal]}
+                        onValueChange={(value) => {
+                          if (view === 'front') {
+                            setHorizontalPosition(value);
+                            setFrontPosition({...frontPosition, horizontal: value[0]});
+                          } else {
+                            setBackPosition({...backPosition, horizontal: value[0]});
+                          }
+                        }}
                         min={20}
                         max={80}
                         step={1}
@@ -595,10 +616,17 @@ const Customize = () => {
                     
                     {/* Rotation Slider */}
                     <div>
-                      <h3 className="font-bold mb-2">Rotation</h3>
+                      <h3 className="font-bold mb-2">{view === 'front' ? 'Front' : 'Back'} Rotation</h3>
                       <Slider
-                        value={rotation}
-                        onValueChange={setRotation}
+                        value={view === 'front' ? rotation : [backPosition.rotation]}
+                        onValueChange={(value) => {
+                          if (view === 'front') {
+                            setRotation(value);
+                            setFrontPosition({...frontPosition, rotation: value[0]});
+                          } else {
+                            setBackPosition({...backPosition, rotation: value[0]});
+                          }
+                        }}
                         min={0}
                         max={360}
                         step={5}
@@ -612,11 +640,24 @@ const Customize = () => {
                     
                     {/* Flip Button */}
                     <div>
-                      <h3 className="font-bold mb-2">Flip Design</h3>
+                      <h3 className="font-bold mb-2">Flip {view === 'front' ? 'Front' : 'Back'} Design</h3>
                       <Button
                         type="button"
-                        variant={isFlipped ? "default" : "outline"}
-                        onClick={() => setIsFlipped(!isFlipped)}
+                        variant={view === 'front' 
+                          ? (isFlipped ? "default" : "outline") 
+                          : (backPosition.flipped ? "default" : "outline")
+                        }
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (view === 'front') {
+                            const newFlipped = !isFlipped;
+                            setIsFlipped(newFlipped);
+                            setFrontPosition({...frontPosition, flipped: newFlipped});
+                          } else {
+                            const newFlipped = !backPosition.flipped;
+                            setBackPosition({...backPosition, flipped: newFlipped});
+                          }
+                        }}
                         className="w-full flex items-center justify-center gap-2"
                       >
                         <svg 
@@ -638,11 +679,14 @@ const Customize = () => {
                           <path d="M21 9l-6-6"></path>
                           <path d="M9 15l-6 6"></path>
                         </svg>
-                        {isFlipped ? "Flipped Horizontally" : "Flip Horizontally"}
+                        {view === 'front' 
+                          ? (isFlipped ? "Flipped Horizontally" : "Flip Horizontally")
+                          : (backPosition.flipped ? "Flipped Horizontally" : "Flip Horizontally")
+                        }
                       </Button>
                     </div>
                     
-                    <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
+                    <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md mt-3">
                       <span className="font-bold">Pro tip:</span> You can also drag your design to position it exactly where you want it on the t-shirt.
                     </p>
                   </>
