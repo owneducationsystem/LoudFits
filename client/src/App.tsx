@@ -114,6 +114,12 @@ function App() {
                 <Route path="/admin/orders">
                   {(params) => <AdminRoute component={AdminOrders} {...params} />}
                 </Route>
+                <Route path="/admin/products">
+                  {(params) => <AdminRoute component={AdminProducts} {...params} />}
+                </Route>
+                <Route path="/admin/settings">
+                  {(params) => <AdminRoute component={AdminSettings} {...params} />}
+                </Route>
                 
                 <Route component={NotFound} />
               </Switch>
