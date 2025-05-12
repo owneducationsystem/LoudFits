@@ -180,6 +180,9 @@ function App() {
                 <Route path="/admin/ws-only">
                   <AdminRoute component={AdminWsOnly} />
                 </Route>
+                <Route path="/admin/debug">
+                  <AdminRoute component={AdminDebug} />
+                </Route>
                 
                 <Route component={NotFound} />
               </Switch>

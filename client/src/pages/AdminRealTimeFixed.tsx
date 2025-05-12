@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Wifi, WifiOff, RefreshCw, Zap, Bell, CheckCircle2 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import AdminHeader from '../components/admin/AdminHeader';
+import WebSocketKeepAlive from '../components/admin/WebSocketKeepAlive';
 
 interface Order {
   id: number;
@@ -34,81 +35,7 @@ const AdminRealTimeFixed: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<WebSocketMessage[]>([]);
   const [adminId, setAdminId] = useState<number>(1); // Default admin ID
-  const [wsConnected, setWsConnected] = useState(false);
-  const socketRef = useRef<WebSocket | null>(null);
   const { toast } = useToast();
-  
-  // WebSocket setup with simplest connection logic
-  useEffect(() => {
-    // Create WebSocket connection
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    const socket = new WebSocket(wsUrl);
-    
-    socket.onopen = () => {
-      console.log('WebSocket connected');
-      setWsConnected(true);
-      
-      // Register as admin
-      socket.send(JSON.stringify({
-        type: 'register',
-        data: {
-          id: adminId,
-          role: 'admin'
-        },
-        timestamp: new Date().toISOString()
-      }));
-      
-      toast({
-        title: 'WebSocket Connected',
-        description: 'Real-time updates enabled',
-      });
-    };
-    
-    socket.onclose = () => {
-      console.log('WebSocket disconnected');
-      setWsConnected(false);
-    };
-    
-    socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setWsConnected(false);
-    };
-    
-    socket.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data) as WebSocketMessage;
-        console.log('Message received:', message);
-        
-        // Add message to notifications
-        if (message.type.includes('order') || message.type.includes('payment')) {
-          setNotifications(prev => {
-            const combined = [message, ...prev];
-            // Remove duplicates and keep latest 10
-            const unique = combined.filter((msg, index, self) => 
-              index === self.findIndex(m => m.timestamp === msg.timestamp)
-            );
-            return unique.slice(0, 10);
-          });
-          
-          // Update selected order if relevant
-          if (selectedOrder && message.data.order && message.data.order.id === selectedOrder.id) {
-            setSelectedOrder(message.data.order);
-          }
-        }
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    };
-    
-    // Save reference
-    socketRef.current = socket;
-    
-    // Clean up on unmount
-    return () => {
-      socket.close();
-    };
-  }, [adminId, toast]);
 
   // Fetch orders on component mount
   useEffect(() => {
@@ -235,19 +162,7 @@ const AdminRealTimeFixed: React.FC = () => {
             <p className="text-gray-500">Fixed WebSocket implementation</p>
           </div>
           
-          <div className="flex items-center space-x-2">
-            {wsConnected ? (
-              <Badge className="flex items-center gap-1 bg-green-500">
-                <Wifi className="h-3 w-3" />
-                <span>Connected</span>
-              </Badge>
-            ) : (
-              <Badge className="flex items-center gap-1 bg-red-500">
-                <WifiOff className="h-3 w-3" />
-                <span>Disconnected</span>
-              </Badge>
-            )}
-          </div>
+          <WebSocketKeepAlive adminId={adminId} interval={10000} />
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

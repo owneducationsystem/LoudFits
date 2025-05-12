@@ -889,6 +889,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }));
           }
         }
+        // Handle ping messages to keep connection alive
+        else if (data.type === 'ping') {
+          try {
+            // Send pong response
+            ws.send(JSON.stringify({
+              type: 'pong',
+              timestamp: new Date().toISOString(),
+              data: data.data || {} // Echo back any data sent with ping
+            }));
+            console.log('Pong sent to client');
+          } catch (error) {
+            console.error('Error responding to ping:', error);
+          }
+        }
       } catch (error) {
         console.error('WebSocket message error:', error);
       }
