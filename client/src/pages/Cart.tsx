@@ -187,11 +187,29 @@ const Cart = () => {
                               className="w-full h-full flex items-center justify-center"
                               style={{ backgroundColor: item.color.toLowerCase() }}
                             >
-                              <img
-                                src={item.customization.image}
-                                alt="Custom design"
-                                className="max-w-[70%] max-h-[70%] object-contain"
-                              />
+                              <div
+                                style={{
+                                  position: 'relative',
+                                  top: `${item.customization.verticalPosition !== undefined ? 
+                                    (item.customization.verticalPosition - 50) / 2 : 
+                                    (item.customization.position !== undefined ? (item.customization.position - 50) / 2 : 0)}%`,
+                                  left: `${item.customization.horizontalPosition !== undefined ? 
+                                    (item.customization.horizontalPosition - 50) / 2 : 0}%`,
+                                  transform: `
+                                    scale(${item.customization.size ? item.customization.size / 70 : 0.7}) 
+                                    rotate(${item.customization.rotation !== undefined ? item.customization.rotation : 0}deg)
+                                    ${item.customization.flipped !== undefined && item.customization.flipped ? 'scaleX(-1)' : ''}
+                                  `,
+                                  maxWidth: '80%',
+                                  maxHeight: '80%'
+                                }}
+                              >
+                                <img
+                                  src={item.customization.image}
+                                  alt="Custom design"
+                                  className="max-w-full max-h-full object-contain"
+                                />
+                              </div>
                             </div>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gray-200">
@@ -208,8 +226,25 @@ const Cart = () => {
                             <span>Color: {item.color}</span>
                           </div>
                           {item.customization && (
-                            <div className="text-xs text-[#582A34] mt-1">
-                              Customized
+                            <div className="text-xs text-[#582A34] mt-1 flex items-center">
+                              <svg 
+                                className="w-3 h-3 mr-1" 
+                                viewBox="0 0 24 24" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                strokeWidth="2" 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round"
+                              >
+                                <path d="M12 20h9"></path>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                              </svg>
+                              <span className="font-medium">Custom Design</span>
+                              <span className="text-gray-500 ml-1">
+                                ({Math.round(item.customization.size)}% size
+                                {item.customization.rotation !== undefined ? `, ${item.customization.rotation}° rotation` : ''}
+                                {item.customization.flipped !== undefined && item.customization.flipped ? ', flipped' : ''}
+                              </span>
                             </div>
                           )}
                         </div>

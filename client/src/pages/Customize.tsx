@@ -429,6 +429,55 @@ const Customize = () => {
                       </div>
                     </div>
                     
+                    {/* Rotation Slider */}
+                    <div>
+                      <h3 className="font-bold mb-2">Rotation</h3>
+                      <Slider
+                        value={rotation}
+                        onValueChange={setRotation}
+                        min={0}
+                        max={360}
+                        step={5}
+                        className="py-4"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>0°</span>
+                        <span>360°</span>
+                      </div>
+                    </div>
+                    
+                    {/* Flip Button */}
+                    <div>
+                      <h3 className="font-bold mb-2">Flip Design</h3>
+                      <Button
+                        type="button"
+                        variant={isFlipped ? "default" : "outline"}
+                        onClick={() => setIsFlipped(!isFlipped)}
+                        className="w-full flex items-center justify-center gap-2"
+                      >
+                        <svg 
+                          width="16" 
+                          height="16" 
+                          viewBox="0 0 24 24" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          strokeWidth="2" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round"
+                        >
+                          <path d="M9 3H3v6"></path>
+                          <path d="M21 13v6h-6"></path>
+                          <path d="M3 3l6 6"></path>
+                          <path d="M15 15l6 6"></path>
+                          <path d="M21 3v6"></path>
+                          <path d="M3 13v6"></path>
+                          <path d="M21 9l-6-6"></path>
+                          <path d="M9 15l-6 6"></path>
+                        </svg>
+                        {isFlipped ? "Flipped Horizontally" : "Flip Horizontally"}
+                      </Button>
+                    </div>
+                    
                     <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
                       <span className="font-bold">Pro tip:</span> You can also drag your design to position it exactly where you want it on the t-shirt.
                     </p>
