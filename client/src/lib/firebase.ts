@@ -32,61 +32,20 @@ console.log("Firebase config (without sensitive data):", {
 });
 
 // Initialize Firebase
-let app: any;
-let auth: any;
-let googleProvider: GoogleAuthProvider | null = null;
-
-// Initialize a mock provider for type safety
-const createMockAuth = () => {
-  console.error("Using mock Firebase auth - authentication features will be unavailable");
-  return {
-    currentUser: null,
-    onAuthStateChanged: () => () => {},
-    signInWithPopup: () => Promise.reject(new Error("Firebase not initialized")),
-    signInWithRedirect: () => { throw new Error("Firebase not initialized"); },
-    signInWithEmailAndPassword: () => Promise.reject(new Error("Firebase not initialized")),
-    createUserWithEmailAndPassword: () => Promise.reject(new Error("Firebase not initialized")),
-    sendPasswordResetEmail: () => Promise.reject(new Error("Firebase not initialized")),
-    signOut: () => Promise.reject(new Error("Firebase not initialized")),
-    getRedirectResult: () => Promise.resolve(null)
-  };
-};
-
-try {
-  // Only initialize Firebase if required config is present
-  if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId) {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    googleProvider = new GoogleAuthProvider();
-    console.log("Firebase initialized successfully");
-  } else {
-    console.error("Firebase initialization skipped due to missing configuration");
-    auth = createMockAuth();
-    googleProvider = null;
-  }
-} catch (error) {
-  console.error("Error initializing Firebase:", error);
-  auth = createMockAuth();
-  googleProvider = null;
-}
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
 
 // Configure Google provider with additional parameters for Replit environment
-if (googleProvider && typeof googleProvider.setCustomParameters === 'function') {
-  googleProvider.setCustomParameters({
-    prompt: 'select_account',
-    // Allow redirect to Replit domain
-    redirect_uri: window.location.origin
-  });
-}
+googleProvider.setCustomParameters({
+  prompt: 'select_account',
+  // Allow redirect to Replit domain
+  redirect_uri: window.location.origin
+});
 
 // Authentication functions
 export const signInWithGoogle = async (): Promise<UserCredential> => {
   try {
-    // Make sure we have a provider before attempting
-    if (!googleProvider) {
-      throw new Error("Google authentication provider not available");
-    }
-    
     console.log("Attempting sign in with Google popup...");
     // In Replit, popup may be blocked, so we'll try popup first, then fall back to redirect
     return await signInWithPopup(auth, googleProvider);
@@ -96,15 +55,10 @@ export const signInWithGoogle = async (): Promise<UserCredential> => {
     // Check if this is a popup blocked error
     if (error instanceof Error && error.message.includes('popup')) {
       console.log("Popup blocked, falling back to redirect...");
-      
       // If popup is blocked, try redirect flow instead
-      if (googleProvider) {
-        signInWithGoogleRedirect();
-        // This function won't return as the page will redirect
-        throw new Error("Redirecting to Google authentication. Please wait...");
-      } else {
-        throw new Error("Google authentication provider not available");
-      }
+      signInWithGoogleRedirect();
+      // This function won't return as the page will redirect
+      throw new Error("Redirecting to Google authentication. Please wait...");
     }
     
     // Re-throw other errors
@@ -114,12 +68,6 @@ export const signInWithGoogle = async (): Promise<UserCredential> => {
 
 export const signInWithGoogleRedirect = () => {
   console.log("Using redirect method for Google sign-in");
-  
-  if (!googleProvider) {
-    console.error("Google provider not available, cannot redirect");
-    throw new Error("Google authentication provider not available");
-  }
-  
   return signInWithRedirect(auth, googleProvider);
 };
 

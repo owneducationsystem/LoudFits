@@ -4,66 +4,44 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { WishlistProvider } from "@/context/WishlistContext";
-import { WebSocketProvider } from "@/context/WebSocketContext";
-import { lazy, Suspense } from "react";
-
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import Home from "@/pages/Home";
+import Shop from "@/pages/Shop";
+import ProductDetail from "@/pages/ProductDetail";
+import Customize from "@/pages/Customize";
+import Cart from "@/pages/Cart";
+import Auth from "@/pages/Auth";
 import NotFound from "@/pages/not-found";
-import AdminRoute from "@/components/layout/AdminRoute";
-
-// Loading component for lazy-loaded pages
-const PageLoading = () => (
-  <div className="flex items-center justify-center min-h-[400px]">
-    <div className="w-12 h-12 border-4 border-gray-200 border-t-[#582A34] rounded-full animate-spin"></div>
-  </div>
-);
-
-// Lazy load all pages
-const Home = lazy(() => import("@/pages/Home"));
-const Shop = lazy(() => import("@/pages/Shop"));
-const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
-const Customize = lazy(() => import("@/pages/Customize"));
-const Cart = lazy(() => import("@/pages/Cart"));
-const Auth = lazy(() => import("@/pages/Auth"));
-const Search = lazy(() => import("@/pages/Search"));
-const Wishlist = lazy(() => import("@/pages/Wishlist"));
-const SizeGuide = lazy(() => import("@/pages/SizeGuide"));
-const FAQ = lazy(() => import("@/pages/FAQ"));
-const ShippingReturns = lazy(() => import("@/pages/ShippingReturns"));
-const Contact = lazy(() => import("@/pages/Contact"));
-const TrackOrder = lazy(() => import("@/pages/TrackOrder"));
-const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
-const TermsConditions = lazy(() => import("@/pages/TermsConditions"));
-const Account = lazy(() => import("@/pages/Account"));
-const Orders = lazy(() => import("@/pages/Orders"));
-const Checkout = lazy(() => import("@/pages/Checkout"));
-const OrderConfirmation = lazy(() => import("@/pages/OrderConfirmation"));
-const PaymentFailed = lazy(() => import("@/pages/PaymentFailed"));
-const PaymentError = lazy(() => import("@/pages/PaymentError"));
-const TestPhonePe = lazy(() => import("@/pages/TestPhonePe"));
-const WebSocketTest = lazy(() => import("@/pages/WebSocketTest"));
-
+import Search from "@/pages/Search";
+import Wishlist from "@/pages/Wishlist";
+import SizeGuide from "@/pages/SizeGuide";
+import FAQ from "@/pages/FAQ";
+import ShippingReturns from "@/pages/ShippingReturns";
+import Contact from "@/pages/Contact";
+import TrackOrder from "@/pages/TrackOrder";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsConditions from "@/pages/TermsConditions";
+import Account from "@/pages/Account";
+import Orders from "@/pages/Orders";
+import Checkout from "@/pages/Checkout";
+import OrderConfirmation from "@/pages/OrderConfirmation";
+import PaymentFailed from "@/pages/PaymentFailed";
+import PaymentError from "@/pages/PaymentError";
+import TestPhonePe from "@/pages/TestPhonePe";
 // Admin pages
-const Admin = lazy(() => import("@/pages/Admin"));
-const AdminUsers = lazy(() => import("@/pages/AdminUsers"));
-const AdminOrders = lazy(() => import("@/pages/AdminOrders"));
-const AdminProducts = lazy(() => import("@/pages/AdminProducts"));
-const AdminAddProduct = lazy(() => import("@/pages/AdminAddProduct"));
-const AdminAddProductSimple = lazy(() => import("@/pages/AdminAddProductSimple"));
-const AdminEditProduct = lazy(() => import("@/pages/AdminEditProduct"));
-const AdminCategories = lazy(() => import("@/pages/AdminCategories"));
-const AdminAddUser = lazy(() => import("@/pages/AdminAddUser"));
-const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
-const AdminLogin = lazy(() => import("@/pages/AdminLogin"));
-const AdminRealTime = lazy(() => import("@/pages/AdminRealTime"));
-const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
-const AdminSimple = lazy(() => import("@/pages/AdminSimple"));
-const AdminBasic = lazy(() => import("@/pages/AdminBasic"));
-const AdminMini = lazy(() => import("@/pages/AdminMini"));
-const AdminRealTimeFixed = lazy(() => import("@/pages/AdminRealTimeFixed"));
-const AdminWsOnly = lazy(() => import("@/pages/AdminWsOnly"));
-const AdminDebug = lazy(() => import("@/pages/AdminDebug"));
+import Admin from "@/pages/Admin";
+import AdminUsers from "@/pages/AdminUsers";
+import AdminOrders from "@/pages/AdminOrders";
+import AdminProducts from "@/pages/AdminProducts";
+import AdminAddProduct from "@/pages/AdminAddProduct";
+import AdminAddProductSimple from "@/pages/AdminAddProductSimple";
+import AdminEditProduct from "@/pages/AdminEditProduct";
+import AdminCategories from "@/pages/AdminCategories";
+import AdminAddUser from "@/pages/AdminAddUser";
+import AdminSettings from "@/pages/AdminSettings";
+import AdminLogin from "@/pages/AdminLogin";
+import AdminRoute from "@/components/layout/AdminRoute";
 
 import { useEffect, useState } from "react";
 import { handleAuthRedirect } from "@/lib/firebase";
@@ -111,90 +89,75 @@ function App() {
     );
   }
 
-  // Wrap components in Suspense for lazy loading
-  const wrapInSuspense = (Component: React.ComponentType<any>) => {
-    return (props: any) => (
-      <Suspense fallback={<PageLoading />}>
-        <Component {...props} />
-      </Suspense>
-    );
-  };
-
-  // Handle admin route with suspense
-  const wrapInAdminRouteSuspense = (Component: React.ComponentType<any>) => {
-    const WrappedComponent = (props: any) => <Component {...props} />;
-    return (props: any) => (
-      <Suspense fallback={<PageLoading />}>
-        <AdminRoute component={WrappedComponent} />
-      </Suspense>
-    );
-  };
-
-  const router = (
-    <Switch>
-      <Route path="/" component={wrapInSuspense(Home)} />
-      <Route path="/shop" component={wrapInSuspense(Shop)} />
-      <Route path="/product/:id" component={wrapInSuspense(ProductDetail)} />
-      <Route path="/customize" component={wrapInSuspense(Customize)} />
-      <Route path="/cart" component={wrapInSuspense(Cart)} />
-      <Route path="/login" component={wrapInSuspense(Auth)} />
-      <Route path="/signup" component={wrapInSuspense(Auth)} />
-      <Route path="/search" component={wrapInSuspense(Search)} />
-      <Route path="/wishlist" component={wrapInSuspense(Wishlist)} />
-      <Route path="/size-guide" component={wrapInSuspense(SizeGuide)} />
-      <Route path="/faqs" component={wrapInSuspense(FAQ)} />
-      <Route path="/shipping-returns" component={wrapInSuspense(ShippingReturns)} />
-      <Route path="/contact" component={wrapInSuspense(Contact)} />
-      <Route path="/track-order" component={wrapInSuspense(TrackOrder)} />
-      <Route path="/privacy-policy" component={wrapInSuspense(PrivacyPolicy)} />
-      <Route path="/terms-conditions" component={wrapInSuspense(TermsConditions)} />
-      <Route path="/account" component={wrapInSuspense(Account)} />
-      <Route path="/orders" component={wrapInSuspense(Orders)} />
-      <Route path="/checkout" component={wrapInSuspense(Checkout)} />
-      <Route path="/order-confirmation/:orderId" component={wrapInSuspense(OrderConfirmation)} />
-      <Route path="/payment-failed/:orderId" component={wrapInSuspense(PaymentFailed)} />
-      <Route path="/payment-error" component={wrapInSuspense(PaymentError)} />
-      <Route path="/test-phonepe" component={wrapInSuspense(TestPhonePe)} />
-      <Route path="/websocket-test" component={wrapInSuspense(WebSocketTest)} />
-      
-      {/* Admin Routes */}
-      <Route path="/admin/login" component={wrapInSuspense(AdminLogin)} />
-      <Route path="/admin" component={wrapInAdminRouteSuspense(Admin)} />
-      <Route path="/admin/dashboard" component={wrapInAdminRouteSuspense(AdminDashboard)} />
-      <Route path="/admin/users" component={wrapInAdminRouteSuspense(AdminUsers)} />
-      <Route path="/admin/orders" component={wrapInAdminRouteSuspense(AdminOrders)} />
-      <Route path="/admin/products/add" component={wrapInAdminRouteSuspense(AdminAddProductSimple)} />
-      <Route path="/admin/products/edit/:id" component={wrapInAdminRouteSuspense(AdminEditProduct)} />
-      <Route path="/admin/products/categories" component={wrapInAdminRouteSuspense(AdminCategories)} />
-      <Route path="/admin/products" component={wrapInAdminRouteSuspense(AdminProducts)} />
-      <Route path="/admin/users/add" component={wrapInAdminRouteSuspense(AdminAddUser)} />
-      <Route path="/admin/settings" component={wrapInAdminRouteSuspense(AdminSettings)} />
-      
-      {/* Admin testing routes - some are accessible without auth for debugging */}
-      <Route path="/admin/realtime-fixed" component={wrapInSuspense(AdminRealTimeFixed)} />
-      <Route path="/admin/realtime" component={wrapInAdminRouteSuspense(AdminRealTime)} />
-      <Route path="/admin/debug" component={wrapInAdminRouteSuspense(AdminDebug)} />
-      <Route path="/admin/wsonly" component={wrapInAdminRouteSuspense(AdminWsOnly)} />
-      
-      <Route component={NotFound} />
-    </Switch>
-  );
-
   return (
     <AuthProvider>
       <CartProvider>
         <WishlistProvider>
           <TooltipProvider>
-            <WebSocketProvider initialAdminId={1}>
-              <div className="flex flex-col min-h-screen">
-                <Header />
-                <main className="flex-grow">
-                  {router}
-                </main>
-                <Footer />
-              </div>
-              <Toaster />
-            </WebSocketProvider>
+            <div className="flex flex-col min-h-screen">
+              <Header />
+              <main className="flex-grow">
+              <Switch>
+                <Route path="/" component={Home} />
+                <Route path="/shop" component={Shop} />
+                <Route path="/product/:id" component={ProductDetail} />
+                <Route path="/customize" component={Customize} />
+                <Route path="/cart" component={Cart} />
+                <Route path="/login" component={Auth} />
+                <Route path="/signup" component={Auth} />
+                <Route path="/search" component={Search} />
+                <Route path="/wishlist" component={Wishlist} />
+                <Route path="/size-guide" component={SizeGuide} />
+                <Route path="/faqs" component={FAQ} />
+                <Route path="/shipping-returns" component={ShippingReturns} />
+                <Route path="/contact" component={Contact} />
+                <Route path="/track-order" component={TrackOrder} />
+                <Route path="/privacy-policy" component={PrivacyPolicy} />
+                <Route path="/terms-conditions" component={TermsConditions} />
+                <Route path="/account" component={Account} />
+                <Route path="/orders" component={Orders} />
+                <Route path="/checkout" component={Checkout} />
+                <Route path="/order-confirmation/:orderId" component={OrderConfirmation} />
+                <Route path="/payment-failed/:orderId" component={PaymentFailed} />
+                <Route path="/payment-error" component={PaymentError} />
+                <Route path="/test-phonepe" component={TestPhonePe} />
+                
+                {/* Admin Routes - Protected */}
+                <Route path="/admin/login" component={AdminLogin} />
+                <Route path="/admin">
+                  <AdminRoute component={Admin} />
+                </Route>
+                <Route path="/admin/users">
+                  <AdminRoute component={AdminUsers} />
+                </Route>
+                <Route path="/admin/orders">
+                  <AdminRoute component={AdminOrders} />
+                </Route>
+                <Route path="/admin/products/add">
+                  <AdminRoute component={AdminAddProductSimple} />
+                </Route>
+                <Route path="/admin/products/edit/:id">
+                  <AdminRoute component={AdminEditProduct} />
+                </Route>
+                <Route path="/admin/products/categories">
+                  <AdminRoute component={AdminCategories} />
+                </Route>
+                <Route path="/admin/products">
+                  <AdminRoute component={AdminProducts} />
+                </Route>
+                <Route path="/admin/users/add">
+                  <AdminRoute component={AdminAddUser} />
+                </Route>
+                <Route path="/admin/settings">
+                  <AdminRoute component={AdminSettings} />
+                </Route>
+                
+                <Route component={NotFound} />
+              </Switch>
+            </main>
+            <Footer />
+            </div>
+            <Toaster />
           </TooltipProvider>
         </WishlistProvider>
       </CartProvider>

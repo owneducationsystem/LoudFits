@@ -64,29 +64,23 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
     }
     
     let newStatus: string;
-    let orderStatus: string = "processing";
-    let paymentStatus: string = "pending";
     
     if (status.success && status.code === "PAYMENT_SUCCESS") {
       newStatus = "completed";
-      orderStatus = "processing";
-      paymentStatus = "paid";
       
       // Update order status
-      await storage.updateOrderStatus(payment.orderId, orderStatus);
-      await storage.updateOrderPaymentStatus(payment.orderId, paymentStatus);
+      await storage.updateOrderStatus(payment.orderId, "processing");
+      await storage.updateOrderPaymentStatus(payment.orderId, "paid");
       
     } else if (status.code === "PAYMENT_PENDING") {
       newStatus = "pending";
       
     } else {
       newStatus = "failed";
-      orderStatus = "cancelled";
-      paymentStatus = "failed";
       
       // Update order status
-      await storage.updateOrderStatus(payment.orderId, orderStatus);
-      await storage.updateOrderPaymentStatus(payment.orderId, paymentStatus);
+      await storage.updateOrderStatus(payment.orderId, "cancelled");
+      await storage.updateOrderPaymentStatus(payment.orderId, "failed");
     }
     
     // Update payment record
@@ -103,38 +97,6 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
     
     if (!order) {
       throw new Error("Order not found after updating payment status");
-    }
-    
-    // Create payment update notification data
-    const paymentUpdate = {
-      id: payment.id,
-      transactionId: payment.transactionId,
-      merchantTransactionId: payment.merchantTransactionId,
-      status: newStatus,
-      amount: payment.amount,
-      orderId: payment.orderId,
-      orderNumber: order.orderNumber,
-      updatedAt: new Date().toISOString()
-    };
-    
-    // Send real-time notifications via WebSocket if available
-    if (typeof global.broadcastEvent === 'function') {
-      // Notify specific user
-      const userRecipient = `user:${order.userId}`;
-      
-      // Broadcast order update event
-      global.broadcastEvent('payment_updated', {
-        order: order,
-        payment: paymentUpdate
-      }, [userRecipient]);
-      
-      // Broadcast to all admins with admin_ prefix to differentiate
-      global.broadcastEvent('admin_payment_updated', {
-        order: order,
-        payment: paymentUpdate
-      }, ['admin:*']);
-      
-      console.log(`Real-time payment notification sent for order: ${order.orderNumber}`);
     }
     
     return { success: true, order };
