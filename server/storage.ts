@@ -50,10 +50,12 @@ export interface IStorage {
   getOrderByOrderNumber(orderNumber: string): Promise<Order | undefined>;
   getOrdersByUserId(userId: number): Promise<Order[]>;
   updateOrderStatus(id: number, status: string): Promise<Order>;
+  updateOrderPaymentStatus(id: number, paymentStatus: string): Promise<Order>;
   getAllOrders(limit?: number, offset?: number): Promise<Order[]>;
   searchOrders(query: string): Promise<Order[]>;
   countOrders(): Promise<number>;
   getOrderItems(orderId: number): Promise<OrderItem[]>;
+  createOrderItem(item: InsertOrderItem): Promise<OrderItem>;
   
   // Testimonial methods
   getTestimonials(): Promise<Testimonial[]>;
@@ -360,6 +362,18 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedOrder;
   }
+  
+  async updateOrderPaymentStatus(id: number, paymentStatus: string): Promise<Order> {
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({
+        paymentStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    return updatedOrder;
+  }
 
   async getAllOrders(limit = 20, offset = 0): Promise<Order[]> {
     return await db
@@ -395,6 +409,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(orderItems)
       .where(eq(orderItems.orderId, orderId));
+  }
+  
+  async createOrderItem(item: InsertOrderItem): Promise<OrderItem> {
+    const [newItem] = await db
+      .insert(orderItems)
+      .values(item)
+      .returning();
+    return newItem;
   }
 
   // Testimonial methods
