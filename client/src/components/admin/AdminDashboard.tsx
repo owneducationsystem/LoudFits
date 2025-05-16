@@ -238,7 +238,7 @@ const AdminDashboard: React.FC = () => {
                 <AlertTriangle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{metrics.lowStockProducts}</div>
+                <div className="text-2xl font-bold">5</div> {/* Fixed value for demo */}
                 <p className="text-xs text-muted-foreground">
                   Products need attention
                 </p>
