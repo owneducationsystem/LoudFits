@@ -161,7 +161,10 @@ const AdminDashboard = () => {
         <Tabs value={tabValue} onValueChange={setTabValue} className="w-full">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="enhanced">Real-Time Dashboard</TabsTrigger>
+            <TabsTrigger onClick={() => {
+            setTabValue("enhanced");
+            window.location.href = "/admin/dashboard";
+          }} value="enhanced">Real-Time Dashboard</TabsTrigger>
             <TabsTrigger value="sales">Sales Analytics</TabsTrigger>
             <TabsTrigger value="activity">Recent Activity</TabsTrigger>
           </TabsList>

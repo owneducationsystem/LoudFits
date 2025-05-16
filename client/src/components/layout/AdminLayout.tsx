@@ -68,6 +68,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
       title: "Dashboard",
       icon: <LayoutDashboard className="h-5 w-5" />,
       path: "/admin",
+      submenu: [
+        { title: "Overview", path: "/admin" },
+        { title: "Real-Time Dashboard", path: "/admin/dashboard" },
+      ],
     },
     {
       title: "Users",
