@@ -27,6 +27,11 @@ export async function updateOrderWithNotification(
   }
   
   // Get the user who placed the order
+  if (!updatedOrder.userId) {
+    console.warn(`Order ${orderId} has no associated user ID`);
+    return updatedOrder;
+  }
+  
   const user = await storage.getUser(updatedOrder.userId);
   
   if (!user) {

@@ -721,14 +721,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid order ID" });
       }
 
-      const { status } = req.body;
+      const { status, notes } = req.body;
       if (!status) {
         return res.status(400).json({ message: "Status is required" });
       }
 
-      const updatedOrder = await storage.updateOrderStatus(orderId, status);
+      // Import the order service for notification handling
+      const { updateOrderWithNotification } = await import('./services/orderService');
+      
+      // Update order with notification
+      const updatedOrder = await updateOrderWithNotification(
+        orderId, 
+        status,
+        true, // notify user
+        false, // don't notify admin (since admin is making the change)
+        notes // optional notes to include in the notification
+      );
+      
+      // Log who updated the order
+      console.log(`Order ${orderId} updated to status '${status}' by admin ${req.user?.username || 'unknown'}`);
+      
       res.json(updatedOrder);
     } catch (error) {
+      console.error("Error updating order status:", error);
       res.status(500).json({ message: "Failed to update order status" });
     }
   });
@@ -808,8 +823,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Set up PhonePe payment routes
-  setupPaymentRoutes(app);
+  // Set up test notification routes
+  app.get("/api/notifications/test", async (req, res) => {
+    const { sendTestNotification } = await import('./services/testNotifications');
+    const result = await sendTestNotification();
+    res.json(result);
+  });
+  
+  app.post("/api/notifications/order-test", async (req, res) => {
+    const { sendOrderNotification } = await import('./services/testNotifications');
+    const { userId = 1 } = req.body;
+    const result = await sendOrderNotification(userId);
+    res.json(result);
+  });
+  
+  app.post("/api/notifications/payment-test", async (req, res) => {
+    const { sendPaymentNotification } = await import('./services/testNotifications');
+    const { userId = 1, success = true } = req.body;
+    const result = await sendPaymentNotification(userId, success);
+    res.json(result);
+  });
   
   // Server is already created at the top for WebSocket support
   return httpServer;

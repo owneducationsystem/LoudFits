@@ -102,13 +102,16 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
     }
     
     // Get user information to send notifications
-    const user = await storage.getUser(order.userId);
-    
-    if (user) {
-      // Send real-time notification to user based on payment status
-      if (newStatus === "completed") {
-        // Send successful payment notification
-        await notificationService.sendUserNotification({
+    if (typeof order.userId !== 'number') {
+      console.warn("Order has no valid user ID", order.id);
+    } else {
+      const user = await storage.getUser(order.userId);
+      
+      if (user) {
+        // Send real-time notification to user based on payment status
+        if (newStatus === "completed") {
+          // Send successful payment notification
+          await notificationService.sendUserNotification({
           type: NotificationType.PAYMENT_RECEIVED,
           title: "Payment Successful",
           message: `Your payment for order #${order.orderNumber} has been completed successfully.`,
