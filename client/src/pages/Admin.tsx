@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
-import { TrendingUp, TrendingDown, Users, ShoppingBag, DollarSign, ClipboardList } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, ShoppingBag, DollarSign, ClipboardList, LayoutDashboard } from "lucide-react";
 import EnhancedAdminDashboard from "@/components/admin/AdminDashboard";
 
 const AdminDashboard = () => {
   const [tabValue, setTabValue] = useState("overview");
+  const [, navigate] = useLocation();
   const [stats, setStats] = useState({
     users: 0,
     products: 0,
@@ -158,13 +160,22 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
+        {/* Direct Dashboard Navigation Button */}
+        <div className="flex justify-end mb-6">
+          <Button 
+            className="flex items-center gap-2" 
+            onClick={() => navigate('/admin/dashboard')}
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            Open Real-Time Dashboard
+          </Button>
+        </div>
+        
         {/* Tabs */}
         <Tabs value={tabValue} onValueChange={setTabValue} className="w-full">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <Link href="/admin/dashboard">
-              <TabsTrigger value="enhanced" onClick={() => window.location.href = "/admin/dashboard"}>Real-Time Dashboard</TabsTrigger>
-            </Link>
+            <TabsTrigger value="enhanced">Real-Time Dashboard</TabsTrigger>
             <TabsTrigger value="sales">Sales Analytics</TabsTrigger>
             <TabsTrigger value="activity">Recent Activity</TabsTrigger>
           </TabsList>
