@@ -397,11 +397,12 @@ export function setupPaymentRoutes(app: Express) {
         paymentStatus: 'PENDING',
         shippingAddress,
         billingAddress,
+        paymentMethod: paymentMethod, // Add payment method to fix constraint violation
         shippingMethod: shippingMethod || 'standard',
         total: amount.total,
         subtotal: amount.subtotal,
         tax: amount.tax,
-        shipping: amount.shipping,
+        shippingCost: amount.shipping, // Use correct field name
         discount: amount.discount,
         orderDate: new Date()
       });
