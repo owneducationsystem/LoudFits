@@ -109,7 +109,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
     return user;
   }
 
@@ -122,52 +125,59 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   async updateUser(id: number, userData: Partial<InsertUser>): Promise<User> {
-    const [updatedUser] = await db
+    const [user] = await db
       .update(users)
-      .set(userData)
+      .set({ ...userData, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
-    return updatedUser;
+    return user;
   }
 
   async getAllUsers(limit = 10, offset = 0): Promise<User[]> {
     return await db
       .select()
       .from(users)
-      .orderBy(desc(users.createdAt))
       .limit(limit)
-      .offset(offset);
+      .offset(offset)
+      .orderBy(desc(users.createdAt));
   }
 
   async searchUsers(query: string): Promise<User[]> {
+    const searchTerm = `%${query}%`;
     return await db
       .select()
       .from(users)
       .where(
         or(
-          like(users.username, `%${query}%`),
-          like(users.email, `%${query}%`),
-          like(users.firstName, `%${query}%`),
-          like(users.lastName, `%${query}%`)
+          like(users.username, searchTerm),
+          like(users.email, searchTerm),
+          like(users.name, searchTerm)
         )
       )
-      .orderBy(desc(users.createdAt))
-      .limit(10);
+      .orderBy(desc(users.createdAt));
   }
 
   async countUsers(): Promise<number> {
-    const result = await db.select({ value: count() }).from(users);
-    return result[0]?.value || 0;
+    const [{ value }] = await db
+      .select({ value: count() })
+      .from(users);
+    return value;
   }
 
   // Product methods
   async getAllProducts(): Promise<Product[]> {
-    return await db.select().from(products).orderBy(desc(products.id));
+    return await db
+      .select()
+      .from(products)
+      .orderBy(desc(products.createdAt));
   }
 
   async getProduct(id: number): Promise<Product | undefined> {
@@ -183,7 +193,8 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(products)
       .where(eq(products.featured, true))
-      .limit(4);
+      .orderBy(desc(products.createdAt))
+      .limit(10);
   }
 
   async getTrendingProducts(): Promise<Product[]> {
@@ -191,18 +202,23 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(products)
       .where(eq(products.trending, true))
-      .limit(4);
+      .orderBy(desc(products.createdAt))
+      .limit(10);
   }
 
   async getProductsByCollection(collection: string): Promise<Product[]> {
     return await db
       .select()
       .from(products)
-      .where(eq(products.collection, collection));
+      .where(eq(products.collection, collection))
+      .orderBy(desc(products.createdAt));
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
-    const [newProduct] = await db.insert(products).values(product).returning();
+    const [newProduct] = await db
+      .insert(products)
+      .values(product)
+      .returning();
     return newProduct;
   }
 
@@ -210,46 +226,50 @@ export class DatabaseStorage implements IStorage {
     id: number,
     productData: Partial<InsertProduct>
   ): Promise<Product> {
-    const [updatedProduct] = await db
+    const [product] = await db
       .update(products)
-      .set(productData)
+      .set({ ...productData, updatedAt: new Date() })
       .where(eq(products.id, id))
       .returning();
-    return updatedProduct;
+    return product;
   }
 
   async deleteProduct(id: number): Promise<boolean> {
-    await db.delete(products).where(eq(products.id, id));
-    // Check if product still exists to determine if deletion was successful
-    const product = await this.getProduct(id);
-    return product === undefined;
+    const result = await db
+      .delete(products)
+      .where(eq(products.id, id))
+      .returning();
+    return result.length > 0;
   }
 
   async searchProducts(query: string): Promise<Product[]> {
+    const searchTerm = `%${query}%`;
     return await db
       .select()
       .from(products)
       .where(
         or(
-          like(products.name, `%${query}%`),
-          like(products.description, `%${query}%`),
-          like(products.category, `%${query}%`)
+          like(products.name, searchTerm),
+          like(products.description, searchTerm),
+          like(products.collection, searchTerm),
+          like(products.tags, searchTerm)
         )
       )
-      .orderBy(desc(products.id))
-      .limit(20);
+      .orderBy(desc(products.createdAt));
   }
 
   async countProducts(): Promise<number> {
-    const result = await db.select({ value: count() }).from(products);
-    return result[0]?.value || 0;
+    const [{ value }] = await db
+      .select({ value: count() })
+      .from(products);
+    return value;
   }
 
   // Cart methods
   async getCartByUserId(
     userId: number
   ): Promise<{ cart: Cart; items: CartItem[] } | undefined> {
-    // Find the cart for this user
+    // First get the cart
     const [cart] = await db
       .select()
       .from(carts)
@@ -259,7 +279,7 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
 
-    // Get all items in this cart
+    // Then get the cart items
     const items = await db
       .select()
       .from(cartItems)
@@ -269,12 +289,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCart(insertCart: InsertCart): Promise<Cart> {
-    const [cart] = await db.insert(carts).values(insertCart).returning();
+    const [cart] = await db
+      .insert(carts)
+      .values(insertCart)
+      .returning();
     return cart;
   }
 
   async addItemToCart(insertItem: InsertCartItem): Promise<CartItem> {
-    // Check if this item already exists in the cart
+    // Check if the item already exists in the cart
     const [existingItem] = await db
       .select()
       .from(cartItems)
@@ -282,26 +305,29 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(cartItems.cartId, insertItem.cartId),
           eq(cartItems.productId, insertItem.productId),
-          eq(cartItems.size, insertItem.size),
-          eq(cartItems.color, insertItem.color)
+          eq(cartItems.size, insertItem.size || "")
         )
       );
 
     if (existingItem) {
-      // Update quantity instead of adding a new item
+      // Update the quantity
       const [updatedItem] = await db
         .update(cartItems)
         .set({
           quantity: existingItem.quantity + insertItem.quantity,
+          updatedAt: new Date(),
         })
         .where(eq(cartItems.id, existingItem.id))
         .returning();
       return updatedItem;
+    } else {
+      // Insert a new item
+      const [newItem] = await db
+        .insert(cartItems)
+        .values(insertItem)
+        .returning();
+      return newItem;
     }
-
-    // Add new item to cart
-    const [item] = await db.insert(cartItems).values(insertItem).returning();
-    return item;
   }
 
   async updateCartItem(
@@ -309,9 +335,9 @@ export class DatabaseStorage implements IStorage {
     productId: number,
     data: Partial<InsertCartItem>
   ): Promise<CartItem> {
-    const [updatedItem] = await db
+    const [item] = await db
       .update(cartItems)
-      .set(data)
+      .set({ ...data, updatedAt: new Date() })
       .where(
         and(
           eq(cartItems.cartId, cartId),
@@ -319,59 +345,44 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .returning();
-    return updatedItem;
+    return item;
   }
 
   async removeCartItem(cartId: number, productId: number): Promise<boolean> {
-    // First check if item exists
-    const existingItems = await db
-      .select()
-      .from(cartItems)
-      .where(
-        and(
-          eq(cartItems.cartId, cartId),
-          eq(cartItems.productId, productId)
-        )
-      );
-    
-    // Delete the item
-    await db
+    const result = await db
       .delete(cartItems)
       .where(
         and(
           eq(cartItems.cartId, cartId),
           eq(cartItems.productId, productId)
         )
-      );
-    
-    // Return true if item existed and was deleted
-    return existingItems.length > 0;
+      )
+      .returning();
+    return result.length > 0;
   }
 
   async clearCart(cartId: number): Promise<boolean> {
-    // First check if cart has items
-    const existingItems = await db
-      .select()
-      .from(cartItems)
-      .where(eq(cartItems.cartId, cartId));
-    
-    // Delete all items from the cart
-    await db
+    const result = await db
       .delete(cartItems)
-      .where(eq(cartItems.cartId, cartId));
-    
-    // Return true if there were items to delete
-    return existingItems.length > 0;
+      .where(eq(cartItems.cartId, cartId))
+      .returning();
+    return result.length > 0;
   }
 
   // Order methods
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
-    const [order] = await db.insert(orders).values(insertOrder).returning();
+    const [order] = await db
+      .insert(orders)
+      .values(insertOrder)
+      .returning();
     return order;
   }
 
   async getOrderById(id: number): Promise<Order | undefined> {
-    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    const [order] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, id));
     return order;
   }
 
@@ -392,56 +403,54 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOrderStatus(id: number, status: string): Promise<Order> {
-    const [updatedOrder] = await db
+    const [order] = await db
       .update(orders)
-      .set({
-        status,
-        updatedAt: new Date(),
-      })
+      .set({ status, updatedAt: new Date() })
       .where(eq(orders.id, id))
       .returning();
-    return updatedOrder;
+    return order;
   }
-  
+
   async updateOrderPaymentStatus(id: number, paymentStatus: string): Promise<Order> {
-    const [updatedOrder] = await db
+    const [order] = await db
       .update(orders)
-      .set({
-        paymentStatus,
-        updatedAt: new Date(),
-      })
+      .set({ paymentStatus, updatedAt: new Date() })
       .where(eq(orders.id, id))
       .returning();
-    return updatedOrder;
+    return order;
   }
 
   async getAllOrders(limit = 20, offset = 0): Promise<Order[]> {
     return await db
       .select()
       .from(orders)
-      .orderBy(desc(orders.createdAt))
       .limit(limit)
-      .offset(offset);
+      .offset(offset)
+      .orderBy(desc(orders.createdAt));
   }
 
   async searchOrders(query: string): Promise<Order[]> {
+    const searchTerm = `%${query}%`;
     return await db
       .select()
       .from(orders)
       .where(
         or(
-          like(orders.orderNumber, `%${query}%`),
-          like(orders.status, `%${query}%`),
-          like(orders.paymentStatus, `%${query}%`)
+          like(orders.orderNumber, searchTerm),
+          like(orders.customerName, searchTerm),
+          like(orders.customerEmail, searchTerm),
+          like(orders.customerPhone, searchTerm),
+          like(orders.status, searchTerm)
         )
       )
-      .orderBy(desc(orders.createdAt))
-      .limit(20);
+      .orderBy(desc(orders.createdAt));
   }
 
   async countOrders(): Promise<number> {
-    const result = await db.select({ value: count() }).from(orders);
-    return result[0]?.value || 0;
+    const [{ value }] = await db
+      .select({ value: count() })
+      .from(orders);
+    return value;
   }
 
   async getOrderItems(orderId: number): Promise<OrderItem[]> {
@@ -450,18 +459,21 @@ export class DatabaseStorage implements IStorage {
       .from(orderItems)
       .where(eq(orderItems.orderId, orderId));
   }
-  
+
   async createOrderItem(item: InsertOrderItem): Promise<OrderItem> {
-    const [newItem] = await db
+    const [orderItem] = await db
       .insert(orderItems)
       .values(item)
       .returning();
-    return newItem;
+    return orderItem;
   }
 
   // Testimonial methods
   async getTestimonials(): Promise<Testimonial[]> {
-    return await db.select().from(testimonials).orderBy(desc(testimonials.id));
+    return await db
+      .select()
+      .from(testimonials)
+      .orderBy(desc(testimonials.createdAt));
   }
 
   async createTestimonial(
@@ -479,23 +491,25 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(testimonials)
       .where(eq(testimonials.featured, true))
-      .orderBy(desc(testimonials.id))
-      .limit(3);
+      .orderBy(desc(testimonials.createdAt));
   }
 
   // Admin log methods
   async createAdminLog(log: InsertAdminLog): Promise<AdminLog> {
-    const [newLog] = await db.insert(adminLogs).values(log).returning();
-    return newLog;
+    const [adminLog] = await db
+      .insert(adminLogs)
+      .values(log)
+      .returning();
+    return adminLog;
   }
 
   async getAdminLogs(limit = 50, offset = 0): Promise<AdminLog[]> {
     return await db
       .select()
       .from(adminLogs)
-      .orderBy(desc(adminLogs.createdAt))
       .limit(limit)
-      .offset(offset);
+      .offset(offset)
+      .orderBy(desc(adminLogs.createdAt));
   }
 
   async getAdminLogsByUserId(userId: number): Promise<AdminLog[]> {
@@ -503,26 +517,19 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(adminLogs)
       .where(eq(adminLogs.userId, userId))
-      .orderBy(desc(adminLogs.createdAt))
-      .limit(50);
+      .orderBy(desc(adminLogs.createdAt));
   }
 
   async searchAdminLogs(query: string): Promise<AdminLog[]> {
+    const searchTerm = `%${query}%`;
     return await db
       .select()
       .from(adminLogs)
-      .where(
-        or(
-          like(adminLogs.action, `%${query}%`),
-          like(adminLogs.entityType, `%${query}%`),
-          like(adminLogs.entityId, `%${query}%`)
-        )
-      )
-      .orderBy(desc(adminLogs.createdAt))
-      .limit(50);
+      .where(like(adminLogs.action, searchTerm))
+      .orderBy(desc(adminLogs.createdAt));
   }
-  
-  // Payment methods implementation
+
+  // Payment methods
   async createPayment(payment: InsertPayment): Promise<Payment> {
     const [newPayment] = await db
       .insert(payments)
@@ -530,7 +537,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return newPayment;
   }
-  
+
   async getPaymentByTransactionId(transactionId: string): Promise<Payment | undefined> {
     const [payment] = await db
       .select()
@@ -538,7 +545,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(payments.transactionId, transactionId));
     return payment;
   }
-  
+
   async getPaymentByMerchantTransactionId(merchantTransactionId: string): Promise<Payment | undefined> {
     const [payment] = await db
       .select()
@@ -546,7 +553,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(payments.merchantTransactionId, merchantTransactionId));
     return payment;
   }
-  
+
   async getPaymentsByOrderId(orderId: number): Promise<Payment[]> {
     return await db
       .select()
@@ -554,7 +561,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(payments.orderId, orderId))
       .orderBy(desc(payments.createdAt));
   }
-  
+
   async getPaymentsByUserId(userId: number): Promise<Payment[]> {
     return await db
       .select()
@@ -562,245 +569,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(payments.userId, userId))
       .orderBy(desc(payments.createdAt));
   }
-  
+
   async updatePaymentStatus(id: number, status: string): Promise<Payment> {
-    const [updatedPayment] = await db
+    const [payment] = await db
       .update(payments)
       .set({ 
-        status,
-        updatedAt: new Date()
+        status, 
+        updatedAt: new Date(),
+        paymentDate: status === "completed" ? new Date() : undefined
       })
       .where(eq(payments.id, id))
       .returning();
-    return updatedPayment;
+    return payment;
   }
-  
+
   async updatePaymentDetails(id: number, details: Partial<InsertPayment>): Promise<Payment> {
-    const [updatedPayment] = await db
+    const [payment] = await db
       .update(payments)
       .set({ 
-        ...details,
-        updatedAt: new Date()
+        ...details, 
+        updatedAt: new Date() 
       })
       .where(eq(payments.id, id))
       .returning();
-    return updatedPayment;
-  }
-
-  async seedInitialData() {
-    // Check if users table is empty
-    const existingUsers = await db.select().from(users);
-    if (existingUsers.length === 0) {
-      // Create admin user
-      await db.insert(users).values({
-        username: "admin",
-        password:
-          "6fb56b2fad8b6356e27206413828b0aae976de8385350b95078cbae59027356a.c2ef9fa5a87a03a0bb5c978f1e42ce0c",
-        email: "rajeshmatta3636@gmail.com",
-        firstName: "Site",
-        lastName: "Admin",
-        role: "admin",
-      });
-
-      // Create test users
-      await db.insert(users).values({
-        username: "user1",
-        password:
-          "6fb56b2fad8b6356e27206413828b0aae976de8385350b95078cbae59027356a.c2ef9fa5a87a03a0bb5c978f1e42ce0c",
-        email: "user1@example.com",
-        firstName: "Test",
-        lastName: "User",
-        role: "customer",
-      });
-
-      // Create test products
-      await db.insert(products).values([
-        {
-          name: "Abstract Design Tee",
-          description:
-            "A unique t-shirt featuring a creative abstract design that's perfect for casual wear.",
-          price: "599",
-          category: "Graphic Tees",
-          gender: "Unisex",
-          sizes: ["S", "M", "L", "XL"],
-          colors: ["Black", "White", "Navy"],
-          images: [
-            "https://placehold.co/600x800?text=Abstract+Tee+1",
-            "https://placehold.co/600x800?text=Abstract+Tee+2",
-          ],
-          featured: true,
-          trending: false,
-          collection: "Abstract",
-        },
-        {
-          name: "Geometric Print Tee",
-          description:
-            "A bold geometric print t-shirt that makes a statement with any outfit.",
-          price: "649",
-          category: "Graphic Tees",
-          gender: "Unisex",
-          sizes: ["S", "M", "L", "XL"],
-          colors: ["Black", "White", "Grey"],
-          images: [
-            "https://placehold.co/600x800?text=Geometric+Tee+1",
-            "https://placehold.co/600x800?text=Geometric+Tee+2",
-          ],
-          featured: false,
-          trending: true,
-          collection: "Geometric",
-        },
-        {
-          name: "Minimalist Logo Tee",
-          description:
-            "A clean, minimalist t-shirt with a subtle logo design for everyday wear.",
-          price: "499",
-          category: "Logo Tees",
-          gender: "Unisex",
-          sizes: ["S", "M", "L", "XL"],
-          colors: ["Black", "White", "Beige"],
-          images: [
-            "https://placehold.co/600x800?text=Minimalist+Tee+1",
-            "https://placehold.co/600x800?text=Minimalist+Tee+2",
-          ],
-          featured: true,
-          trending: true,
-          collection: "Minimalist",
-        },
-        {
-          name: "Urban Streetwear Tee",
-          description:
-            "A streetwear-inspired t-shirt with urban graphics perfect for the fashion-forward.",
-          price: "699",
-          category: "Street Style",
-          gender: "Men",
-          sizes: ["S", "M", "L", "XL"],
-          colors: ["Black", "Grey", "Red"],
-          images: [
-            "https://placehold.co/600x800?text=Streetwear+Tee+1",
-            "https://placehold.co/600x800?text=Streetwear+Tee+2",
-          ],
-          featured: false,
-          trending: true,
-          collection: "Urban",
-        },
-        {
-          name: "Classic Logo Tee",
-          description: "A timeless classic tee with the iconic Loudfits logo.",
-          price: "549",
-          category: "Logo Tees",
-          gender: "Unisex",
-          sizes: ["S", "M", "L", "XL"],
-          colors: ["Black", "White", "Blue"],
-          images: [
-            "https://placehold.co/600x800?text=Classic+Logo+Tee+1",
-            "https://placehold.co/600x800?text=Classic+Logo+Tee+2",
-          ],
-          featured: true,
-          trending: false,
-          collection: "Classics",
-        },
-        {
-          name: "Artistic Pattern Tee",
-          description:
-            "An artistic t-shirt featuring a unique pattern designed by local artists.",
-          price: "749",
-          category: "Artist Collabs",
-          gender: "Unisex",
-          sizes: ["S", "M", "L", "XL"],
-          colors: ["Black", "White", "Purple"],
-          images: [
-            "https://placehold.co/600x800?text=Artistic+Tee+1",
-            "https://placehold.co/600x800?text=Artistic+Tee+2",
-          ],
-          featured: false,
-          trending: false,
-          collection: "Artist Series",
-        },
-        {
-          name: "Bold Typography Tee",
-          description:
-            "A statement t-shirt with bold typography that speaks volumes.",
-          price: "599",
-          category: "Typography",
-          gender: "Unisex",
-          sizes: ["S", "M", "L", "XL"],
-          colors: ["Black", "White", "Yellow"],
-          images: [
-            "https://placehold.co/600x800?text=Typography+Tee+1",
-            "https://placehold.co/600x800?text=Typography+Tee+2",
-          ],
-          featured: false,
-          trending: false,
-          collection: "Typography",
-        },
-        {
-          name: "Vintage Wash Tee",
-          description:
-            "A soft, vintage-wash t-shirt with a lived-in feel and retro graphics.",
-          price: "649",
-          category: "Vintage",
-          gender: "Women",
-          sizes: ["S", "M", "L", "XL"],
-          colors: ["Washed Black", "Washed Blue", "Washed Red"],
-          images: [
-            "https://placehold.co/600x800?text=Vintage+Tee+1",
-            "https://placehold.co/600x800?text=Vintage+Tee+2",
-          ],
-          featured: true,
-          trending: true,
-          collection: "Vintage",
-        },
-        {
-          name: "Eco-Friendly Organic Tee",
-          description:
-            "An environmentally conscious t-shirt made from 100% organic cotton.",
-          price: "799",
-          category: "Eco Collection",
-          gender: "Unisex",
-          sizes: ["S", "M", "L", "XL"],
-          colors: ["Natural", "Green", "Earth Brown"],
-          images: [
-            "https://placehold.co/600x800?text=Eco+Tee+1",
-            "https://placehold.co/600x800?text=Eco+Tee+2",
-          ],
-          featured: false,
-          trending: false,
-          collection: "Eco-Friendly",
-        },
-      ]);
-
-      // Create testimonials
-      await db.insert(testimonials).values([
-        {
-          name: "Priya S.",
-          rating: 5,
-          review:
-            "I absolutely love my new t-shirt from Loudfits! The quality is amazing and the design is exactly what I was looking for. Will definitely be shopping here again.",
-          featured: true,
-        },
-        {
-          name: "Rahul K.",
-          rating: 4,
-          review:
-            "Great product and quick delivery. The fit is perfect and the material feels premium. Just wish there were more color options.",
-          featured: true,
-        },
-        {
-          name: "Aisha M.",
-          rating: 5,
-          review:
-            "The designs are so unique and stand out from anything else I've seen. The fabric is comfortable enough to wear all day. Already ordered my second tee!",
-          featured: true,
-        },
-        {
-          name: "Vikram J.",
-          rating: 4,
-          review:
-            "Stylish and comfortable. Got lots of compliments on my first wear. Shipping was a bit slow but the quality makes up for it.",
-          featured: false,
-        },
-      ]);
-    }
+    return payment;
   }
 
   // Inventory methods
@@ -896,8 +688,8 @@ export class DatabaseStorage implements IStorage {
     const [updatedInventory] = await db
       .update(inventory)
       .set({
-        reservedQuantity: item.reservedQuantity + quantity,
-        inStock: (item.quantity - (item.reservedQuantity + quantity)) > 0,
+        reservedQuantity: (item.reservedQuantity || 0) + quantity,
+        inStock: (item.quantity - ((item.reservedQuantity || 0) + quantity)) > 0,
         updatedAt: new Date()
       })
       .where(
@@ -944,8 +736,8 @@ export class DatabaseStorage implements IStorage {
     const [updatedInventory] = await db
       .update(inventory)
       .set({
-        reservedQuantity: item.reservedQuantity - quantity,
-        inStock: (item.quantity - (item.reservedQuantity - quantity)) > 0,
+        reservedQuantity: (item.reservedQuantity || 0) - quantity,
+        inStock: (item.quantity - ((item.reservedQuantity || 0) - quantity)) > 0,
         updatedAt: new Date()
       })
       .where(
@@ -974,14 +766,15 @@ export class DatabaseStorage implements IStorage {
     return updatedInventory;
   }
 
-  async getLowStockInventory(threshold?: number): Promise<Inventory[]> {
+  async getLowStockInventory(threshold: number = 5): Promise<Inventory[]> {
     return await db
       .select()
       .from(inventory)
       .where(
-        sql`${inventory.quantity} - ${inventory.reservedQuantity} <= COALESCE(${inventory.lowStockThreshold}, ${threshold || 5})`
+        sql`(${inventory.quantity} - COALESCE(${inventory.reservedQuantity}, 0)) <= COALESCE(${inventory.lowStockThreshold}, ${threshold})`
       )
-      .orderBy([asc(inventory.productId), asc(inventory.size)]);
+      .orderBy(asc(inventory.productId))
+      .orderBy(asc(inventory.size));
   }
 
   async getOutOfStockInventory(): Promise<Inventory[]> {
@@ -991,10 +784,11 @@ export class DatabaseStorage implements IStorage {
       .where(
         or(
           eq(inventory.inStock, false),
-          sql`${inventory.quantity} - ${inventory.reservedQuantity} <= 0`
+          sql`(${inventory.quantity} - COALESCE(${inventory.reservedQuantity}, 0)) <= 0`
         )
       )
-      .orderBy([asc(inventory.productId), asc(inventory.size)]);
+      .orderBy(asc(inventory.productId))
+      .orderBy(asc(inventory.size));
   }
 
   async createInventoryLog(log: InsertInventoryLog): Promise<InventoryLog> {
@@ -1019,7 +813,7 @@ export class DatabaseStorage implements IStorage {
     
     // Check if any size is in stock
     const isInStock = inventoryItems.some(item => 
-      item.inStock && (item.quantity - item.reservedQuantity) > 0
+      item.inStock && (item.quantity - (item.reservedQuantity || 0)) > 0
     );
     
     // Update the product's inStock status
@@ -1030,14 +824,68 @@ export class DatabaseStorage implements IStorage {
     
     return isInStock;
   }
+
+  async seedInitialData() {
+    // Check if we already have users
+    const userCount = await this.countUsers();
+    if (userCount === 0) {
+      // Seed an admin user
+      await db.insert(users).values({
+        username: "admin",
+        email: "admin@example.com",
+        password: "$2b$10$0eGz7FmeAOL6/u.g0pKZn.UZ2XkmXScoF7zQy0yvAOJQNrIvQZPGG", // Restart@123
+        role: "admin",
+        name: "Admin User",
+        phone: "1234567890",
+        active: true,
+      });
+    }
+
+    // Check if we have any test products
+    const productCount = await this.countProducts();
+    if (productCount === 0) {
+      // Seed a couple of test products
+      await db.insert(products).values([
+        {
+          name: "Basic Black Tee",
+          description: "A comfortable black t-shirt made from 100% cotton.",
+          price: 19.99,
+          salePrice: 15.99,
+          collection: "essentials",
+          images: ["https://example.com/images/black-tee.jpg"],
+          sku: "BT-001",
+          sizes: ["S", "M", "L", "XL"],
+          colors: ["Black"],
+          inStock: true,
+          featured: true,
+          trending: true,
+        },
+        {
+          name: "Loud Logo Tee",
+          description: "A bold t-shirt with the Loudfits logo.",
+          price: 24.99,
+          salePrice: null,
+          collection: "logo",
+          images: ["https://example.com/images/logo-tee.jpg"],
+          sku: "LT-001",
+          sizes: ["S", "M", "L", "XL", "XXL"],
+          colors: ["White", "Black", "Red"],
+          inStock: true,
+          featured: true,
+        },
+      ]);
+    }
+  }
 }
 
-export const storage = dbStorage;
+// Create an instance of the storage
+const storage = new DatabaseStorage();
+export { storage };
 
 // Try to initialize the database once
 (async () => {
   try {
-    await dbStorage.seedInitialData();
+    await storage.seedInitialData();
     console.log("Database initialized with seed data if needed");
   } catch (error) {
     console.error("Error initializing database:", error);
