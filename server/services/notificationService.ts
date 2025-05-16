@@ -344,6 +344,126 @@ class NotificationService {
   }
   
   /**
+   * Send an order notification to both user and admin
+   * @param orderId Order ID
+   * @param orderNumber Order number
+   * @param userId User ID
+   * @param status Order status
+   * @param message Custom message (optional)
+   */
+  async sendOrderNotification(orderId: number, orderNumber: string, userId: number, status: string, message?: string) {
+    // Create user notification
+    const userTitle = status === 'placed' 
+      ? 'Order Placed Successfully' 
+      : `Order ${status.charAt(0).toUpperCase() + status.slice(1)}`;
+    
+    const userMessage = message || 
+      (status === 'placed' 
+        ? `Your order #${orderNumber} has been received and is being processed.`
+        : `Your order #${orderNumber} has been updated to ${status}.`);
+    
+    // Determine notification type based on status
+    let notificationType: NotificationType;
+    switch(status.toLowerCase()) {
+      case 'placed': notificationType = NotificationType.ORDER_PLACED; break;
+      case 'shipped': notificationType = NotificationType.ORDER_SHIPPED; break;
+      case 'delivered': notificationType = NotificationType.ORDER_DELIVERED; break;
+      case 'canceled': notificationType = NotificationType.ORDER_CANCELED; break;
+      default: notificationType = NotificationType.ORDER_UPDATED;
+    }
+    
+    // Send to the user
+    await this.sendUserNotification({
+      type: notificationType,
+      title: userTitle,
+      message: userMessage,
+      userId,
+      entityId: orderId,
+      entityType: 'order',
+      metadata: { orderNumber, status },
+      priority: 'medium',
+      actionRequired: false
+    });
+    
+    // Send to admin with higher priority for certain statuses
+    const priority = status === 'placed' || status === 'canceled' ? 'high' : 'medium';
+    
+    await this.sendAdminNotification({
+      type: notificationType,
+      title: `Order ${status.charAt(0).toUpperCase() + status.slice(1)}: #${orderNumber}`,
+      message: `Order #${orderNumber} has been ${status}. Customer ID: ${userId}`,
+      entityId: orderId,
+      entityType: 'order',
+      metadata: { orderNumber, status, userId },
+      priority,
+      actionRequired: status === 'placed',
+      actionType: status === 'placed' ? 'process_order' : undefined
+    });
+    
+    return true;
+  }
+  
+  /**
+   * Send payment notification to both user and admin
+   * @param paymentId Payment ID
+   * @param orderId Order ID
+   * @param orderNumber Order number
+   * @param userId User ID
+   * @param amount Payment amount
+   * @param success Whether payment was successful
+   */
+  async sendPaymentNotification(
+    paymentId: number, 
+    orderId: number, 
+    orderNumber: string, 
+    userId: number, 
+    amount: number,
+    success: boolean
+  ) {
+    const formattedAmount = new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR'
+    }).format(amount);
+    
+    const notificationType = success 
+      ? NotificationType.PAYMENT_RECEIVED 
+      : NotificationType.PAYMENT_FAILED;
+    
+    // Send to user
+    await this.sendUserNotification({
+      type: notificationType,
+      title: success ? 'Payment Successful' : 'Payment Failed',
+      message: success 
+        ? `Your payment of ${formattedAmount} for order #${orderNumber} was successful.` 
+        : `Your payment of ${formattedAmount} for order #${orderNumber} failed. Please try again or contact support.`,
+      userId,
+      entityId: orderId,
+      entityType: 'payment',
+      metadata: { orderNumber, amount, paymentId },
+      priority: success ? 'medium' : 'high',
+      actionRequired: !success,
+      actionType: !success ? 'retry_payment' : undefined
+    });
+    
+    // Send to admin
+    await this.sendAdminNotification({
+      type: notificationType,
+      title: success ? `Payment Received: #${orderNumber}` : `Payment Failed: #${orderNumber}`,
+      message: success 
+        ? `Payment of ${formattedAmount} received for order #${orderNumber}. Customer ID: ${userId}` 
+        : `Payment of ${formattedAmount} failed for order #${orderNumber}. Customer ID: ${userId}`,
+      entityId: orderId,
+      entityType: 'payment',
+      metadata: { orderNumber, amount, paymentId, userId },
+      priority: success ? 'medium' : 'high',
+      actionRequired: !success,
+      actionType: !success ? 'check_payment' : undefined
+    });
+    
+    return true;
+  }
+
+  /**
    * Send a stock alert notification to admins
    * @param productId Product ID
    * @param productName Product name

@@ -47,25 +47,17 @@ export function setupNotificationRoutes(app: Express) {
       // Generate a random order number
       const orderNumber = `TEST-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
       
-      // User notification
-      await notificationService.sendUserNotification({
-        userId,
-        type: NotificationType.ORDER_PLACED,
-        title: "Order Placed Successfully",
-        message: `Your order #${orderNumber} has been placed and is being processed. You will receive a confirmation email shortly.`,
-        entityId: 123, // Mock order ID
-        entityType: 'order'
-      });
+      // Test orderId - in a real scenario this would be a real order ID
+      const orderId = Math.floor(Math.random() * 1000);
       
-      // Admin notification
-      await notificationService.sendAdminNotification({
-        type: NotificationType.ORDER_PLACED,
-        title: "New Order Received",
-        message: `New order #${orderNumber} has been placed and requires processing.`,
-        entityId: 123, // Mock order ID
-        entityType: 'order',
-        isAdmin: true
-      });
+      // Send order notification to both user and admin using our new method
+      await notificationService.sendOrderNotification(
+        orderId,
+        orderNumber,
+        userId,
+        'placed',
+        `Your test order #${orderNumber} has been placed successfully!`
+      );
       
       res.json({ success: true, orderNumber });
     } catch (error: any) {
