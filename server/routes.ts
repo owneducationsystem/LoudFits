@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { setupPaymentRoutes } from "./routes/payment";
 import { storage } from "./storage";
 import { z } from "zod";
+import { notificationService, NotificationType } from "./services/notificationService";
+import { emailService } from "./services/emailService";
 import {
   insertProductSchema,
   insertUserSchema,
