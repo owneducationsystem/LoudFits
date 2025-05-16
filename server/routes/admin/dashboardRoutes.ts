@@ -170,30 +170,103 @@ dashboardRoutes.get("/user-signups", async (req, res) => {
         iso: date.toISOString(),
         year: date.getFullYear(),
         month: date.getMonth(),
-        day: date.getDate()
+        day: date.getDate(),
+        time: date.toLocaleTimeString()
       };
     };
+    
+    // Log all users for debug
+    console.log("All users:", users.map(user => ({
+      id: user.id,
+      username: user.username,
+      createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
+    })));
 
-    // Count signups by time period with more verbose date comparison
+    // For debugging: show today's date details
+    console.log("Today:", {
+      fullDate: today.toISOString(),
+      year: today.getFullYear(),
+      month: today.getMonth(),
+      day: today.getDate()
+    });
+    
+    // Count signups by time period, accounting for potential timezone issues
     const signupsToday = users.filter(user => {
-      const createdAt = new Date(user.createdAt);
-      // Compare year, month, and day for "today" check - ignoring time
-      return createdAt.getFullYear() === today.getFullYear() && 
-             createdAt.getMonth() === today.getMonth() && 
-             createdAt.getDate() === today.getDate();
+      // Force createdAt to a string format first to ensure consistent handling
+      const createdAtStr = user.createdAt instanceof Date 
+          ? user.createdAt.toISOString() 
+          : String(user.createdAt);
+      
+      // Parse date with specific handling
+      const createdAt = new Date(createdAtStr);
+      
+      // For debugging: Log the comparison values
+      console.log(`User ${user.id} signup date check:`, {
+        createdAtOriginal: createdAtStr,
+        createdAtParsed: createdAt.toISOString(),
+        year: {
+          today: today.getFullYear(),
+          created: createdAt.getFullYear(),
+          matches: createdAt.getFullYear() === today.getFullYear()
+        },
+        month: {
+          today: today.getMonth(),
+          created: createdAt.getMonth(),
+          matches: createdAt.getMonth() === today.getMonth()
+        },
+        day: {
+          today: today.getDate(),
+          created: createdAt.getDate(),
+          matches: createdAt.getDate() === today.getDate()
+        },
+        isToday: createdAt.getFullYear() === today.getFullYear() && 
+                createdAt.getMonth() === today.getMonth() && 
+                createdAt.getDate() === today.getDate()
+      });
+      
+      // Get today's date as a string in YYYY-MM-DD format
+      const todayStr = today.toISOString().split('T')[0];
+      
+      // Get createdAt date as string in YYYY-MM-DD format
+      const createdDateStr = createdAt.toISOString().split('T')[0];
+      
+      // Compare dates by string conversion (safer across timezones)
+      const isToday = createdDateStr === todayStr;
+      
+      // Return true if signup happened today
+      return isToday;
     }).length;
     
     // For this week, ensure we're comparing dates properly
     const signupsThisWeek = users.filter(user => {
-      const createdAt = new Date(user.createdAt);
-      return createdAt >= startOfWeek;
+      // Parse the date safely
+      const createdAtStr = user.createdAt instanceof Date 
+          ? user.createdAt.toISOString() 
+          : String(user.createdAt);
+      const createdAt = new Date(createdAtStr);
+      
+      // Get the date strings to compare
+      const createdDateStr = createdAt.toISOString().split('T')[0];
+      const weekStartStr = startOfWeek.toISOString().split('T')[0];
+      
+      // It's this week if the date is >= the start of the week
+      return createdDateStr >= weekStartStr;
     }).length;
     
     // For this month, ensure we're comparing dates properly
     const signupsThisMonth = users.filter(user => {
-      const createdAt = new Date(user.createdAt);
-      return createdAt.getFullYear() === startOfMonth.getFullYear() && 
-             createdAt.getMonth() === startOfMonth.getMonth();
+      // Parse the date safely
+      const createdAtStr = user.createdAt instanceof Date 
+          ? user.createdAt.toISOString() 
+          : String(user.createdAt);
+      const createdAt = new Date(createdAtStr);
+      
+      // Get the year-month strings to compare (YYYY-MM)
+      const createdYearMonth = createdAt.toISOString().split('-').slice(0, 2).join('-');
+      const thisYearMonth = startOfMonth.toISOString().split('-').slice(0, 2).join('-');
+      
+      // It's this month if the year and month match
+      return createdYearMonth === thisYearMonth;
     }).length;
     
     // Add some logging to help debug
