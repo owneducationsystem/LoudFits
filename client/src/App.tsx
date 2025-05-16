@@ -138,9 +138,6 @@ function App() {
                 <Route path="/admin/dashboard">
                   <AdminRoute component={Admin} />
                 </Route>
-                <Route path="/admin/sales-analytics">
-                  <AdminRoute component={Admin} />
-                </Route>
                 <Route path="/admin/users">
                   <AdminRoute component={AdminUsers} />
                 </Route>
