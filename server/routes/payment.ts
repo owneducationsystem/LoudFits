@@ -72,14 +72,16 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
         const updatedOrder = await storage.updateOrderPaymentStatus(order.id, 'PAID');
         
         // Send notifications
-        await notificationService.sendUserNotification({
-          userId: order.userId,
-          type: NotificationType.PAYMENT_RECEIVED,
-          title: 'Payment Successful',
-          message: `Your payment for order #${order.orderNumber} has been successfully processed.`,
-          entityId: order.id,
-          entityType: 'order'
-        });
+        if (order.userId) {
+          await notificationService.sendUserNotification({
+            userId: order.userId,
+            type: NotificationType.PAYMENT_RECEIVED,
+            title: 'Payment Successful',
+            message: `Your payment for order #${order.orderNumber} has been successfully processed.`,
+            entityId: order.id,
+            entityType: 'order'
+          });
+        }
         
         await notificationService.sendAdminNotification({
           type: NotificationType.PAYMENT_RECEIVED,
@@ -91,17 +93,18 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
         });
         
         // Send email notification
-        const user = await storage.getUser(order.userId);
-        if (user && user.email) {
-          await emailService.sendPaymentConfirmationEmail(
-            user.email,
-            user.firstName || user.username,
-            order.orderNumber,
-            order.total,
-            payment.method
-          );
+        if (order.userId) {
+          const user = await storage.getUser(order.userId);
+          if (user && user.email) {
+            await emailService.sendPaymentConfirmationEmail(
+              user.email,
+              user.firstName || user.username,
+              order.orderNumber,
+              order.total,
+              payment.method
+            );
+          }
         }
-        
         return { success: true, order: updatedOrder };
       }
     } else if (status === 'FAILED' || status === 'PAYMENT_ERROR') {
@@ -111,14 +114,16 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
         const updatedOrder = await storage.updateOrderPaymentStatus(order.id, 'FAILED');
         
         // Send notifications
-        await notificationService.sendUserNotification({
-          userId: order.userId,
-          type: NotificationType.PAYMENT_FAILED,
-          title: 'Payment Failed',
-          message: `Your payment for order #${order.orderNumber} has failed. Please try again or contact support.`,
-          entityId: order.id,
-          entityType: 'order'
-        });
+        if (order.userId) {
+          await notificationService.sendUserNotification({
+            userId: order.userId,
+            type: NotificationType.PAYMENT_FAILED,
+            title: 'Payment Failed',
+            message: `Your payment for order #${order.orderNumber} has failed. Please try again or contact support.`,
+            entityId: order.id,
+            entityType: 'order'
+          });
+        }
         
         await notificationService.sendAdminNotification({
           type: NotificationType.PAYMENT_FAILED,
@@ -130,15 +135,17 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
         });
         
         // Send email notification
-        const user = await storage.getUser(order.userId);
-        if (user && user.email) {
-          await emailService.sendPaymentFailedEmail(
-            user.email,
-            user.firstName || user.username,
-            order.orderNumber,
-            order.total,
-            'The payment processor reported an error'
-          );
+        if (order.userId) {
+          const user = await storage.getUser(order.userId);
+          if (user && user.email) {
+            await emailService.sendPaymentFailedEmail(
+              user.email,
+              user.firstName || user.username,
+              order.orderNumber,
+              order.total,
+              'The payment processor reported an error'
+            );
+          }
         }
         
         return { success: true, order: updatedOrder };
