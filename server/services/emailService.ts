@@ -8,42 +8,86 @@ class EmailService {
   private transporter!: nodemailer.Transporter;
   private fromEmail!: string;
   private isEnabled: boolean = false;
+  private initialized: boolean = false;
 
   constructor() {
-    // Configure nodemailer
+    // Basic initialization in constructor (no async here)
+    this.setupBasicTransport();
+    
+    // Run the async initialization in background
+    this.initializeAsync().catch(err => {
+      console.error('Failed to initialize email service:', err);
+    });
+  }
+  
+  // Setup a basic transport immediately (synchronous)
+  private setupBasicTransport() {
     try {
-      // For testing in development, use a special testing configuration
-      // that doesn't actually send emails but logs them
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Email service running in development mode - emails will be logged but not sent');
-        
-        // Preview emails in the console (doesn't actually send)
+      console.log(`Setting up basic email transport...`);
+      
+      if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+        // Use Gmail if credentials are present
         this.transporter = nodemailer.createTransport({
-          host: 'smtp.ethereal.email',
-          port: 587,
-          secure: false,
-          auth: {
-            user: process.env.EMAIL_USER || 'youremail@gmail.com',
-            pass: process.env.EMAIL_PASSWORD || 'yourpassword'
-          },
-          debug: true,
-          // This prevents actually sending emails in development
-          // They will just be logged to the console
-          tls: {
-            rejectUnauthorized: false
-          }
-        });
-      } else {
-        // For production, use proper SMTP settings
-        this.transporter = nodemailer.createTransport({
-          host: 'smtp.gmail.com',
-          port: 465,
-          secure: true, // use SSL
+          service: 'gmail',
           auth: {
             user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASSWORD // This should be an app password for Gmail
+            pass: process.env.EMAIL_PASSWORD
           }
         });
+        
+        this.fromEmail = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+        this.isEnabled = true;
+        console.log('Basic email service initialized using Gmail');
+      } else {
+        // Setup a simple transport that just logs (doesn't send)
+        this.transporter = nodemailer.createTransport({
+          jsonTransport: true
+        });
+        
+        this.fromEmail = 'no-reply@loudfits.com';
+        console.log('Email service initialized in preview mode - emails will be logged only');
+      }
+    } catch (error) {
+      console.error('Error setting up basic email transport:', error);
+      // Create a fallback transport that doesn't fail
+      this.transporter = nodemailer.createTransport({
+        jsonTransport: true
+      });
+    }
+  }
+
+  // Try to set up advanced configuration asynchronously
+  private async initializeAsync() {
+    try {
+      // If credentials are missing, try to create a test account
+      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+        console.log('Email credentials missing. Creating test account...');
+        
+        try {
+          // Create a test account on Ethereal
+          const testAccount = await nodemailer.createTestAccount();
+          
+          this.transporter = nodemailer.createTransport({
+            host: 'smtp.ethereal.email',
+            port: 587,
+            secure: false,
+            auth: {
+              user: testAccount.user,
+              pass: testAccount.pass
+            }
+          });
+          
+          this.fromEmail = 'test@ethereal.email';
+          this.isEnabled = true;
+          console.log(`Test email account created: ${testAccount.user}`);
+          console.log('Test emails can be viewed at https://ethereal.email/messages');
+        } catch (err) {
+          console.error('Failed to create test account:', err);
+          // Keep using the basic transport
+        }
+      } else {
+        // We already have a basic transport from setupBasicTransport
+        console.log('Using provided email credentials');
       }
 
       this.fromEmail = process.env.EMAIL_FROM || 'support@loudfits.com';
