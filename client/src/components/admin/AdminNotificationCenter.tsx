@@ -304,9 +304,11 @@ export function AdminNotificationCenter() {
               </Badge>
             )}
             <span className="ml-2 text-xs text-muted-foreground">
-              ({connected ? 
+              {connected !== undefined ? (
+                connected ? 
                 <span className="text-green-600">Connected</span> : 
-                <span className="text-red-600">Disconnected</span>})
+                <span className="text-red-600">Disconnected</span>
+              ) : <span className="text-yellow-600">Connecting...</span>}
             </span>
           </div>
           <div className="flex items-center space-x-2">
