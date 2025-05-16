@@ -123,15 +123,22 @@ export class DashboardService {
   
   /**
    * Get count of products with low stock
+   * Uses inStock boolean since stockQuantity may not be available
    */
   async getLowStockCount(): Promise<number> {
     try {
       const allProducts = await storage.getAllProducts();
-      return allProducts.filter(product => 
-        product.stockQuantity !== null && 
-        product.stockQuantity !== undefined && 
-        product.stockQuantity <= 5
-      ).length;
+      
+      // First try to use stockQuantity if available
+      const lowStockProducts = allProducts.filter(product => {
+        if (product.stockQuantity !== null && product.stockQuantity !== undefined) {
+          return product.stockQuantity <= 5 && product.stockQuantity > 0;
+        } 
+        // Fall back to inStock if stockQuantity isn't available
+        return product.inStock === false;
+      });
+      
+      return lowStockProducts.length;
     } catch (error) {
       console.error('Error getting low stock products count:', error);
       return 0;

@@ -107,19 +107,23 @@ export const setupAdminDashboardRoutes = (app: Router) => {
       const totalProducts = allProducts.length;
       
       // Count out of stock products
-      const outOfStockCount = allProducts.filter(product => 
-        product.stockQuantity !== null && 
-        product.stockQuantity !== undefined && 
-        product.stockQuantity === 0
-      ).length;
+      const outOfStockCount = allProducts.filter(product => {
+        if (product.stockQuantity !== null && product.stockQuantity !== undefined) {
+          return product.stockQuantity === 0;
+        }
+        return product.inStock === false;
+      }).length;
       
       // Get low stock products details
       const lowStockProducts = allProducts
-        .filter(product => 
-          product.stockQuantity !== null && 
-          product.stockQuantity !== undefined && 
-          product.stockQuantity <= 5
-        )
+        .filter(product => {
+          if (product.stockQuantity !== null && product.stockQuantity !== undefined) {
+            return product.stockQuantity <= 5 && product.stockQuantity > 0;
+          }
+          // If using the inStock boolean, we can't determine "low stock" easily,
+          // but we'll include products that are still in stock but might be low
+          return product.inStock === true;
+        })
         .map(product => ({
           id: product.id,
           name: product.name,
