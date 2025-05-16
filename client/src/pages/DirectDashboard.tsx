@@ -10,7 +10,13 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  ArrowLeft
+  ArrowLeft,
+  Bell,
+  BellOff,
+  Mail,
+  FilterX,
+  Filter,
+  Info
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +31,27 @@ const DirectDashboard = () => {
     orders: 0
   });
   const [loading, setLoading] = useState(false);
+  const [productPerformance, setProductPerformance] = useState({
+    topSelling: [],
+    noSales: []
+  });
+  const [userSignups, setUserSignups] = useState({
+    today: 0,
+    thisWeek: 0,
+    thisMonth: 0,
+    graph: []
+  });
+  const [notificationSettings, setNotificationSettings] = useState({
+    enableSoundAlerts: true,
+    enableEmailFallback: true,
+    categoryFilters: {
+      orders: true,
+      payments: true,
+      users: true,
+      inventory: true,
+      system: true
+    }
+  });
 
   useEffect(() => {
     // Simple method to fetch stats without authentication requirements
@@ -40,7 +67,50 @@ const DirectDashboard = () => {
       }
     };
 
+    // Fetch product performance data
+    const fetchProductPerformance = async () => {
+      try {
+        const response = await fetch('/api/admin/dashboard/product-performance');
+        if (response.ok) {
+          const data = await response.json();
+          setProductPerformance(data);
+        }
+      } catch (error) {
+        console.error("Error fetching product performance:", error);
+      }
+    };
+
+    // Fetch user signup data
+    const fetchUserSignups = async () => {
+      try {
+        const response = await fetch('/api/admin/dashboard/user-signups');
+        if (response.ok) {
+          const data = await response.json();
+          setUserSignups(data);
+        }
+      } catch (error) {
+        console.error("Error fetching user signups:", error);
+      }
+    };
+
+    // Fetch notification settings
+    const fetchNotificationSettings = async () => {
+      try {
+        const response = await fetch('/api/admin/dashboard/notification-settings');
+        if (response.ok) {
+          const data = await response.json();
+          setNotificationSettings(data);
+        }
+      } catch (error) {
+        console.error("Error fetching notification settings:", error);
+      }
+    };
+
     fetchStats();
+    fetchProductPerformance();
+    fetchUserSignups();
+    fetchNotificationSettings();
+    
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -224,6 +294,298 @@ const DirectDashboard = () => {
                   <span className="text-sm font-medium">20%</span>
                 </div>
                 <Progress value={20} className="h-2" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Product Performance Section */}
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold mb-4">Product Performance</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Top Selling Products</CardTitle>
+                <CardDescription>
+                  Best performing products by quantity sold
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {productPerformance.topSelling.length === 0 ? (
+                  <div className="text-center p-4 text-muted-foreground">
+                    <Package className="h-8 w-8 mx-auto mb-2" />
+                    <p>No sales data available yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {productPerformance.topSelling.map((product, index) => (
+                      <div key={product.id} className="flex items-center justify-between border-b pb-2">
+                        <div className="flex items-center">
+                          <div className="bg-gray-100 rounded-md w-10 h-10 flex items-center justify-center mr-3">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium">{product.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {product.quantity} sold - ${(product.revenue).toFixed(2)} revenue
+                            </p>
+                          </div>
+                        </div>
+                        <Badge>{index === 0 ? '🏆 Best Seller' : ''}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Products Without Sales</CardTitle>
+                <CardDescription>
+                  Products with no sales in the last 30 days
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {productPerformance.noSales.length === 0 ? (
+                  <div className="text-center p-4 text-green-600">
+                    <CheckCircle className="h-8 w-8 mx-auto mb-2" />
+                    <p>All products have recent sales!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {productPerformance.noSales.map((product) => (
+                      <div key={product.id} className="flex items-center justify-between border-b pb-2">
+                        <div className="flex items-center">
+                          <AlertTriangle className="h-4 w-4 text-amber-500 mr-2" />
+                          <div>
+                            <p className="font-medium">{product.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              No sales for {product.daysWithoutSales} days - ${product.price}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="bg-amber-50">Needs Attention</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* User Signups Section */}
+        <div className="mt-4 mb-8">
+          <h2 className="text-2xl font-bold mb-4">User Signups</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Today</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{userSignups.today}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  New signups today
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">This Week</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{userSignups.thisWeek}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  New users this week
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">This Month</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{userSignups.thisMonth}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  New users this month
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Growth Rate</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">+{userSignups.thisMonth > 0 ? ((userSignups.thisWeek / userSignups.thisMonth) * 100).toFixed(1) : 0}%</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Week over month
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Signup Trend</CardTitle>
+              <CardDescription>
+                User registration over the last 30 days
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[200px] w-full">
+                {userSignups.graph.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    <p>No signup data available</p>
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex items-end">
+                    {userSignups.graph.map((day, index) => (
+                      <div 
+                        key={day.date} 
+                        className="flex-1 flex flex-col items-center"
+                        style={{ height: '100%' }}
+                      >
+                        <div 
+                          className="w-full max-w-[10px] mx-auto bg-blue-500 rounded-t"
+                          style={{ 
+                            height: `${Math.max(5, (day.count / Math.max(...userSignups.graph.map(d => d.count))) * 100)}%`,
+                            opacity: day.count > 0 ? 1 : 0.3
+                          }}
+                        ></div>
+                        {index % 5 === 0 && (
+                          <span className="text-[9px] mt-1 text-muted-foreground">
+                            {new Date(day.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Notification Settings */}
+        <div className="mt-4 mb-8">
+          <h2 className="text-2xl font-bold mb-4">Notification Settings</h2>
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Preferences</CardTitle>
+              <CardDescription>
+                Configure how you want to receive notifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Bell className="h-5 w-5 mr-2 text-blue-500" />
+                    <div>
+                      <p className="font-medium">Sound Alerts</p>
+                      <p className="text-sm text-muted-foreground">Play sound when new notifications arrive</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      onClick={() => setNotificationSettings({
+                        ...notificationSettings,
+                        enableSoundAlerts: !notificationSettings.enableSoundAlerts
+                      })}
+                      variant={notificationSettings.enableSoundAlerts ? "default" : "outline"}
+                      className="h-7 px-3"
+                    >
+                      {notificationSettings.enableSoundAlerts ? "On" : "Off"}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Mail className="h-5 w-5 mr-2 text-blue-500" />
+                    <div>
+                      <p className="font-medium">Email Fallback</p>
+                      <p className="text-sm text-muted-foreground">Send email for missed notifications</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      onClick={() => setNotificationSettings({
+                        ...notificationSettings,
+                        enableEmailFallback: !notificationSettings.enableEmailFallback
+                      })}
+                      variant={notificationSettings.enableEmailFallback ? "default" : "outline"}
+                      className="h-7 px-3"
+                    >
+                      {notificationSettings.enableEmailFallback ? "On" : "Off"}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 mt-4">
+                  <h3 className="font-medium mb-3 flex items-center">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Category Filters
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(notificationSettings.categoryFilters).map(([category, enabled]) => (
+                      <div key={category} className="flex items-center">
+                        <Button 
+                          onClick={() => {
+                            const updatedFilters = {...notificationSettings.categoryFilters};
+                            updatedFilters[category] = !enabled;
+                            setNotificationSettings({
+                              ...notificationSettings,
+                              categoryFilters: updatedFilters
+                            });
+                          }}
+                          variant={enabled ? "default" : "outline"}
+                          size="sm"
+                          className="mr-2 h-7"
+                        >
+                          {enabled ? "On" : "Off"}
+                        </Button>
+                        <span className="capitalize">{category}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <Button 
+                    onClick={() => {
+                      // In a real app this would save to the server
+                      fetch('/api/admin/dashboard/notification-settings', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(notificationSettings),
+                      })
+                      .then(response => response.json())
+                      .then(data => {
+                        if (data.success) {
+                          // Show success message
+                          alert('Settings saved successfully');
+                        }
+                      })
+                      .catch(error => {
+                        console.error('Error saving notification settings:', error);
+                      });
+                    }}
+                    className="w-full"
+                  >
+                    Save Preferences
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    <Info className="h-3 w-3 inline mr-1" />
+                    Changes will apply to all notification channels
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
