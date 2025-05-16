@@ -109,8 +109,10 @@ class EmailService {
    * @param user User who registered
    */
   async sendWelcomeEmail(user: User): Promise<boolean> {
-    if (!this.isEnabled) return false;
-    if (!user.email) return false;
+    if (!user.email) {
+      console.log('Cannot send welcome email: user has no email address');
+      return false;
+    }
 
     try {
       const mailOptions = {
@@ -161,8 +163,10 @@ class EmailService {
    * @param device Device information (browser/OS)
    */
   async sendLoginNotificationEmail(user: User, ipAddress?: string, device?: string): Promise<boolean> {
-    if (!this.isEnabled) return false;
-    if (!user.email) return false;
+    if (!user.email) {
+      console.log('Cannot send login notification: user has no email address');
+      return false;
+    }
 
     try {
       const mailOptions = {
@@ -207,8 +211,10 @@ class EmailService {
    * @param products Products in the order
    */
   async sendOrderConfirmationEmail(order: Order, user: User, products: Product[]): Promise<boolean> {
-    if (!this.isEnabled) return false;
-    if (!user.email) return false;
+    if (!user.email) {
+      console.log('Cannot send order confirmation: user has no email address');
+      return false;
+    }
 
     try {
       // Format the product items for the email
@@ -291,7 +297,7 @@ class EmailService {
             <div style="background-color: #f8f8f8; padding: 15px; border-radius: 5px; margin: 20px 0;">
               <p style="margin: 5px 0;">${user.username}</p>
               <p style="margin: 5px 0;">${user.address || ''}</p>
-              <p style="margin: 5px 0;">${user.city || ''}, ${user.state || ''} ${user.pincode || ''}</p>
+              <p style="margin: 5px 0;">${user.city || ''} ${user.state || ''}</p>
               <p style="margin: 5px 0;">${user.country || 'India'}</p>
               <p style="margin: 5px 0;">${user.phoneNumber || ''}</p>
             </div>
