@@ -1,47 +1,19 @@
 import { Router } from 'express';
 import { storage } from '../../storage';
 import { notificationService } from '../../services/notificationService';
+import { dashboardService } from '../../services/dashboardService';
 
 export const setupAdminDashboardRoutes = (app: Router) => {
   // Get order stats for admin dashboard
   app.get('/api/admin/orders/stats', async (req, res) => {
     try {
-      const allOrders = await storage.getAllOrders();
+      // Get basic order metrics
+      const totalOrders = await dashboardService.getTotalOrders();
+      const pendingOrders = await dashboardService.getPendingOrdersCount();
+      const todayRevenue = await dashboardService.getTodayRevenue();
       
-      // Calculate total orders
-      const totalOrders = allOrders.length;
-      
-      // Calculate orders by status
-      const statusCounts = {
-        pending: 0,
-        processing: 0,
-        shipped: 0,
-        delivered: 0,
-        canceled: 0
-      };
-      
-      allOrders.forEach(order => {
-        const status = order.status?.toLowerCase() || 'pending';
-        if (statusCounts.hasOwnProperty(status)) {
-          statusCounts[status]++;
-        }
-      });
-      
-      // Calculate pending orders
-      const pendingOrders = statusCounts.pending + statusCounts.processing;
-      
-      // Calculate today's revenue
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const todayOrders = allOrders.filter(order => {
-        const orderDate = new Date(order.createdAt);
-        return orderDate >= today && order.status !== 'canceled';
-      });
-      
-      const todayRevenue = todayOrders.reduce((sum, order) => {
-        return sum + parseFloat(order.total.toString());
-      }, 0).toFixed(2);
+      // Get order status counts
+      const statusCounts = await dashboardService.getOrderStatusCounts();
       
       res.json({
         totalOrders,
@@ -58,12 +30,11 @@ export const setupAdminDashboardRoutes = (app: Router) => {
   // Get user stats for admin dashboard
   app.get('/api/admin/users/stats', async (req, res) => {
     try {
-      const allUsers = await storage.getAllUsers();
-      
-      // Calculate total users
-      const totalUsers = allUsers.length;
+      // Get total users from dashboard service
+      const totalUsers = await dashboardService.getTotalUsers();
       
       // Calculate new users today
+      const allUsers = await storage.getAllUsers();
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
@@ -127,17 +98,13 @@ export const setupAdminDashboardRoutes = (app: Router) => {
   // Get product stats for admin dashboard
   app.get('/api/admin/products/stats', async (req, res) => {
     try {
+      // Get low stock count from dashboard service
+      const lowStockCount = await dashboardService.getLowStockCount();
+      
       const allProducts = await storage.getAllProducts();
       
       // Total product count
       const totalProducts = allProducts.length;
-      
-      // Count low stock products (5 or fewer items)
-      const lowStockCount = allProducts.filter(product => 
-        product.stockQuantity !== null && 
-        product.stockQuantity !== undefined && 
-        product.stockQuantity <= 5
-      ).length;
       
       // Count out of stock products
       const outOfStockCount = allProducts.filter(product => 
@@ -158,7 +125,7 @@ export const setupAdminDashboardRoutes = (app: Router) => {
           name: product.name,
           stockQuantity: product.stockQuantity,
           category: product.category,
-          image: product.images[0] || null
+          image: product.images?.[0] || null
         }));
       
       res.json({
@@ -176,15 +143,16 @@ export const setupAdminDashboardRoutes = (app: Router) => {
   // Update dashboard metrics manually
   app.post('/api/admin/dashboard/update', async (req, res) => {
     try {
-      // Trigger a dashboard update via notification service
-      // This is a simplified version - implement the actual method in notificationService
-      await notificationService.sendAdminDashboardUpdate({
-        updatedAt: new Date().toISOString()
-      });
+      // Get metric type from request or default to 'all'
+      const metricType = req.body.metricType || 'all';
+      
+      // Trigger dashboard metrics update
+      const success = await dashboardService.updateDashboardMetrics(metricType);
       
       res.json({ 
-        success: true, 
-        message: 'Dashboard metrics updated'
+        success, 
+        message: success ? 'Dashboard metrics updated' : 'Failed to update some metrics',
+        updatedAt: new Date().toISOString()
       });
     } catch (error) {
       console.error('Error updating dashboard metrics:', error);
