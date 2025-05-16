@@ -342,6 +342,225 @@ class NotificationService {
     
     return { regular, admin };
   }
+  
+  /**
+   * Send a stock alert notification to admins
+   * @param productId Product ID
+   * @param productName Product name
+   * @param currentStock Current stock level
+   * @param threshold Threshold that triggered the alert
+   */
+  async sendStockAlert(productId: number, productName: string, currentStock: number, threshold: number = 5) {
+    let priority: 'low' | 'medium' | 'high' | 'urgent';
+    let type = NotificationType.STOCK_ALERT;
+    
+    // Determine priority based on stock level
+    if (currentStock === 0) {
+      priority = 'urgent';
+      type = NotificationType.OUT_OF_STOCK;
+    } else if (currentStock <= 2) {
+      priority = 'high';
+      type = NotificationType.LOW_STOCK;
+    } else if (currentStock <= threshold) {
+      priority = 'medium';
+      type = NotificationType.LOW_STOCK;
+    } else {
+      priority = 'low';
+    }
+    
+    return this.sendAdminNotification({
+      type,
+      title: currentStock === 0 ? 'Product Out of Stock!' : 'Low Stock Alert',
+      message: currentStock === 0 
+        ? `Product "${productName}" (ID: ${productId}) is now out of stock and needs immediate attention.`
+        : `Product "${productName}" (ID: ${productId}) is running low with only ${currentStock} items left.`,
+      entityId: productId,
+      entityType: 'product',
+      priority,
+      actionRequired: true,
+      actionType: 'restock_product',
+      metadata: {
+        productId,
+        currentStock,
+        threshold
+      }
+    });
+  }
+  
+  /**
+   * Send an order status update to both admin and customer
+   * @param orderId Order ID
+   * @param orderNumber Order number
+   * @param userId User ID
+   * @param status New order status
+   * @param additionalInfo Additional information
+   */
+  async sendOrderStatusUpdate(orderId: number, orderNumber: string, userId: number, status: string, additionalInfo?: string) {
+    let type: NotificationType;
+    let title: string;
+    let adminTitle: string;
+    
+    // Determine notification type based on status
+    switch (status.toLowerCase()) {
+      case 'shipped':
+        type = NotificationType.ORDER_SHIPPED;
+        title = 'Your Order Has Shipped';
+        adminTitle = 'Order Shipped';
+        break;
+      case 'delivered':
+        type = NotificationType.ORDER_DELIVERED;
+        title = 'Your Order Has Been Delivered';
+        adminTitle = 'Order Delivered';
+        break;
+      case 'cancelled':
+      case 'canceled':
+        type = NotificationType.ORDER_CANCELED;
+        title = 'Your Order Has Been Cancelled';
+        adminTitle = 'Order Cancelled';
+        break;
+      default:
+        type = NotificationType.ORDER_UPDATED;
+        title = 'Your Order Status Has Been Updated';
+        adminTitle = 'Order Updated';
+    }
+    
+    // Send to customer
+    const userMessage = `Your order #${orderNumber} has been ${status.toLowerCase()}${additionalInfo ? '. ' + additionalInfo : '.'}`;
+    await this.sendUserNotification({
+      type,
+      title,
+      message: userMessage,
+      userId,
+      entityId: orderId,
+      entityType: 'order',
+      metadata: {
+        orderId,
+        orderNumber,
+        status
+      }
+    });
+    
+    // Send to admin
+    const adminMessage = `Order #${orderNumber} has been ${status.toLowerCase()}${additionalInfo ? '. ' + additionalInfo : '.'}`;
+    return this.sendAdminNotification({
+      type,
+      title: adminTitle,
+      message: adminMessage,
+      entityId: orderId,
+      entityType: 'order',
+      priority: 'medium',
+      metadata: {
+        orderId,
+        orderNumber,
+        userId,
+        status
+      }
+    });
+  }
+  
+  /**
+   * Send a payment notification
+   * @param orderId Order ID
+   * @param orderNumber Order number
+   * @param userId User ID
+   * @param status Payment status
+   * @param amount Payment amount
+   * @param paymentMethod Payment method
+   */
+  async sendPaymentNotification(orderId: number, orderNumber: string, userId: number, status: string, amount: string, paymentMethod: string) {
+    const isSuccess = status.toLowerCase() === 'success' || status.toLowerCase() === 'paid';
+    const type = isSuccess ? NotificationType.PAYMENT_RECEIVED : NotificationType.PAYMENT_FAILED;
+    
+    // Send to customer
+    const userTitle = isSuccess ? 'Payment Successful' : 'Payment Failed';
+    const userMessage = isSuccess
+      ? `Your payment of ${amount} for order #${orderNumber} has been successfully processed.`
+      : `Your payment for order #${orderNumber} has failed. Please try again or contact our support team.`;
+    
+    await this.sendUserNotification({
+      type,
+      title: userTitle,
+      message: userMessage,
+      userId,
+      entityId: orderId,
+      entityType: 'order',
+      metadata: {
+        orderId,
+        orderNumber,
+        amount,
+        paymentMethod,
+        status
+      }
+    });
+    
+    // Send to admin
+    const adminTitle = isSuccess ? 'Payment Received' : 'Payment Failed';
+    const adminMessage = isSuccess
+      ? `Payment of ${amount} received for order #${orderNumber} via ${paymentMethod}.`
+      : `Payment failed for order #${orderNumber}. Amount: ${amount}, Method: ${paymentMethod}.`;
+    
+    return this.sendAdminNotification({
+      type,
+      title: adminTitle,
+      message: adminMessage,
+      entityId: orderId,
+      entityType: 'order',
+      priority: isSuccess ? 'medium' : 'high',
+      actionRequired: !isSuccess,
+      actionType: !isSuccess ? 'check_payment' : undefined,
+      metadata: {
+        orderId,
+        orderNumber,
+        userId,
+        amount,
+        paymentMethod,
+        status
+      }
+    });
+  }
+  
+  /**
+   * Send a notification about new user registration
+   * @param userId User ID
+   * @param username Username
+   * @param email Email
+   */
+  async sendUserRegistrationNotification(userId: number, username: string, email: string) {
+    return this.sendAdminNotification({
+      type: NotificationType.USER_REGISTERED,
+      title: 'New User Registration',
+      message: `New user registered: ${username} (${email})`,
+      entityId: userId,
+      entityType: 'user',
+      priority: 'low',
+      metadata: {
+        userId,
+        username,
+        email
+      }
+    });
+  }
+  
+  /**
+   * Send a real-time dashboard update notification
+   * @param data Dashboard update data
+   */
+  async sendDashboardUpdate(data: {
+    totalOrders?: number;
+    pendingOrders?: number;
+    todayRevenue?: string;
+    activeUsers?: number;
+    lowStockProducts?: number;
+  }) {
+    this.clients.forEach((client, socket) => {
+      if (client.isAdmin && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'dashboard_update',
+          data
+        }));
+      }
+    });
+  }
 }
 
 // Export a singleton instance

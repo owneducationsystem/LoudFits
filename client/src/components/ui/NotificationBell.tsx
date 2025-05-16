@@ -1,5 +1,10 @@
-import React, { useState } from 'react';
-import { Bell, Check, CheckCheck, X, ShoppingBag, CreditCard, Package, Info } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { 
+  Bell, CheckCheck, X, ShoppingBag, 
+  CreditCard, Package, Info, AlertTriangle, 
+  User, Truck, CheckCircle, Users, TagIcon,
+  ShoppingCart, AlertCircle, ShieldAlert
+} from 'lucide-react';
 import { useNotifications, NotificationType } from '@/context/NotificationContext';
 import { Button } from './button';
 import { Card } from './card';
@@ -27,18 +32,74 @@ export function NotificationBell() {
   // Get icon for notification type
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
+      // Order notifications
       case NotificationType.ORDER_PLACED:
         return <ShoppingBag className="h-4 w-4 text-green-500" />;
       case NotificationType.ORDER_UPDATED:
         return <Package className="h-4 w-4 text-blue-500" />;
+      case NotificationType.ORDER_SHIPPED:
+        return <Truck className="h-4 w-4 text-blue-500" />;
+      case NotificationType.ORDER_DELIVERED:
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case NotificationType.ORDER_CANCELED:
+        return <X className="h-4 w-4 text-red-500" />;
+        
+      // Payment notifications
       case NotificationType.PAYMENT_RECEIVED:
         return <CreditCard className="h-4 w-4 text-green-500" />;
       case NotificationType.PAYMENT_FAILED:
         return <CreditCard className="h-4 w-4 text-red-500" />;
+      case NotificationType.PAYMENT_REFUNDED:
+        return <CreditCard className="h-4 w-4 text-amber-500" />;
+        
+      // User notifications
+      case NotificationType.USER_REGISTERED:
+        return <User className="h-4 w-4 text-blue-500" />;
+      case NotificationType.USER_UPDATED:
+        return <Users className="h-4 w-4 text-blue-400" />;
+        
+      // Product notifications
+      case NotificationType.PRODUCT_UPDATED:
+        return <TagIcon className="h-4 w-4 text-indigo-500" />;
+      case NotificationType.PRODUCT_ADDED:
+        return <TagIcon className="h-4 w-4 text-green-500" />;
+      case NotificationType.STOCK_ALERT:
+        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+      case NotificationType.LOW_STOCK:
+        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+      case NotificationType.OUT_OF_STOCK:
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+        
+      // Admin notifications
       case NotificationType.ADMIN_ALERT:
-        return <Info className="h-4 w-4 text-amber-500" />;
+        return <ShieldAlert className="h-4 w-4 text-amber-500" />;
+      case NotificationType.ADMIN_LOGIN:
+        return <User className="h-4 w-4 text-purple-500" />;
+        
+      // System notifications
+      case NotificationType.ERROR:
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case NotificationType.SYSTEM:
+        return <Info className="h-4 w-4 text-blue-500" />;
+        
       default:
         return <Info className="h-4 w-4 text-gray-500" />;
+    }
+  };
+  
+  // Get priority badge for notification
+  const getPriorityBadge = (priority?: 'low' | 'medium' | 'high' | 'urgent') => {
+    if (!priority) return null;
+    
+    switch (priority) {
+      case 'urgent':
+        return <Badge variant="destructive" className="ml-2 px-1.5 py-0 text-[0.65rem]">Urgent</Badge>;
+      case 'high':
+        return <Badge variant="destructive" className="ml-2 px-1.5 py-0 text-[0.65rem]">High</Badge>;
+      case 'medium':
+        return <Badge variant="outline" className="ml-2 px-1.5 py-0 text-[0.65rem] border-amber-500 text-amber-500">Medium</Badge>;
+      default:
+        return null;
     }
   };
   
@@ -100,7 +161,10 @@ export function NotificationBell() {
                     key={notification.id}
                     className={cn(
                       "p-3 hover:bg-muted cursor-pointer transition-colors",
-                      !notification.read && "bg-muted/50"
+                      !notification.read && "bg-muted/50",
+                      notification.priority === 'urgent' && "bg-red-50/70 hover:bg-red-50/90",
+                      notification.priority === 'high' && "bg-amber-50/70 hover:bg-amber-50/90",
+                      notification.actionRequired && "border-l-2 border-amber-500"
                     )}
                     onClick={() => handleNotificationClick(notification.id)}
                   >
@@ -109,20 +173,36 @@ export function NotificationBell() {
                         {getNotificationIcon(notification.type)}
                       </div>
                       <div className="flex-1 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <p className={cn("text-sm font-medium", !notification.read && "font-semibold")}>
-                            {notification.title}
-                          </p>
+                        <div className="flex items-center justify-between flex-wrap">
+                          <div className="flex items-center">
+                            <p className={cn("text-sm font-medium", !notification.read && "font-semibold")}>
+                              {notification.title}
+                            </p>
+                            {getPriorityBadge(notification.priority)}
+                          </div>
                           {!notification.read && (
                             <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                           )}
                         </div>
+                        
                         <p className="text-xs text-muted-foreground line-clamp-2">
                           {notification.message}
                         </p>
-                        <p className="text-xs text-muted-foreground/70">
-                          {format(new Date(notification.createdAt), 'MMM d, h:mm a')}
-                        </p>
+                        
+                        <div className="flex justify-between items-center">
+                          <p className="text-xs text-muted-foreground/70">
+                            {format(new Date(notification.createdAt), 'MMM d, h:mm a')}
+                          </p>
+                          
+                          {notification.actionRequired && (
+                            <Badge 
+                              variant="outline" 
+                              className="ml-2 px-1.5 py-0 text-[0.65rem] border-amber-500 text-amber-500"
+                            >
+                              Action needed
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

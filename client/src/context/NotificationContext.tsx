@@ -12,14 +12,36 @@ interface NotificationUser {
 
 // Types for notifications
 export enum NotificationType {
+  // Order related notifications
   ORDER_PLACED = 'order_placed',
   ORDER_UPDATED = 'order_updated',
+  ORDER_SHIPPED = 'order_shipped',
+  ORDER_DELIVERED = 'order_delivered',
+  ORDER_CANCELED = 'order_canceled',
+  
+  // Payment related notifications
   PAYMENT_RECEIVED = 'payment_received',
   PAYMENT_FAILED = 'payment_failed',
+  PAYMENT_REFUNDED = 'payment_refunded',
+  
+  // User related notifications
   USER_REGISTERED = 'user_registered',
+  USER_UPDATED = 'user_updated',
+  
+  // Product related notifications
   PRODUCT_UPDATED = 'product_updated',
+  PRODUCT_ADDED = 'product_added',
+  STOCK_ALERT = 'stock_alert',
+  LOW_STOCK = 'low_stock',
+  OUT_OF_STOCK = 'out_of_stock',
+  
+  // Admin notifications
   ADMIN_ALERT = 'admin_alert',
-  SYSTEM = 'system'
+  ADMIN_LOGIN = 'admin_login',
+  
+  // System notifications
+  SYSTEM = 'system',
+  ERROR = 'error'
 }
 
 export interface Notification {
@@ -34,6 +56,9 @@ export interface Notification {
   metadata?: any;
   read: boolean;
   createdAt: Date;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  actionRequired?: boolean;
+  actionType?: string;
 }
 
 interface NotificationContextType {
@@ -184,12 +209,37 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         return prev;
       }
       
+      // Format createdAt as a Date if it's a string
+      if (typeof notification.createdAt === 'string') {
+        notification.createdAt = new Date(notification.createdAt);
+      }
+      
+      // Determine toast variant based on notification type and priority
+      let variant: 'default' | 'destructive' | 'success' = 'default';
+      
+      // Handle critical alerts with destructive variant
+      if (notification.type === NotificationType.PAYMENT_FAILED || 
+          notification.type === NotificationType.ADMIN_ALERT ||
+          notification.type === NotificationType.ERROR ||
+          notification.type === NotificationType.OUT_OF_STOCK ||
+          notification.priority === 'urgent' || 
+          notification.priority === 'high') {
+        variant = 'destructive';
+      }
+      
+      // Handle positive notifications with success variant
+      if (notification.type === NotificationType.PAYMENT_RECEIVED ||
+          notification.type === NotificationType.ORDER_DELIVERED) {
+        variant = 'success';
+      }
+      
       // Display a toast notification for new notifications
       toast({
         title: notification.title,
         description: notification.message,
-        variant: notification.type === NotificationType.PAYMENT_FAILED ? 'destructive' : 
-                  notification.type === NotificationType.ADMIN_ALERT ? 'destructive' : 'default',
+        variant: variant,
+        // Keep important notifications visible longer
+        duration: (notification.priority === 'urgent' || notification.priority === 'high') ? 8000 : 5000
       });
       
       return [notification, ...prev];
