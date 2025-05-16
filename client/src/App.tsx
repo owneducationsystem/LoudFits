@@ -31,6 +31,7 @@ import PaymentFailed from "@/pages/PaymentFailed";
 import PaymentError from "@/pages/PaymentError";
 import TestPhonePe from "@/pages/TestPhonePe";
 import NotificationTest from "@/pages/NotificationTest";
+import EmailTest from "@/pages/EmailTest";
 // Admin pages
 import Admin from "@/pages/Admin";
 import AdminUsers from "@/pages/AdminUsers";

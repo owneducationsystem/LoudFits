@@ -92,17 +92,26 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
           isAdmin: true
         });
         
-        // Send email notification
+        // Send email notification for successful payment
         if (order.userId) {
           const user = await storage.getUser(order.userId);
           if (user && user.email) {
-            await emailService.sendPaymentConfirmationEmail(
+            // Send payment confirmation email (non-blocking)
+            emailService.sendPaymentConfirmationEmail(
               user.email,
               user.firstName || user.username,
               order.orderNumber,
               order.total,
-              payment.method
-            );
+              payment.method || 'Online Payment'
+            ).then(sent => {
+              if (sent) {
+                console.log(`Payment confirmation email sent to ${user.email} for order #${order.orderNumber}`);
+              } else {
+                console.log(`Failed to send payment confirmation email to ${user.email}`);
+              }
+            }).catch(err => {
+              console.error(`Error sending payment confirmation email: ${err.message}`);
+            });
           }
         }
         return { success: true, order: updatedOrder };
@@ -134,17 +143,26 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
           isAdmin: true
         });
         
-        // Send email notification
+        // Send email notification for failed payment
         if (order.userId) {
           const user = await storage.getUser(order.userId);
           if (user && user.email) {
-            await emailService.sendPaymentFailedEmail(
+            // Send payment failure email (non-blocking)
+            emailService.sendPaymentFailedEmail(
               user.email,
               user.firstName || user.username,
               order.orderNumber,
               order.total,
-              'The payment processor reported an error'
-            );
+              'The payment processor reported an error. Please try again or use a different payment method.'
+            ).then(sent => {
+              if (sent) {
+                console.log(`Payment failure email sent to ${user.email} for order #${order.orderNumber}`);
+              } else {
+                console.log(`Failed to send payment failure email to ${user.email}`);
+              }
+            }).catch(err => {
+              console.error(`Error sending payment failure email: ${err.message}`);
+            });
           }
         }
         

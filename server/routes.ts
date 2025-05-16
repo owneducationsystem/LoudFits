@@ -88,6 +88,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup routes
   setupPaymentRoutes(app);
   
+  // Set up email test routes
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const { setupEmailRoutes } = require('./routes/emailRoutes');
+      setupEmailRoutes(app);
+      console.log("Email test routes registered");
+    } catch (error) {
+      console.error("Failed to register email routes:", error);
+    }
+  }
+  
   // Setup notification test routes
   app.get("/api/notifications/test", async (req, res) => {
     try {
