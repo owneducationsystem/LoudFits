@@ -17,7 +17,11 @@ import {
   FilterX,
   Filter,
   Info,
-  RefreshCw
+  RefreshCw,
+  CreditCard,
+  UserPlus,
+  Server,
+  Truck
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -140,15 +144,49 @@ const DirectDashboard = () => {
     }
   });
 
+  // Interface for payment performance data
+  interface FailureReason {
+    reason: string;
+    count: number;
+    amount: number;
+  }
+  
+  interface PaymentSummary {
+    totalPayments: number;
+    successfulPayments: number;
+    failedPayments: number;
+    successRate: number;
+    totalLostRevenue: number;
+  }
+  
+  interface PaymentPerformance {
+    summary: PaymentSummary;
+    failureReasons: FailureReason[];
+    recommendations: string[];
+  }
+  
+  const [paymentPerformance, setPaymentPerformance] = useState<PaymentPerformance>({
+    summary: {
+      totalPayments: 0,
+      successfulPayments: 0,
+      failedPayments: 0,
+      successRate: 0,
+      totalLostRevenue: 0
+    },
+    failureReasons: [],
+    recommendations: []
+  });
+
   const fetchAllData = async () => {
     setLoading(true);
     try {
       // Fetch all data in parallel for better performance
-      const [statsRes, performanceRes, signupsRes, settingsRes] = await Promise.all([
+      const [statsRes, performanceRes, signupsRes, settingsRes, paymentPerformanceRes] = await Promise.all([
         fetch('/api/stats/public'),
         fetch('/api/admin/dashboard/product-performance'),
         fetch('/api/admin/dashboard/user-signups'),
-        fetch('/api/admin/dashboard/notification-settings')
+        fetch('/api/admin/dashboard/notification-settings'),
+        fetch('/api/admin/payment-performance')
       ]);
       
       if (statsRes.ok) {
@@ -197,6 +235,11 @@ const DirectDashboard = () => {
       if (settingsRes.ok) {
         const data = await settingsRes.json();
         setNotificationSettings(data);
+      }
+      
+      if (paymentPerformanceRes.ok) {
+        const data = await paymentPerformanceRes.json();
+        setPaymentPerformance(data);
       }
       
       // Update last refreshed timestamp
@@ -504,9 +547,131 @@ const DirectDashboard = () => {
           </div>
         </div>
 
+        {/* Payment Performance Section */}
+        <div className="mt-4 mb-8">
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Payment Performance
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <div className="text-2xl font-bold">{paymentPerformance.summary.successRate}%</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {paymentPerformance.summary.successfulPayments} of {paymentPerformance.summary.totalPayments} payments
+                    </p>
+                  </div>
+                  <Progress 
+                    value={paymentPerformance.summary.successRate} 
+                    className={`w-24 h-6 ${paymentPerformance.summary.successRate > 90 ? 'bg-green-100' : paymentPerformance.summary.successRate > 75 ? 'bg-yellow-100' : 'bg-red-100'}`}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Failed Payments</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-red-500">{paymentPerformance.summary.failedPayments}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Total failed transactions
+                    </p>
+                  </div>
+                  <AlertTriangle className={`h-10 w-10 ${paymentPerformance.summary.failedPayments > 0 ? 'text-red-500' : 'text-green-500'}`} />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Revenue Impact</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-500">${paymentPerformance.summary.totalLostRevenue.toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Lost revenue from failed payments
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Failed Payment Reasons</CardTitle>
+                <CardDescription>
+                  Common reasons for payment failures
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {paymentPerformance.failureReasons.length === 0 ? (
+                  <div className="text-center p-4 text-muted-foreground">
+                    <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                    <p>No payment failures detected</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {paymentPerformance.failureReasons.map((reason, index) => (
+                      <div key={index} className="flex items-center justify-between border-b pb-2">
+                        <div className="flex items-center">
+                          <div className="bg-red-100 text-red-600 rounded-md w-8 h-8 flex items-center justify-center mr-3">
+                            {reason.count}
+                          </div>
+                          <div>
+                            <p className="font-medium">{reason.reason}</p>
+                            <p className="text-xs text-muted-foreground">
+                              ${reason.amount.toFixed(2)} lost revenue
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-red-500 border-red-200 bg-red-50">
+                          {Math.round((reason.count / paymentPerformance.summary.failedPayments) * 100)}%
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Recommendations</CardTitle>
+                <CardDescription>
+                  Suggested actions to improve payment success
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {paymentPerformance.recommendations.map((recommendation, index) => (
+                    <div key={index} className="flex items-start gap-2 border-b pb-3">
+                      <div className="bg-blue-100 text-blue-600 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        {index + 1}
+                      </div>
+                      <p>{recommendation}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         {/* User Signups Section */}
         <div className="mt-4 mb-8">
-          <h2 className="text-2xl font-bold mb-4">User Signups</h2>
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <UserPlus className="h-5 w-5" />
+            User Signups
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <Card>
               <CardHeader className="pb-2">
