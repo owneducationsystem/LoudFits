@@ -695,6 +695,11 @@ const AdminSettings = () => {
             </CardFooter>
           </Card>
         </TabsContent>
+        
+        {/* Notifications Tab */}
+        <TabsContent value="notifications">
+          <AdminNotificationCenter />
+        </TabsContent>
       </Tabs>
     </AdminLayout>
   );
