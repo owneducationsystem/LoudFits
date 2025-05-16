@@ -233,7 +233,7 @@ const AdminDashboard: React.FC = () => {
         
         {/* Overview Tab */}
         <TabsContent value="overview">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             {/* Order Metrics */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -289,6 +289,9 @@ const AdminDashboard: React.FC = () => {
                 </p>
               </CardContent>
             </Card>
+            
+            {/* System Health Status */}
+            <SystemHealthIndicator websocketConnected={connected} />
           </div>
 
           {/* Order Status Distribution */}
