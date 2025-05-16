@@ -84,6 +84,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Initialize the notification service with our HTTP server
   notificationService.initialize(httpServer);
+  
+  // Setup routes
+  setupPaymentRoutes(app);
+  
+  // Setup notification test routes
+  app.get("/api/notifications/test", async (req, res) => {
+    try {
+      // Create a test notification
+      const notification = {
+        type: NotificationType.SYSTEM,
+        title: "Test Notification",
+        message: "This is a test notification from Loudfits. If you can see this, the notification system is working!",
+        id: Math.random().toString(36).substring(2, 15),
+        createdAt: new Date(),
+        read: false
+      };
+      
+      // Send the notification to all connected clients
+      await notificationService.sendBroadcast({
+        type: NotificationType.SYSTEM,
+        title: "Test Notification",
+        message: "This is a test notification from Loudfits. If you can see this, the notification system is working!"
+      });
+      
+      res.json({ success: true, notification });
+    } catch (error: any) {
+      console.error("Error sending test notification:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  app.post("/api/notifications/order-test", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      
+      // Generate a random order number
+      const orderNumber = `TEST-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+      
+      // User notification
+      await notificationService.sendUserNotification({
+        userId,
+        type: NotificationType.ORDER_PLACED,
+        title: "Order Placed Successfully",
+        message: `Your order #${orderNumber} has been placed and is being processed. You will receive a confirmation email shortly.`,
+        entityId: 123, // Mock order ID
+        entityType: 'order'
+      });
+      
+      // Admin notification
+      await notificationService.sendAdminNotification({
+        type: NotificationType.ORDER_PLACED,
+        title: "New Order Received",
+        message: `New order #${orderNumber} has been placed and requires processing.`,
+        entityId: 123, // Mock order ID
+        entityType: 'order',
+        isAdmin: true
+      });
+      
+      res.json({ success: true, orderNumber });
+    } catch (error: any) {
+      console.error("Error sending order test notification:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  app.post("/api/notifications/payment-test", async (req, res) => {
+    try {
+      const { userId, success = true } = req.body;
+      
+      // Generate a random order number
+      const orderNumber = `TEST-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+      
+      if (success) {
+        // Payment success notification
+        await notificationService.sendUserNotification({
+          userId,
+          type: NotificationType.PAYMENT_RECEIVED,
+          title: "Payment Successful",
+          message: `Your payment for order #${orderNumber} has been successfully processed.`,
+          entityId: 123, // Mock order ID
+          entityType: 'order'
+        });
+        
+        await notificationService.sendAdminNotification({
+          type: NotificationType.PAYMENT_RECEIVED,
+          title: "Payment Received",
+          message: `Payment received for order #${orderNumber}.`,
+          entityId: 123, // Mock order ID
+          entityType: 'order',
+          isAdmin: true
+        });
+      } else {
+        // Payment failure notification
+        await notificationService.sendUserNotification({
+          userId,
+          type: NotificationType.PAYMENT_FAILED,
+          title: "Payment Failed",
+          message: `Your payment for order #${orderNumber} has failed. Please try again or contact our support team.`,
+          entityId: 123, // Mock order ID
+          entityType: 'order'
+        });
+        
+        await notificationService.sendAdminNotification({
+          type: NotificationType.PAYMENT_FAILED,
+          title: "Payment Failed",
+          message: `Payment failed for order #${orderNumber}.`,
+          entityId: 123, // Mock order ID
+          entityType: 'order',
+          isAdmin: true
+        });
+      }
+      
+      res.json({ success: true, orderNumber, paymentStatus: success ? 'success' : 'failed' });
+    } catch (error: any) {
+      console.error("Error sending payment test notification:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
   // Simple test endpoint
   app.get("/api/test", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });

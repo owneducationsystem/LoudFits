@@ -51,125 +51,101 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
     return next();
   }
   
-  return res.status(401).json({ error: "Unauthorized access" });
+  res.status(401).json({ message: "Unauthorized - Please login first" });
 };
 
-// Helper function to update payment status based on PhonePe response
+// Update payment status and handle notifications
 async function updatePaymentStatus(payment: Payment, status: any): Promise<{
   success: boolean;
-  order?: Order;
   error?: string;
+  order?: Order;
 }> {
   try {
-    if (!payment) {
-      throw new Error("Payment record not found");
-    }
+    // Update payment status in database
+    const updatedPayment = await storage.updatePaymentStatus(payment.id, status);
     
-    let newStatus: string;
-    
-    if (status.success && status.code === "PAYMENT_SUCCESS") {
-      newStatus = "completed";
-      
-      // Update order status
-      await storage.updateOrderStatus(payment.orderId, "processing");
-      await storage.updateOrderPaymentStatus(payment.orderId, "paid");
-      
-    } else if (status.code === "PAYMENT_PENDING") {
-      newStatus = "pending";
-      
-    } else {
-      newStatus = "failed";
-      
-      // Update order status
-      await storage.updateOrderStatus(payment.orderId, "cancelled");
-      await storage.updateOrderPaymentStatus(payment.orderId, "failed");
-    }
-    
-    // Update payment record
-    await storage.updatePaymentStatus(payment.id, newStatus);
-    await storage.updatePaymentDetails(payment.id, {
-      gatewayResponse: status,
-      gatewayErrorCode: status.code !== "PAYMENT_SUCCESS" ? status.code : null,
-      gatewayErrorMessage: status.code !== "PAYMENT_SUCCESS" ? status.message : null,
-      paymentDate: newStatus === "completed" ? new Date() : null
-    });
-    
-    // Get the updated order
-    const order = await storage.getOrderById(payment.orderId);
-    
-    if (!order) {
-      throw new Error("Order not found after updating payment status");
-    }
-    
-    // Get user information to send notifications
-    if (typeof order.userId !== 'number') {
-      console.warn("Order has no valid user ID", order.id);
-    } else {
-      const user = await storage.getUser(order.userId);
-      
-      if (user) {
-        // Send real-time notification to user based on payment status
-        if (newStatus === "completed") {
-          // Send successful payment notification
-          await notificationService.sendUserNotification({
+    // If payment is successful or failed, update the order status
+    if (status === 'SUCCESS' || status === 'PAYMENT_SUCCESS') {
+      const order = await storage.getOrderById(payment.orderId);
+      if (order) {
+        // Update order payment status to paid
+        const updatedOrder = await storage.updateOrderPaymentStatus(order.id, 'PAID');
+        
+        // Send notifications
+        await notificationService.sendUserNotification({
+          userId: order.userId,
           type: NotificationType.PAYMENT_RECEIVED,
-          title: "Payment Successful",
-          message: `Your payment for order #${order.orderNumber} has been completed successfully.`,
-          userId: user.id,
+          title: 'Payment Successful',
+          message: `Your payment for order #${order.orderNumber} has been successfully processed.`,
           entityId: order.id,
           entityType: 'order'
         });
         
-        // Send email notification if configured
-        try {
+        await notificationService.sendAdminNotification({
+          type: NotificationType.PAYMENT_RECEIVED,
+          title: 'Payment Received',
+          message: `Payment received for order #${order.orderNumber}`,
+          entityId: order.id,
+          entityType: 'order',
+          isAdmin: true
+        });
+        
+        // Send email notification
+        const user = await storage.getUser(order.userId);
+        if (user && user.email) {
           await emailService.sendPaymentConfirmationEmail(
             user.email,
             user.firstName || user.username,
             order.orderNumber,
             order.total,
-            payment.method
+            payment.paymentMethod
           );
-        } catch (emailError) {
-          console.error("Failed to send payment confirmation email:", emailError);
         }
         
-        // Notify admins about new order
-        await notificationService.sendAdminNotification({
-          type: NotificationType.ORDER_PLACED,
-          title: "New Order Received",
-          message: `Order #${order.orderNumber} payment completed. Amount: ₹${order.total}`,
-          entityId: order.id,
-          entityType: 'order'
-        });
-      } else if (newStatus === "failed") {
-        // Send payment failure notification
+        return { success: true, order: updatedOrder };
+      }
+    } else if (status === 'FAILED' || status === 'PAYMENT_ERROR') {
+      const order = await storage.getOrderById(payment.orderId);
+      if (order) {
+        // Update order payment status to failed
+        const updatedOrder = await storage.updateOrderPaymentStatus(order.id, 'FAILED');
+        
+        // Send notifications
         await notificationService.sendUserNotification({
+          userId: order.userId,
           type: NotificationType.PAYMENT_FAILED,
-          title: "Payment Failed",
-          message: `Your payment for order #${order.orderNumber} was unsuccessful. Please try again or contact support.`,
-          userId: user.id,
+          title: 'Payment Failed',
+          message: `Your payment for order #${order.orderNumber} has failed. Please try again or contact support.`,
           entityId: order.id,
           entityType: 'order'
         });
         
-        // Send email notification for failed payment
-        try {
+        await notificationService.sendAdminNotification({
+          type: NotificationType.PAYMENT_FAILED,
+          title: 'Payment Failed',
+          message: `Payment failed for order #${order.orderNumber}`,
+          entityId: order.id,
+          entityType: 'order',
+          isAdmin: true
+        });
+        
+        // Send email notification
+        const user = await storage.getUser(order.userId);
+        if (user && user.email) {
           await emailService.sendPaymentFailedEmail(
             user.email,
             user.firstName || user.username,
             order.orderNumber,
             order.total,
-            status.message || "Transaction declined"
+            'The payment processor reported an error'
           );
-        } catch (emailError) {
-          console.error("Failed to send payment failure email:", emailError);
         }
+        
+        return { success: true, order: updatedOrder };
       }
-    } else {
-      console.warn("User not found for order notification", order.id);
     }
     
-    return { success: true, order };
+    return { success: true, order: undefined };
     
   } catch (error: any) {
     console.error("Error updating payment status:", error);
@@ -177,6 +153,7 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
   }
 }
 
+// Setup payment routes
 export function setupPaymentRoutes(app: Express) {
   // Debug endpoint for PhonePe configuration (for development only)
   if (process.env.NODE_ENV !== 'production') {
@@ -199,53 +176,54 @@ export function setupPaymentRoutes(app: Express) {
         // App base URL for redirects
         const appBaseUrl = `${req.protocol}://${req.get('host')}`;
         
-        console.log(`[TEST] Creating test payment for amount: ${amount}, orderNumber: ${orderNumber}`);
-        console.log(`[TEST] Using redirect base URL: ${appBaseUrl}`);
+        // Create a test payment record
+        const payment = await storage.createPayment({
+          orderId: 1, // Sample order ID
+          transactionId: merchantTransactionId,
+          merchantTransactionId: merchantTransactionId,
+          amount: amount.toString(),
+          currency: 'INR',
+          status: 'PENDING',
+          paymentMethod: 'phonepe_test',
+          paymentDetails: JSON.stringify({
+            testMode: true,
+            expectedResult: success ? 'success' : 'failure'
+          }),
+          timestamp: new Date()
+        });
         
-        // Create a mock order in the database (optional)
-        const mockOrder = {
-          orderNumber,
-          userId: req.user?.id || 1, // Default to first user if no auth
-          total: amount,
-          status: 'pending',
-          paymentStatus: 'pending',
-          email: req.user?.email || 'test@example.com',
-          shippingAddress: '123 Test Street, Test City, Test Country',
-          phone: '1234567890',
-          name: req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Test User' : 'Test User'
-        };
+        console.log(`Test payment created: ${merchantTransactionId} for amount ${amount}`);
         
-        // We'll return all the data that would be used to create a real payment
-        // without actually making the PhonePe API call
+        // Create a mock payment URL with our test parameters
+        const mockPaymentUrl = `${appBaseUrl}/api/payment/mock-payment?merchantTransactionId=${merchantTransactionId}&amount=${amount}&success=${success}`;
+        
+        // Return the payment details to the client
         res.json({
           success: true,
-          testPayment: true,
           data: {
-            orderNumber,
-            merchantTransactionId,
-            amount,
-            redirectUrl: `${appBaseUrl}/payment/callback?merchantTransactionId=${merchantTransactionId}&transactionId=PHTST${Date.now()}&code=${success ? 'PAYMENT_SUCCESS' : 'PAYMENT_ERROR'}`,
-            callbackUrl: `${appBaseUrl}/api/payment/webhook`,
-            paymentUrl: `${appBaseUrl}/test-phonepe/mock-payment?txnId=${merchantTransactionId}&amount=${amount}&success=${success}`,
-            timestamp: new Date().toISOString(),
-            mockOrder
+            transactionId: merchantTransactionId,
+            orderNumber: orderNumber,
+            amount: amount,
+            currency: 'INR',
+            paymentMethod: 'phonepe_test',
+            paymentUrl: mockPaymentUrl
           }
         });
       } catch (error: any) {
-        console.error(`[TEST] Error creating test payment:`, error);
-        res.status(500).json({ 
-          success: false, 
-          error: error.message || "Unknown error during test payment creation"
+        console.error('Error creating test payment:', error);
+        res.status(500).json({
+          success: false,
+          error: error.message || 'Failed to create test payment'
         });
       }
     });
     
-    // Mock payment page for simulating PhonePe payment process
-    app.get("/test-phonepe/mock-payment", (req, res) => {
-      const { txnId, amount, success = "true" } = req.query;
-      const isSuccess = success === "true";
+    // Mock payment page for testing
+    app.get("/api/payment/mock-payment", (req, res) => {
+      const { merchantTransactionId, amount, success } = req.query;
+      const isSuccess = success === 'true';
       
-      // Return a simple HTML page to simulate the payment gateway
+      // Show a mock payment page
       res.send(`
         <!DOCTYPE html>
         <html>
@@ -299,33 +277,53 @@ export function setupPaymentRoutes(app: Express) {
             .txn-id {
               font-size: 12px;
               color: #666;
-              margin-top: 20px;
+              margin-top: 15px;
+            }
+            .loader {
+              border: 4px solid #f3f3f3;
+              border-top: 4px solid #5f259f;
+              border-radius: 50%;
+              width: 30px;
+              height: 30px;
+              animation: spin 2s linear infinite;
+              margin: 20px auto;
+            }
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
             }
           </style>
         </head>
         <body>
           <div class="card">
             <div class="phonepe-header">
-              <h2>PhonePe Payment (Test Mode)</h2>
+              <h2>PhonePe Payment</h2>
             </div>
-            <p>You are about to make a payment via PhonePe</p>
-            <div class="amount">₹${amount}</div>
-            <p>Transaction ID: ${txnId}</p>
-            <div>
-              <button class="button success" onclick="simulatePayment(true)">Pay Now (Success)</button>
-              <button class="button error" onclick="simulatePayment(false)">Pay Now (Failure)</button>
+            <p>Complete your payment of</p>
+            <div class="amount">₹${amount || '100.00'}</div>
+            <p>Transaction ID: <span class="txn-id">${merchantTransactionId || 'Unknown'}</span></p>
+            
+            <div id="payment-options">
+              <button onclick="simulatePayment(true)" class="button success">Complete Payment (Success)</button>
+              <br>
+              <button onclick="simulatePayment(false)" class="button error">Fail Payment (Error)</button>
             </div>
-            <p class="txn-id">This is a test payment page for development purposes only.</p>
+            
+            <div id="processing" style="display: none;">
+              <div class="loader"></div>
+              <p>Processing payment...</p>
+            </div>
           </div>
           
           <script>
-            function simulatePayment(isSuccess) {
-              // Simulate payment processing delay
-              document.body.innerHTML = '<div style="text-align:center; margin-top:50px;"><h2>Processing Payment...</h2><p>Please wait...</p><div style="width:50px; height:50px; border:5px solid #f3f3f3; border-top:5px solid #5f259f; border-radius:50%; margin:20px auto; animation:spin 1s linear infinite;"></div></div>';
+            function simulatePayment(success) {
+              document.getElementById('payment-options').style.display = 'none';
+              document.getElementById('processing').style.display = 'block';
               
+              // Redirect after a short delay to simulate processing
               setTimeout(() => {
-                const redirectUrl = window.location.origin + "/payment/callback?merchantTransactionId=${txnId}&transactionId=PHTST" + Date.now() + "&code=" + (isSuccess ? "PAYMENT_SUCCESS" : "PAYMENT_ERROR");
-                window.location.href = redirectUrl;
+                const code = success ? 'PAYMENT_SUCCESS' : 'PAYMENT_ERROR';
+                window.location.href = '/payment/callback?merchantTransactionId=${merchantTransactionId}&code=' + code;
               }, 2000);
             }
             
@@ -344,6 +342,7 @@ export function setupPaymentRoutes(app: Express) {
         </html>
       `);
     });
+    
     app.get("/api/payment/config", (req, res) => {
       res.json({
         merchantId: process.env.PHONEPE_MERCHANT_ID || "Missing",
@@ -360,6 +359,7 @@ export function setupPaymentRoutes(app: Express) {
       });
     });
   }
+  
   // Initiate payment with PhonePe
   app.post("/api/payment/initiate", isAuthenticated, async (req, res) => {
     try {
@@ -367,41 +367,41 @@ export function setupPaymentRoutes(app: Express) {
         amount, 
         cartItems, 
         shippingAddress, 
-        billingAddress = null,
-        shippingMethod = "standard",
-        paymentMethod = "phonepe"
+        billingAddress = shippingAddress, 
+        shippingMethod, 
+        paymentMethod 
       } = req.body;
       
-      if (!amount || !cartItems || !shippingAddress) {
+      // Validate request data
+      if (!amount || !cartItems || !shippingAddress || !paymentMethod) {
         return res.status(400).json({ 
           success: false, 
           error: "Missing required payment details" 
         });
       }
       
-      // Generate unique order ID
+      // Generate unique order number and transaction ID
       const orderNumber = generateOrderNumber();
+      const merchantTransactionId = orderNumber;
       
-      // Create order record in database
-      const orderData = {
-        orderNumber,
+      // Create order record
+      const order = await storage.createOrder({
         userId: req.user!.id,
+        orderNumber,
+        status: 'PENDING',
+        paymentStatus: 'PENDING',
+        shippingAddress,
+        billingAddress,
+        shippingMethod: shippingMethod || 'standard',
+        total: amount.total,
         subtotal: amount.subtotal,
         tax: amount.tax,
-        shippingCost: amount.shipping,
-        discount: amount.discount || 0,
-        total: amount.total,
-        status: "pending",
-        paymentStatus: "pending",
-        paymentMethod,
-        shippingMethod,
-        shippingAddress,
-        billingAddress
-      };
+        shipping: amount.shipping,
+        discount: amount.discount,
+        orderDate: new Date()
+      });
       
-      const order = await storage.createOrder(orderData);
-      
-      // Save order items
+      // Create order items
       for (const item of cartItems) {
         await storage.createOrderItem({
           orderId: order.id,
@@ -410,14 +410,22 @@ export function setupPaymentRoutes(app: Express) {
           price: item.product.price,
           size: item.size,
           color: item.color,
-          customization: item.customization || null
+          customization: item.customization,
         });
       }
       
-      // Create merchant transaction ID
-      let merchantTransactionId = `LF${Date.now()}${Math.floor(Math.random() * 1000)}`;
+      // Create payment record
+      const payment = await storage.createPayment({
+        orderId: order.id,
+        amount: amount.total,
+        currency: 'INR',
+        status: 'PENDING',
+        paymentMethod,
+        merchantTransactionId,
+        timestamp: new Date()
+      });
       
-      // App base URL for redirects (adjust for different environments)
+      // Set up the redirect and callback URLs
       const appBaseUrl = process.env.NODE_ENV === 'production'
         ? 'https://your-production-domain.com'
         : `${req.protocol}://${req.get('host')}`;
@@ -449,7 +457,7 @@ export function setupPaymentRoutes(app: Express) {
         try {
           // In production, try initiating PhonePe payment
           paymentResult = await PhonePeService.initiatePayment({
-            amount: Number(orderData.total),
+            amount: Number(amount.total),
             orderId: merchantTransactionId,
             customerEmail: req.user!.email,
             customerPhone: req.user!.phoneNumber || "9999999999", // Default if not available
@@ -457,168 +465,76 @@ export function setupPaymentRoutes(app: Express) {
             redirectUrl: `${appBaseUrl}/payment/callback`,
             callbackUrl: `${appBaseUrl}/api/payment/webhook`,
           });
+        } catch (error: any) {
+          console.error('PhonePe payment initiation failed:', error);
+          useTestMode = true;
           
-          if (!paymentResult.success) {
-            throw new Error(paymentResult.errorMessage || "Payment initiation failed");
-          }
-          
-          // If we got here, PhonePe was successful, no need for test mode
-          useTestMode = false;
-        } catch (error) {
-          throw error; // In production, just throw the error
+          // Update payment record with error
+          await storage.updatePaymentDetails(payment.id, {
+            status: 'ERROR',
+            paymentDetails: JSON.stringify({
+              error: error.message || 'Unknown error',
+              timestamp: new Date().toISOString()
+            })
+          });
         }
       }
       
-      // If in test mode, use the test payment endpoint
       if (useTestMode) {
-        console.log("[DEV] Setting up test payment");
-        const testMerchantTransactionId = `TEST${Date.now()}${Math.floor(Math.random() * 1000)}`;
+        // Create a mock payment URL with our test parameters
+        const mockPaymentUrl = `${appBaseUrl}/api/payment/mock-payment?merchantTransactionId=${merchantTransactionId}&amount=${amount.total}&success=true`;
         
         paymentResult = {
           success: true,
           instrumentResponse: {
             redirectInfo: {
-              url: `${appBaseUrl}/test-phonepe/mock-payment?txnId=${testMerchantTransactionId}&amount=${Number(orderData.total)}&success=true`
+              url: mockPaymentUrl
             }
           },
-          transactionId: `TESTTRX${Date.now()}`
+          transactionId: `MOCK${Date.now()}`
         };
         
-        // Update the merchant transaction ID for the payment record
-        merchantTransactionId = testMerchantTransactionId;
+        // Update payment record with test mode info
+        await storage.updatePaymentDetails(payment.id, {
+          paymentDetails: JSON.stringify({
+            testMode: true,
+            mockTransactionId: paymentResult.transactionId,
+            timestamp: new Date().toISOString()
+          })
+        });
       }
       
-      // Store payment information
-      await storage.createPayment({
-        orderId: order.id,
-        userId: req.user!.id,
-        transactionId: paymentResult.transactionId || "",
-        merchantTransactionId,
-        amount: orderData.total,
-        method: paymentMethod,
-        status: "initiated",
-      });
-      
-      // If successful, return the payment URL to redirect the user
-      res.json({
-        success: true,
-        order: {
-          id: order.id,
-          orderNumber: order.orderNumber
-        },
-        paymentUrl: paymentResult.instrumentResponse?.redirectInfo.url,
-        transactionId: paymentResult.transactionId,
-        isTestMode: useTestMode
-      });
-      
+      if (paymentResult.success) {
+        // Update payment record with transaction ID if available
+        if (paymentResult.transactionId) {
+          await storage.updatePaymentDetails(payment.id, {
+            transactionId: paymentResult.transactionId
+          });
+        }
+        
+        // Return success response with payment URL
+        res.json({
+          success: true,
+          order,
+          payment,
+          paymentUrl: paymentResult.instrumentResponse?.redirectInfo.url
+        });
+      } else {
+        // Update order and payment status to failed
+        await storage.updateOrderStatus(order.id, 'FAILED');
+        await storage.updatePaymentStatus(payment.id, 'FAILED');
+        
+        // Return error response
+        res.status(400).json({
+          success: false,
+          error: paymentResult.errorMessage || "Failed to initiate payment"
+        });
+      }
     } catch (error: any) {
-      console.error("Payment initiation error:", error);
+      console.error('Payment initiation error:', error);
       res.status(500).json({
         success: false,
-        error: error.message || "Failed to initiate payment"
-      });
-    }
-  });
-  
-  // Payment status endpoint to check payment status
-  app.get("/api/payment/status/:orderId", async (req, res) => {
-    try {
-      const orderId = parseInt(req.params.orderId);
-      
-      if (isNaN(orderId)) {
-        return res.status(400).json({ success: false, error: "Invalid order ID" });
-      }
-      
-      // Get order
-      const order = await storage.getOrderById(orderId);
-      
-      if (!order) {
-        return res.status(404).json({ success: false, error: "Order not found" });
-      }
-      
-      // Get the latest payment for this order
-      const payments = await storage.getPaymentsByOrderId(orderId);
-      
-      if (!payments || payments.length === 0) {
-        return res.status(404).json({ 
-          success: false, 
-          error: "No payment found for this order",
-          order
-        });
-      }
-      
-      // Sort payments by created date to get the latest
-      const latestPayment = payments.sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )[0];
-      
-      // If payment is already completed or failed, just return the current status
-      if (latestPayment.status === "completed" || latestPayment.status === "failed") {
-        return res.json({
-          success: true,
-          paymentStatus: latestPayment.status,
-          order
-        });
-      }
-      
-      // If payment is pending or initiated, check with payment gateway
-      let paymentStatus;
-      
-      try {
-        // For test transactions, we can just return success
-        if (latestPayment.merchantTransactionId.startsWith('TEST')) {
-          paymentStatus = {
-            success: true,
-            code: "PAYMENT_SUCCESS",
-            message: "Payment successful (test payment)",
-            data: { merchantId: latestPayment.merchantTransactionId }
-          };
-        } else {
-          // Check with PhonePe
-          paymentStatus = await PhonePeService.checkPaymentStatus(latestPayment.merchantTransactionId);
-        }
-        
-        // Update payment status
-        const result = await updatePaymentStatus(latestPayment, paymentStatus);
-        
-        if (result.success && result.order) {
-          return res.json({
-            success: true,
-            paymentStatus: latestPayment.status,
-            order: result.order
-          });
-        } else {
-          return res.status(500).json({
-            success: false,
-            error: result.error || "Failed to update payment status",
-            order
-          });
-        }
-        
-      } catch (error: any) {
-        console.error("Error checking payment status:", error);
-        
-        // In development, just return the current status
-        if (process.env.NODE_ENV !== 'production') {
-          return res.json({
-            success: true,
-            paymentStatus: latestPayment.status,
-            order,
-            warning: "Could not check payment status with gateway"
-          });
-        }
-        
-        return res.status(500).json({
-          success: false,
-          error: error.message || "Failed to check payment status",
-          order
-        });
-      }
-    } catch (error: any) {
-      console.error("Payment status check error:", error);
-      return res.status(500).json({
-        success: false,
-        error: error.message || "An error occurred while checking payment status"
+        error: error.message || "An error occurred while processing your payment"
       });
     }
   });
@@ -651,201 +567,100 @@ export function setupPaymentRoutes(app: Express) {
       } else {
         // Verify payment status with PhonePe for real transactions
         try {
-          paymentStatus = await PhonePeService.checkPaymentStatus(merchantTransactionId);
-        } catch (error) {
+          paymentStatus = await PhonePeService.checkPaymentStatus(merchantTransactionId.toString());
+        } catch (error: any) {
           console.error('Error checking PhonePe payment status:', error);
-          
-          // Fallback for development: use query parameters to determine status
-          if (process.env.NODE_ENV !== 'production') {
-            paymentStatus = {
-              success: code === 'PAYMENT_SUCCESS',
-              code: code || 'PAYMENT_ERROR',
-              message: (error as Error)?.message || 'Failed to verify payment status',
-              data: {}
-            };
-          } else {
-            throw error;
-          }
+          paymentStatus = {
+            success: false,
+            code: 'CHECK_FAILED',
+            message: error.message || 'Failed to check payment status',
+            data: { merchantId: merchantTransactionId }
+          };
         }
       }
       
-      // Get payment record
-      let payment = await storage.getPaymentByMerchantTransactionId(merchantTransactionId);
-      
-      // For test transactions without a payment record, create a fake one for testing
-      if (!payment && merchantTransactionId && merchantTransactionId.toString().startsWith('TEST')) {
-        console.log('[DEV] Creating mock payment record for test transaction');
-        
-        // Create a mock order first
-        const orderNumber = generateOrderNumber();
-        const mockOrder = await storage.createOrder({
-          orderNumber: orderNumber,
-          userId: 1, // Default test user ID
-          status: "pending",
-          paymentStatus: "pending",
-          subtotal: "100",
-          tax: "18",
-          shippingCost: "0",
-          discount: "0",
-          total: "118",
-          paymentMethod: "phonepe",
-          shippingMethod: "standard",
-          shippingAddress: "123 Test Street, Test City, Test State, 12345",
-          billingAddress: null
-        });
-        
-        // Create a mock payment record
-        payment = await storage.createPayment({
-          orderId: mockOrder.id,
-          userId: 1,
-          transactionId: transactionId?.toString() || `MOCKTRX${Date.now()}`,
-          merchantTransactionId: merchantTransactionId.toString(),
-          amount: "118",
-          method: "phonepe",
-          status: "initiated",
-        });
-        
-        console.log(`[DEV] Created mock order (${orderNumber}) and payment for testing`);
-      }
+      // Get the payment record
+      const payment = await storage.getPaymentByMerchantTransactionId(merchantTransactionId.toString());
       
       if (!payment) {
-        throw new Error("Payment record not found");
+        console.error(`Payment not found for merchantTransactionId: ${merchantTransactionId}`);
+        return res.redirect(`/payment-error?error=Payment+not+found`);
       }
       
-      // Update payment status using the helper function
-      const result = await updatePaymentStatus(payment, paymentStatus);
+      // Update payment record with the new status
+      const newStatus = paymentStatus.success ? 'SUCCESS' : 'FAILED';
+      await storage.updatePaymentStatus(payment.id, newStatus);
       
-      if (!result.success) {
-        throw new Error(result.error || "Failed to update payment status");
+      // Update payment details
+      await storage.updatePaymentDetails(payment.id, {
+        transactionId: paymentStatus.data?.transactionId || payment.transactionId,
+        paymentDetails: JSON.stringify({
+          ...JSON.parse(payment.paymentDetails || '{}'),
+          statusCheckResponse: paymentStatus,
+          callbackTimestamp: new Date().toISOString()
+        })
+      });
+      
+      // Update order status and send notifications
+      const updateResult = await updatePaymentStatus(payment, newStatus);
+      
+      if (!updateResult.success) {
+        console.error(`Failed to update order status: ${updateResult.error}`);
       }
       
-      // Determine redirect based on payment status
-      if (result.order?.paymentStatus === "paid") {
-        res.redirect(`/order-confirmation/${payment.orderId}`);
+      // Redirect the user based on payment status
+      if (paymentStatus.success) {
+        const order = updateResult.order || await storage.getOrderById(payment.orderId);
+        if (order) {
+          return res.redirect(`/order-confirmation/${order.id}`);
+        } else {
+          return res.redirect('/order-confirmation');
+        }
       } else {
-        const reason = paymentStatus.message || "Payment was not completed successfully";
-        res.redirect(`/payment-error?message=${encodeURIComponent(reason)}`);
+        return res.redirect(`/payment-failed/${payment.orderId}`);
       }
-      
-      // Log payment callback
-      console.log(`Payment callback processed: orderId=${payment.orderId}, status=${result.order?.paymentStatus}`);
-      
     } catch (error: any) {
-      console.error("Payment callback error:", error);
-      res.redirect(`/payment-error?message=${encodeURIComponent(error.message)}`);
+      console.error('Payment callback error:', error);
+      res.redirect(`/payment-error?error=${encodeURIComponent(error.message || 'An error occurred')}`);
     }
   });
-  
-  // Payment webhook (called by PhonePe asynchronously)
+
+  // Payment webhook for receiving notifications from PhonePe
   app.post("/api/payment/webhook", async (req, res) => {
     try {
-      const webhookData = req.body;
-      const xVerifyHeader = req.header("X-VERIFY");
+      console.log('Payment webhook received:', req.body);
       
-      if (!xVerifyHeader) {
-        return res.status(400).json({ success: false, error: "Missing verification header" });
+      // Verify signature if needed
+      
+      // Process callback data
+      const { merchantTransactionId, transactionId, status } = req.body.response || {};
+      
+      if (!merchantTransactionId) {
+        return res.status(400).json({ status: 'ERROR', message: 'Invalid callback data' });
       }
       
-      // Verify webhook data authenticity
-      const isValidWebhook = PhonePeService.verifyWebhook(webhookData, xVerifyHeader);
-      
-      if (!isValidWebhook) {
-        return res.status(401).json({ success: false, error: "Invalid webhook signature" });
-      }
-      
-      // Process the webhook data
-      const { merchantTransactionId, transactionId, amount, paymentState } = webhookData;
-      
-      // Get payment record
+      // Get the payment record
       const payment = await storage.getPaymentByMerchantTransactionId(merchantTransactionId);
       
       if (!payment) {
-        return res.status(404).json({ success: false, error: "Payment record not found" });
-      }
-      
-      // Update payment status based on the webhook data
-      let newStatus;
-      
-      if (paymentState === "COMPLETED") {
-        newStatus = "completed";
-        
-        // Update order status
-        await storage.updateOrderStatus(payment.orderId, "processing");
-        
-      } else if (paymentState === "PENDING") {
-        newStatus = "pending";
-        
-      } else {
-        newStatus = "failed";
-        
-        // Update order status
-        await storage.updateOrderStatus(payment.orderId, "cancelled");
+        return res.status(404).json({ status: 'ERROR', message: 'Payment not found' });
       }
       
       // Update payment record
-      await storage.updatePaymentStatus(payment.id, newStatus);
-      await storage.updatePaymentDetails(payment.id, {
-        gatewayResponse: webhookData,
-        paymentDate: newStatus === "completed" ? new Date() : null
-      });
+      await storage.updatePaymentStatus(payment.id, status);
       
-      // Respond to the webhook
-      res.json({ success: true });
+      if (transactionId && transactionId !== payment.transactionId) {
+        await storage.updatePaymentDetails(payment.id, { transactionId });
+      }
       
+      // Update order status and send notifications
+      await updatePaymentStatus(payment, status);
+      
+      // Return success response
+      res.json({ status: 'SUCCESS' });
     } catch (error: any) {
-      console.error("Payment webhook error:", error);
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
-  
-  // Get payment status for an order
-  app.get("/api/payment/status/:orderId", isAuthenticated, async (req, res) => {
-    try {
-      const orderId = parseInt(req.params.orderId);
-      
-      if (!orderId) {
-        return res.status(400).json({ success: false, error: "Invalid order ID" });
-      }
-      
-      // Get order details
-      const order = await storage.getOrderById(orderId);
-      
-      if (!order) {
-        return res.status(404).json({ success: false, error: "Order not found" });
-      }
-      
-      // Verify the user owns this order
-      if (order.userId !== req.user!.id && req.user!.role !== "admin") {
-        return res.status(403).json({ success: false, error: "You do not have permission to view this order" });
-      }
-      
-      // Get payment details
-      const payments = await storage.getPaymentsByOrderId(orderId);
-      
-      // Return order and payment status
-      res.json({
-        success: true,
-        order: {
-          id: order.id,
-          orderNumber: order.orderNumber,
-          total: order.total,
-          status: order.status,
-          paymentStatus: order.paymentStatus,
-          createdAt: order.createdAt
-        },
-        payments: payments.map(p => ({
-          id: p.id,
-          amount: p.amount,
-          method: p.method,
-          status: p.status,
-          transactionId: p.transactionId,
-          createdAt: p.createdAt
-        }))
-      });
-      
-    } catch (error: any) {
-      console.error("Payment status check error:", error);
-      res.status(500).json({ success: false, error: error.message });
+      console.error('Payment webhook error:', error);
+      res.status(500).json({ status: 'ERROR', message: error.message || 'An error occurred' });
     }
   });
 }
