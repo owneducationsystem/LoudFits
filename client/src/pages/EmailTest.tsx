@@ -68,7 +68,7 @@ const EmailTest: React.FC = () => {
       }
       
       // Send API request
-      const response = await fetch(`/api/email/test-${selectedEmail}`, {
+      const response = await fetch(`/api/ajax/email/${selectedEmail}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
