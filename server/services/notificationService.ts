@@ -400,6 +400,17 @@ class NotificationService {
       actionType: status === 'placed' ? 'process_order' : undefined
     });
     
+    // Also broadcast this notification to make sure all clients receive it
+    await this.sendBroadcast({
+      type: notificationType,
+      title: `Order Update: #${orderNumber}`,
+      message: `Order #${orderNumber} status: ${status}`,
+      entityId: orderId,
+      entityType: 'order',
+      metadata: { orderNumber, status, userId },
+      priority: 'medium'
+    });
+    
     return true;
   }
   
@@ -458,6 +469,19 @@ class NotificationService {
       priority: success ? 'medium' : 'high',
       actionRequired: !success,
       actionType: !success ? 'check_payment' : undefined
+    });
+    
+    // Also broadcast this notification to make sure all clients receive it
+    await this.sendBroadcast({
+      type: notificationType,
+      title: success ? `Payment Successful: Order #${orderNumber}` : `Payment Failed: Order #${orderNumber}`,
+      message: success 
+        ? `Payment of ${formattedAmount} for order #${orderNumber} was successful.` 
+        : `Payment of ${formattedAmount} for order #${orderNumber} failed.`,
+      entityId: orderId,
+      entityType: 'payment',
+      metadata: { orderNumber, amount, paymentId, userId, success },
+      priority: success ? 'medium' : 'high'
     });
     
     return true;
