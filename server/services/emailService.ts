@@ -26,13 +26,16 @@ class EmailService {
       console.log(`Setting up basic email transport...`);
       
       if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-        // Use Gmail if credentials are present
+        // Use the same working Gmail config that we tested and confirmed working
         this.transporter = nodemailer.createTransport({
           service: 'gmail',
           auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASSWORD
-          }
+          },
+          // Adding debug info to help troubleshoot any issues
+          logger: true,
+          debug: process.env.NODE_ENV === 'development'
         });
         
         this.fromEmail = process.env.EMAIL_FROM || process.env.EMAIL_USER;
@@ -215,6 +218,9 @@ class EmailService {
       console.log('Cannot send order confirmation: user has no email address');
       return false;
     }
+    
+    console.log(`Attempting to send order confirmation email to: ${user.email}`);
+    
 
     try {
       // Format the product items for the email
