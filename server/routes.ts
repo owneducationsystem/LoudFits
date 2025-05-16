@@ -5,6 +5,7 @@ import { setupAdminDashboardRoutes } from "./routes/admin/dashboardRoutes";
 import { setupPaymentPerformanceRoutes } from "./routes/admin/paymentPerformanceRoutes";
 import { getSystemHealth } from "./routes/admin/healthRoutes";
 import { setupPublicStatsRoutes } from "./routes/public/statsRoutes";
+import { inventoryRouter } from "./routes/inventory";
 import { storage } from "./storage";
 import { z } from "zod";
 import { notificationService, NotificationType } from "./services/notificationService";
@@ -84,8 +85,9 @@ const logAdminAction = async (req: Request, res: Response, next: NextFunction) =
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Register our direct email testing route
+  // Register our routes
   app.use("/api/direct-email", directEmailRoutes);
+  app.use("/api", inventoryRouter);
   // Create the HTTP server first so we can attach WebSockets to it
   let httpServer = createServer(app);
   

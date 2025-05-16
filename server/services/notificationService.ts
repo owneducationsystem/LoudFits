@@ -686,5 +686,4 @@ class NotificationService {
   }
 }
 
-// Export a singleton instance
 export const notificationService = new NotificationService();
