@@ -178,14 +178,15 @@ export function setupPaymentRoutes(app: Express) {
         
         // Create a test payment record
         const payment = await storage.createPayment({
+          userId: 1, // Default test user ID
           orderId: 1, // Sample order ID
           transactionId: merchantTransactionId,
           merchantTransactionId: merchantTransactionId,
           amount: amount.toString(),
           currency: 'INR',
           status: 'PENDING',
-          paymentMethod: 'phonepe_test',
-          paymentDetails: JSON.stringify({
+          method: 'phonepe_test', // Use method instead of paymentMethod to match schema
+          gatewayResponse: JSON.stringify({
             testMode: true,
             expectedResult: success ? 'success' : 'failure'
           }),
