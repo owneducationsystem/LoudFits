@@ -12,14 +12,39 @@ class EmailService {
   constructor() {
     // Configure nodemailer
     try {
-      // For production, use your actual SMTP settings
-      this.transporter = nodemailer.createTransport({
-        service: 'gmail', // or your own SMTP server
-        auth: {
-          user: process.env.EMAIL_USER || 'youremail@gmail.com',
-          pass: process.env.EMAIL_PASSWORD || 'yourpassword'
-        }
-      });
+      // For testing in development, use a special testing configuration
+      // that doesn't actually send emails but logs them
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Email service running in development mode - emails will be logged but not sent');
+        
+        // Preview emails in the console (doesn't actually send)
+        this.transporter = nodemailer.createTransport({
+          host: 'smtp.ethereal.email',
+          port: 587,
+          secure: false,
+          auth: {
+            user: process.env.EMAIL_USER || 'youremail@gmail.com',
+            pass: process.env.EMAIL_PASSWORD || 'yourpassword'
+          },
+          debug: true,
+          // This prevents actually sending emails in development
+          // They will just be logged to the console
+          tls: {
+            rejectUnauthorized: false
+          }
+        });
+      } else {
+        // For production, use proper SMTP settings
+        this.transporter = nodemailer.createTransport({
+          host: 'smtp.gmail.com',
+          port: 465,
+          secure: true, // use SSL
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASSWORD // This should be an app password for Gmail
+          }
+        });
+      }
 
       this.fromEmail = process.env.EMAIL_FROM || 'support@loudfits.com';
       
@@ -70,8 +95,14 @@ class EmailService {
         `
       };
 
-      await this.transporter.sendMail(mailOptions);
-      console.log(`Welcome email sent to ${user.email}`);
+      console.log('Attempting to send welcome email with:', {
+        to: user.email,
+        from: this.fromEmail,
+        subject: 'Welcome to Loudfits!'
+      });
+      
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log(`Welcome email sent to ${user.email}. Message ID: ${info.messageId}`);
       return true;
     } catch (error) {
       console.error('Error sending welcome email:', error);
