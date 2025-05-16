@@ -311,9 +311,68 @@ const DirectDashboard = () => {
             </Button>
           </div>
         </div>
+        
+        {/* Quick Navigation Links */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="flex items-center gap-1"
+            onClick={() => {
+              document.getElementById('system-health')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
+            <Server className="h-4 w-4" />
+            System Health
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="flex items-center gap-1"
+            onClick={() => {
+              document.getElementById('order-status')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
+            <Truck className="h-4 w-4" />
+            Order Status
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="flex items-center gap-1"
+            onClick={() => {
+              document.getElementById('product-performance')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
+            <Package className="h-4 w-4" />
+            Product Performance
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="flex items-center gap-1"
+            onClick={() => {
+              document.getElementById('payment-performance')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
+            <CreditCard className="h-4 w-4" />
+            Payment Performance
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="flex items-center gap-1"
+            onClick={() => {
+              document.getElementById('user-signups')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
+            <UserPlus className="h-4 w-4" />
+            User Signups
+          </Button>
+        </div>
 
         {/* System Health Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div id="system-health" className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card className="border-green-200">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Server Status</CardTitle>
