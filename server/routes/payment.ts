@@ -101,6 +101,71 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
       throw new Error("Order not found after updating payment status");
     }
     
+    // Get user information to send notifications
+    const user = await storage.getUser(order.userId);
+    
+    if (user) {
+      // Send real-time notification to user based on payment status
+      if (newStatus === "completed") {
+        // Send successful payment notification
+        await notificationService.sendUserNotification({
+          type: NotificationType.PAYMENT_RECEIVED,
+          title: "Payment Successful",
+          message: `Your payment for order #${order.orderNumber} has been completed successfully.`,
+          userId: user.id,
+          entityId: order.id,
+          entityType: 'order'
+        });
+        
+        // Send email notification if configured
+        try {
+          await emailService.sendPaymentConfirmationEmail(
+            user.email,
+            user.firstName || user.username,
+            order.orderNumber,
+            order.total,
+            payment.method
+          );
+        } catch (emailError) {
+          console.error("Failed to send payment confirmation email:", emailError);
+        }
+        
+        // Notify admins about new order
+        await notificationService.sendAdminNotification({
+          type: NotificationType.ORDER_PLACED,
+          title: "New Order Received",
+          message: `Order #${order.orderNumber} payment completed. Amount: ₹${order.total}`,
+          entityId: order.id,
+          entityType: 'order'
+        });
+      } else if (newStatus === "failed") {
+        // Send payment failure notification
+        await notificationService.sendUserNotification({
+          type: NotificationType.PAYMENT_FAILED,
+          title: "Payment Failed",
+          message: `Your payment for order #${order.orderNumber} was unsuccessful. Please try again or contact support.`,
+          userId: user.id,
+          entityId: order.id,
+          entityType: 'order'
+        });
+        
+        // Send email notification for failed payment
+        try {
+          await emailService.sendPaymentFailedEmail(
+            user.email,
+            user.firstName || user.username,
+            order.orderNumber,
+            order.total,
+            status.message || "Transaction declined"
+          );
+        } catch (emailError) {
+          console.error("Failed to send payment failure email:", emailError);
+        }
+      }
+    } else {
+      console.warn("User not found for order notification", order.id);
+    }
+    
     return { success: true, order };
     
   } catch (error: any) {
