@@ -58,7 +58,7 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
 async function updatePaymentStatus(payment: Payment, status: any): Promise<{
   success: boolean;
   error?: string;
-  order?: Order;
+  order?: Order | undefined;
 }> {
   try {
     // Update payment status in database
