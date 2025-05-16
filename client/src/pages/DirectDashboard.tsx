@@ -24,6 +24,28 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
+// Helper functions for growth rate calculations
+const calculateGrowth = (current: number, total: number): number => {
+  // If both are 0, growth rate is 0%
+  if (current === 0 && total === 0) return 0;
+  
+  // If total is 0 but current has value, it's infinite growth (cap at 100%)
+  if (total === 0 && current > 0) return 100;
+  
+  // If current is larger than total, cap at 100% 
+  // (can happen when comparing week to month in early month)
+  if (current >= total) return 100;
+  
+  // Calculate percentage that current represents of total
+  return (current / total) * 100;
+};
+
+const formatGrowthRate = (rate: number): string => {
+  // Add + sign for positive rates, - will be added automatically for negative
+  const prefix = rate >= 0 ? '+' : '';
+  return `${prefix}${rate.toFixed(1)}%`;
+};
+
 const DirectDashboard = () => {
   const [, navigate] = useLocation();
   const [stats, setStats] = useState({
