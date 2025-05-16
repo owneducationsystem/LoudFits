@@ -49,7 +49,7 @@ class NotificationService {
   initialize(server: Server) {
     this.wss = new WebSocketServer({ 
       server,
-      path: '/ws/notifications'
+      path: '/ws'
     });
     
     console.log('WebSocket notification server initialized');

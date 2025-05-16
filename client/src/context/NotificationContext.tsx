@@ -62,14 +62,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   
+  // Convert Firebase user to our simplified notification user
+  const notificationUser: NotificationUser | null = currentUser ? {
+    uid: currentUser.uid,
+    id: (currentUser as any).id,
+    email: currentUser.email || undefined,
+    role: (currentUser as any).role || 'customer'
+  } : null;
+  
   // Calculate the number of unread notifications
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n: Notification) => !n.read).length;
   
   // Connect to WebSocket when component mounts
   useEffect(() => {
     // Initialize WebSocket connection
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/notifications`;
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
     
     const ws = new WebSocket(wsUrl);
     
@@ -79,12 +87,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setConnected(true);
       
       // Authenticate with the WebSocket server
-      if (currentUser) {
+      if (notificationUser) {
         ws.send(JSON.stringify({
           type: 'auth',
           data: {
-            userId: currentUser.uid || currentUser.id,
-            isAdmin: currentUser.role === 'admin'
+            userId: notificationUser.uid || notificationUser.id,
+            isAdmin: notificationUser.role === 'admin'
           }
         }));
       }
@@ -108,36 +116,40 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
     
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      
-      switch (data.type) {
-        case 'notification':
-          handleNewNotification(data.data);
-          break;
-        case 'unread_notifications':
-          if (Array.isArray(data.data)) {
-            setNotifications(prev => {
-              const existingIds = new Set(prev.map(n => n.id));
-              const newNotifications = data.data.filter(n => !existingIds.has(n.id));
-              return [...prev, ...newNotifications];
-            });
-          }
-          break;
-        case 'admin_notifications':
-          if (Array.isArray(data.data)) {
-            setNotifications(prev => {
-              const existingIds = new Set(prev.map(n => n.id));
-              const newNotifications = data.data.filter(n => !existingIds.has(n.id));
-              return [...prev, ...newNotifications];
-            });
-          }
-          break;
-        case 'broadcast':
-          handleNewNotification(data.data);
-          break;
-        case 'auth_confirmation':
-          console.log('Authentication confirmed:', data);
-          break;
+      try {
+        const data = JSON.parse(event.data);
+        
+        switch (data.type) {
+          case 'notification':
+            handleNewNotification(data.data);
+            break;
+          case 'unread_notifications':
+            if (Array.isArray(data.data)) {
+              setNotifications(prev => {
+                const existingIds = new Set(prev.map((n: Notification) => n.id));
+                const newNotifications = data.data.filter((n: any) => !existingIds.has(n.id));
+                return [...prev, ...newNotifications];
+              });
+            }
+            break;
+          case 'admin_notifications':
+            if (Array.isArray(data.data)) {
+              setNotifications(prev => {
+                const existingIds = new Set(prev.map((n: Notification) => n.id));
+                const newNotifications = data.data.filter((n: any) => !existingIds.has(n.id));
+                return [...prev, ...newNotifications];
+              });
+            }
+            break;
+          case 'broadcast':
+            handleNewNotification(data.data);
+            break;
+          case 'auth_confirmation':
+            console.log('Authentication confirmed:', data);
+            break;
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
       }
     };
     
@@ -149,20 +161,20 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         ws.close();
       }
     };
-  }, [currentUser]);
+  }, [currentUser, notificationUser]);
   
   // Re-authenticate when user changes
   useEffect(() => {
-    if (socket && socket.readyState === WebSocket.OPEN && currentUser) {
+    if (socket && socket.readyState === WebSocket.OPEN && notificationUser) {
       socket.send(JSON.stringify({
         type: 'auth',
         data: {
-          userId: currentUser.uid || currentUser.id,
-          isAdmin: currentUser.role === 'admin'
+          userId: notificationUser.uid || notificationUser.id,
+          isAdmin: notificationUser.role === 'admin'
         }
       }));
     }
-  }, [currentUser, socket]);
+  }, [notificationUser, socket]);
   
   // Handle a new notification
   const handleNewNotification = (notification: Notification) => {

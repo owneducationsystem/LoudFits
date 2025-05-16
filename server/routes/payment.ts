@@ -4,6 +4,8 @@ import { User, Payment, Order } from "@shared/schema";
 import crypto from "crypto";
 import { PhonePeService } from "../services/phonePeService";
 import { storage } from "../storage";
+import { notificationService, NotificationType } from "../services/notificationService";
+import { emailService } from "../services/emailService";
 
 // Generate unique order number
 function generateOrderNumber(): string {
