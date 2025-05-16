@@ -7,16 +7,16 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
-  Button, 
-  Input, 
-  Label, 
   Select, 
   SelectContent, 
   SelectItem, 
   SelectTrigger, 
   SelectValue 
-} from "@/components/ui";
+} from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, CheckCircle, AlertCircle, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -132,7 +132,7 @@ const EmailTest: React.FC = () => {
             <Input
               id="userId"
               value={userId}
-              onChange={(e) => setUserId(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUserId(e.target.value)}
               placeholder="Enter user ID"
               type="number"
               min="1"
@@ -146,7 +146,7 @@ const EmailTest: React.FC = () => {
             <Input
               id="orderId"
               value={orderId}
-              onChange={(e) => setOrderId(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOrderId(e.target.value)}
               placeholder="Enter order ID"
               type="number"
               min="1"

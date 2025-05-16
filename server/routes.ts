@@ -91,9 +91,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up email test routes
   if (process.env.NODE_ENV !== 'production') {
     try {
-      const { setupEmailRoutes } = require('./routes/emailRoutes');
-      setupEmailRoutes(app);
-      console.log("Email test routes registered");
+      // Import using dynamic import instead of require
+      import('./routes/emailRoutes').then(module => {
+        module.setupEmailRoutes(app);
+        console.log("Email test routes registered");
+      }).catch(error => {
+        console.error("Failed to register email routes:", error);
+      });
     } catch (error) {
       console.error("Failed to register email routes:", error);
     }

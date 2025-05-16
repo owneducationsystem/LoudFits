@@ -126,6 +126,7 @@ function App() {
                 <Route path="/payment-error" component={PaymentError} />
                 <Route path="/test-phonepe" component={TestPhonePe} />
                 <Route path="/test-notifications" component={NotificationTest} />
+                <Route path="/test-emails" component={EmailTest} />
                 
                 {/* Admin Routes - Protected */}
                 <Route path="/admin/login" component={AdminLogin} />
