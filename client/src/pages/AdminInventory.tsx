@@ -1,20 +1,9 @@
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
-import { 
-  Package, 
-  Plus, 
-  RefreshCw, 
-  AlertTriangle, 
-  Search, 
-  Edit, 
-  Trash2, 
-  ArrowUpDown, 
-  CheckCircle,
-  XCircle,
-  ShoppingBag,
-  AlertCircle
-} from "lucide-react";
+import { Search, Plus, Edit, Trash2, AlertCircle, CheckCircle2, Layers } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,20 +15,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -47,7 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -59,24 +33,16 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import AdminLayout from "@/components/layout/AdminLayout";
 
 interface Product {
   id: number;
@@ -119,501 +85,281 @@ interface InventoryLog {
   createdAt: string;
 }
 
-const inventoryFormSchema = z.object({
-  productId: z.number({
-    required_error: "Product is required",
-  }),
-  size: z.string().min(1, { message: "Size is required" }),
-  quantity: z.number().min(0, { message: "Quantity must be 0 or greater" }),
-  lowStockThreshold: z.number().min(1, { message: "Threshold must be at least 1" }),
+// Form schemas
+const addInventorySchema = z.object({
+  productId: z.coerce.number().min(1, "Please select a product"),
+  size: z.string().min(1, "Size is required"),
+  quantity: z.coerce.number().min(0, "Quantity must be 0 or greater"),
+  lowStockThreshold: z.coerce.number().min(1, "Threshold must be at least 1"),
 });
 
-const inventoryUpdateSchema = z.object({
-  quantity: z.number().min(0, { message: "Quantity must be 0 or greater" }),
-  lowStockThreshold: z.number().min(1, { message: "Threshold must be at least 1" }),
+const updateInventorySchema = z.object({
+  quantity: z.coerce.number().min(0, "Quantity must be 0 or greater"),
+  lowStockThreshold: z.coerce.number().min(1, "Threshold must be at least 1"),
+  reason: z.string().min(3, "Please provide a reason for the update"),
 });
 
-const reserveReleaseSchema = z.object({
-  quantity: z.number().min(1, { message: "Quantity must be at least 1" }),
-  reason: z.string().min(3, { message: "Reason is required" }),
+const reserveInventorySchema = z.object({
+  quantity: z.coerce.number().min(1, "Quantity must be at least 1"),
+  reason: z.string().min(3, "Please provide a reason for reserving inventory"),
   referenceId: z.string().optional(),
 });
 
 export default function AdminInventory() {
-  const { toast } = useToast();
   const [inventory, setInventory] = useState<InventoryWithProduct[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedInventory, setSelectedInventory] = useState<InventoryWithProduct | null>(null);
   const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterSize, setFilterSize] = useState<string>("");
-  const [filterStock, setFilterStock] = useState<string>("all");
-  const [sortField, setSortField] = useState<string>("productId");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [selectedTab, setSelectedTab] = useState("all");
-
+  const [viewType, setViewType] = useState<'all' | 'low-stock' | 'out-of-stock'>('all');
+  
   // Form for adding new inventory
-  const addForm = useForm<z.infer<typeof inventoryFormSchema>>({
-    resolver: zodResolver(inventoryFormSchema),
+  const addForm = useForm<z.infer<typeof addInventorySchema>>({
+    resolver: zodResolver(addInventorySchema),
     defaultValues: {
+      productId: 0,
+      size: "",
       quantity: 0,
       lowStockThreshold: 5,
     },
   });
-
+  
   // Form for updating inventory
-  const updateForm = useForm<z.infer<typeof inventoryUpdateSchema>>({
-    resolver: zodResolver(inventoryUpdateSchema),
+  const updateForm = useForm<z.infer<typeof updateInventorySchema>>({
+    resolver: zodResolver(updateInventorySchema),
     defaultValues: {
       quantity: 0,
       lowStockThreshold: 5,
+      reason: "",
     },
   });
-
+  
   // Form for reserving inventory
-  const reserveForm = useForm<z.infer<typeof reserveReleaseSchema>>({
-    resolver: zodResolver(reserveReleaseSchema),
+  const reserveForm = useForm<z.infer<typeof reserveInventorySchema>>({
+    resolver: zodResolver(reserveInventorySchema),
     defaultValues: {
       quantity: 1,
       reason: "",
+      referenceId: "",
     },
   });
-
-  // Form for releasing inventory
-  const releaseForm = useForm<z.infer<typeof reserveReleaseSchema>>({
-    resolver: zodResolver(reserveReleaseSchema),
-    defaultValues: {
-      quantity: 1,
-      reason: "",
-    },
-  });
-
+  
   // Fetch inventory data
   const fetchInventory = async () => {
     try {
-      setIsLoading(true);
-      const response = await fetch("/api/inventory");
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch inventory");
-      }
-      
+      const response = await fetch("/api/admin/inventory");
       const data = await response.json();
       
-      // Also fetch product data for each inventory item
+      // Fetch product details for each inventory item
       const inventoryWithProducts = await Promise.all(
         data.map(async (item: InventoryItem) => {
-          try {
-            const productResponse = await fetch(`/api/products/${item.productId}`);
-            if (productResponse.ok) {
-              const product = await productResponse.json();
-              return { ...item, product };
-            }
-            return item;
-          } catch (error) {
-            console.error("Error fetching product:", error);
-            return item;
-          }
+          const productResponse = await fetch(`/api/products/${item.productId}`);
+          const product = await productResponse.json();
+          return { ...item, product };
         })
       );
       
       setInventory(inventoryWithProducts);
     } catch (error) {
       console.error("Error fetching inventory:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load inventory data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
-
-  // Fetch products data
+  
+  // Fetch products for dropdown
   const fetchProducts = async () => {
     try {
       const response = await fetch("/api/products");
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch products");
-      }
-      
       const data = await response.json();
       setProducts(data);
     } catch (error) {
       console.error("Error fetching products:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load products data",
-        variant: "destructive",
-      });
     }
   };
-
-  // Fetch inventory logs
-  const fetchInventoryLogs = async (inventoryId: number) => {
+  
+  // Handle adding new inventory
+  const handleAddInventory = async (data: z.infer<typeof addInventorySchema>) => {
     try {
-      setLogsLoading(true);
-      const response = await fetch(`/api/inventory/logs/${inventoryId}`);
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch inventory logs");
-      }
-      
-      const data = await response.json();
-      setInventoryLogs(data);
-    } catch (error) {
-      console.error("Error fetching inventory logs:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load inventory logs",
-        variant: "destructive",
-      });
-    } finally {
-      setLogsLoading(false);
-    }
-  };
-
-  // Add new inventory item
-  const onAddInventory = async (values: z.infer<typeof inventoryFormSchema>) => {
-    try {
-      const response = await fetch("/api/inventory", {
+      const response = await fetch("/api/admin/inventory", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify(data),
       });
       
-      if (!response.ok) {
-        throw new Error("Failed to add inventory item");
+      if (response.ok) {
+        addForm.reset();
+        fetchInventory();
+      } else {
+        const errorData = await response.json();
+        console.error("Error adding inventory:", errorData);
       }
-      
-      const newItem = await response.json();
-      
-      toast({
-        title: "Success",
-        description: "Inventory item added successfully",
-      });
-      
-      // Reset form and refresh inventory
-      addForm.reset();
-      fetchInventory();
     } catch (error) {
-      console.error("Error adding inventory item:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add inventory item",
-        variant: "destructive",
-      });
+      console.error("Error adding inventory:", error);
     }
   };
-
-  // Update inventory item
-  const onUpdateInventory = async (values: z.infer<typeof inventoryUpdateSchema>) => {
-    if (!selectedInventory) return;
-    
-    try {
-      const response = await fetch(`/api/inventory/${selectedInventory.productId}/${selectedInventory.size}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to update inventory item");
-      }
-      
-      const updatedItem = await response.json();
-      
-      toast({
-        title: "Success",
-        description: "Inventory item updated successfully",
-      });
-      
-      // Reset form and refresh inventory
-      updateForm.reset();
-      setSelectedInventory(null);
-      fetchInventory();
-    } catch (error) {
-      console.error("Error updating inventory item:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update inventory item",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Delete inventory item
-  const deleteInventoryItem = async (productId: number, size: string) => {
-    try {
-      const response = await fetch(`/api/inventory/${productId}/${size}`, {
-        method: "DELETE",
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to delete inventory item");
-      }
-      
-      toast({
-        title: "Success",
-        description: "Inventory item deleted successfully",
-      });
-      
-      // Refresh inventory
-      fetchInventory();
-    } catch (error) {
-      console.error("Error deleting inventory item:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete inventory item",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Reserve inventory
-  const onReserveInventory = async (values: z.infer<typeof reserveReleaseSchema>) => {
-    if (!selectedInventory) return;
-    
-    try {
-      const response = await fetch("/api/inventory/reserve", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          productId: selectedInventory.productId,
-          size: selectedInventory.size,
-          quantity: values.quantity,
-          reason: values.reason,
-          referenceId: values.referenceId || null,
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to reserve inventory");
-      }
-      
-      const result = await response.json();
-      
-      toast({
-        title: "Success",
-        description: `Reserved ${values.quantity} items successfully`,
-      });
-      
-      // Reset form and refresh inventory
-      reserveForm.reset();
-      setSelectedInventory(null);
-      fetchInventory();
-    } catch (error) {
-      console.error("Error reserving inventory:", error);
-      toast({
-        title: "Error",
-        description: "Failed to reserve inventory",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Release inventory
-  const onReleaseInventory = async (values: z.infer<typeof reserveReleaseSchema>) => {
-    if (!selectedInventory) return;
-    
-    try {
-      const response = await fetch("/api/inventory/release", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          productId: selectedInventory.productId,
-          size: selectedInventory.size,
-          quantity: values.quantity,
-          reason: values.reason,
-          referenceId: values.referenceId || null,
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to release inventory");
-      }
-      
-      const result = await response.json();
-      
-      toast({
-        title: "Success",
-        description: `Released ${values.quantity} items successfully`,
-      });
-      
-      // Reset form and refresh inventory
-      releaseForm.reset();
-      setSelectedInventory(null);
-      fetchInventory();
-    } catch (error) {
-      console.error("Error releasing inventory:", error);
-      toast({
-        title: "Error",
-        description: "Failed to release inventory",
-        variant: "destructive",
-      });
-    }
-  };
-
+  
   // View inventory logs
   const viewInventoryLogs = (item: InventoryWithProduct) => {
     setSelectedInventory(item);
-    fetchInventoryLogs(item.id);
+    
+    // Fetch logs for this inventory item
+    fetch(`/api/admin/inventory/${item.id}/logs`)
+      .then(response => response.json())
+      .then(data => {
+        setInventoryLogs(data);
+      })
+      .catch(error => {
+        console.error("Error fetching inventory logs:", error);
+      });
   };
-
-  // Handle edit inventory
+  
+  // Handle editing inventory
   const handleEditInventory = (item: InventoryWithProduct) => {
     setSelectedInventory(item);
     updateForm.reset({
       quantity: item.quantity,
       lowStockThreshold: item.lowStockThreshold,
+      reason: "",
     });
   };
-
-  // Handle reserve inventory
+  
+  // Handle updating inventory
+  const handleUpdateInventory = async (data: z.infer<typeof updateInventorySchema>) => {
+    if (!selectedInventory) return;
+    
+    try {
+      const response = await fetch(`/api/admin/inventory/${selectedInventory.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...data,
+          action: data.quantity > selectedInventory.quantity ? 'add' : 'subtract',
+          quantityChange: Math.abs(data.quantity - selectedInventory.quantity),
+        }),
+      });
+      
+      if (response.ok) {
+        updateForm.reset();
+        setSelectedInventory(null);
+        fetchInventory();
+      } else {
+        const errorData = await response.json();
+        console.error("Error updating inventory:", errorData);
+      }
+    } catch (error) {
+      console.error("Error updating inventory:", error);
+    }
+  };
+  
+  // Handle reserving inventory
   const handleReserveInventory = (item: InventoryWithProduct) => {
     setSelectedInventory(item);
     reserveForm.reset({
       quantity: 1,
       reason: "",
+      referenceId: "",
     });
   };
-
-  // Handle release inventory
+  
+  // Handle submitting reserve
+  const handleSubmitReserve = async (data: z.infer<typeof reserveInventorySchema>) => {
+    if (!selectedInventory) return;
+    
+    try {
+      const response = await fetch(`/api/admin/inventory/${selectedInventory.id}/reserve`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (response.ok) {
+        reserveForm.reset();
+        setSelectedInventory(null);
+        fetchInventory();
+      } else {
+        const errorData = await response.json();
+        console.error("Error reserving inventory:", errorData);
+      }
+    } catch (error) {
+      console.error("Error reserving inventory:", error);
+    }
+  };
+  
+  // Handle releasing reserved inventory
   const handleReleaseInventory = (item: InventoryWithProduct) => {
+    if (item.reservedQuantity === 0) return;
+    
     setSelectedInventory(item);
-    releaseForm.reset({
-      quantity: 1,
-      reason: "",
+    reserveForm.reset({
+      quantity: item.reservedQuantity,
+      reason: "Released reserved inventory",
+      referenceId: "",
     });
   };
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+  
+  // Handle submitting release
+  const handleSubmitRelease = async (data: z.infer<typeof reserveInventorySchema>) => {
+    if (!selectedInventory) return;
+    
+    try {
+      const response = await fetch(`/api/admin/inventory/${selectedInventory.id}/release`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (response.ok) {
+        reserveForm.reset();
+        setSelectedInventory(null);
+        fetchInventory();
+      } else {
+        const errorData = await response.json();
+        console.error("Error releasing inventory:", errorData);
+      }
+    } catch (error) {
+      console.error("Error releasing inventory:", error);
+    }
   };
-
-  // Calculate available quantity
+  
+  // Filter inventory based on search and view type
+  const filteredInventory = inventory.filter(item => {
+    const matchesSearch = 
+      item.product?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.product?.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.size.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (viewType === 'low-stock') {
+      return matchesSearch && item.quantity <= item.lowStockThreshold && item.quantity > 0;
+    } else if (viewType === 'out-of-stock') {
+      return matchesSearch && item.quantity === 0;
+    }
+    
+    return matchesSearch;
+  });
+  
+  // Get available quantity (total - reserved)
   const getAvailableQuantity = (item: InventoryItem) => {
     return item.quantity - (item.reservedQuantity || 0);
   };
-
+  
   // Get stock status
   const getStockStatus = (item: InventoryItem) => {
-    const availableQuantity = getAvailableQuantity(item);
-    
-    if (availableQuantity <= 0) {
-      return { status: "out-of-stock", label: "Out of Stock", color: "bg-red-500 text-white" };
-    } else if (availableQuantity <= item.lowStockThreshold) {
-      return { status: "low-stock", label: "Low Stock", color: "bg-amber-500 text-white" };
+    if (item.quantity === 0) {
+      return { label: "Out of Stock", variant: "destructive" as const };
+    } else if (item.quantity <= item.lowStockThreshold) {
+      return { label: "Low Stock", variant: "warning" as const };
     } else {
-      return { status: "in-stock", label: "In Stock", color: "bg-green-500 text-white" };
+      return { label: "In Stock", variant: "success" as const };
     }
   };
-
-  // Toggle sort
-  const toggleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  };
-
-  // Filter inventory based on search, size, and stock status
-  const filteredInventory = inventory.filter((item) => {
-    const productNameMatch = item.product?.name.toLowerCase().includes(searchTerm.toLowerCase()) || false;
-    const sizeMatch = filterSize === "" || item.size === filterSize;
-    
-    let stockMatch = true;
-    if (filterStock === "in-stock") {
-      stockMatch = getAvailableQuantity(item) > 0;
-    } else if (filterStock === "low-stock") {
-      stockMatch = getAvailableQuantity(item) <= item.lowStockThreshold && getAvailableQuantity(item) > 0;
-    } else if (filterStock === "out-of-stock") {
-      stockMatch = getAvailableQuantity(item) <= 0;
-    }
-    
-    return productNameMatch && sizeMatch && stockMatch;
-  });
-
-  // Filter inventory for different tabs
-  const getTabInventory = () => {
-    if (selectedTab === "low-stock") {
-      return inventory.filter(item => {
-        const availableQuantity = getAvailableQuantity(item);
-        return availableQuantity <= item.lowStockThreshold && availableQuantity > 0;
-      });
-    } else if (selectedTab === "out-of-stock") {
-      return inventory.filter(item => getAvailableQuantity(item) <= 0);
-    } else {
-      return filteredInventory;
-    }
-  };
-
-  // Sort inventory
-  const sortedInventory = [...getTabInventory()].sort((a, b) => {
-    let aValue: any;
-    let bValue: any;
-    
-    switch (sortField) {
-      case "productId":
-        aValue = a.productId;
-        bValue = b.productId;
-        break;
-      case "productName":
-        aValue = a.product?.name || "";
-        bValue = b.product?.name || "";
-        break;
-      case "size":
-        aValue = a.size;
-        bValue = b.size;
-        break;
-      case "quantity":
-        aValue = a.quantity;
-        bValue = b.quantity;
-        break;
-      case "available":
-        aValue = getAvailableQuantity(a);
-        bValue = getAvailableQuantity(b);
-        break;
-      case "reserved":
-        aValue = a.reservedQuantity || 0;
-        bValue = b.reservedQuantity || 0;
-        break;
-      case "threshold":
-        aValue = a.lowStockThreshold;
-        bValue = b.lowStockThreshold;
-        break;
-      case "lastRestocked":
-        aValue = new Date(a.lastRestocked).getTime();
-        bValue = new Date(b.lastRestocked).getTime();
-        break;
-      default:
-        aValue = a.productId;
-        bValue = b.productId;
-    }
-    
-    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-    return 0;
-  });
-
-  // Get unique sizes from inventory
-  const uniqueSizes = Array.from(new Set(inventory.map(item => item.size))).sort();
-
+  
   // Load data on component mount
   useEffect(() => {
     fetchInventory();
@@ -621,7 +367,7 @@ export default function AdminInventory() {
   }, []);
 
   const content = (
-    <div className="bg-gray-50">
+    <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
         <div className="flex gap-2">
@@ -632,865 +378,203 @@ export default function AdminInventory() {
                 Add Inventory
               </Button>
             </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Inventory Item</DialogTitle>
-                  <DialogDescription>
-                    Add stock for a specific product and size
-                  </DialogDescription>
-                </DialogHeader>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Inventory</DialogTitle>
+                <DialogDescription>
+                  Add inventory for a product with size-specific quantities.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...addForm}>
+                <form onSubmit={addForm.handleSubmit(handleAddInventory)} className="space-y-4">
+                  <FormField
+                    control={addForm.control}
+                    name="productId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Product</FormLabel>
+                        <Select 
+                          onValueChange={(value) => field.onChange(parseInt(value))} 
+                          defaultValue={field.value.toString()}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a product" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {products.map((product) => (
+                              <SelectItem key={product.id} value={product.id.toString()}>
+                                {product.name} ({product.sku})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addForm.control}
+                    name="size"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Size</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g. S, M, L, XL" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addForm.control}
+                    name="quantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quantity</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} min={0} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addForm.control}
+                    name="lowStockThreshold"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Low Stock Threshold</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} min={1} />
+                        </FormControl>
+                        <FormDescription>
+                          Notifications will be sent when stock falls below this level.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button type="submit">Add Inventory</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+      
+      <div className="mb-6 flex gap-4 items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <Input
+            placeholder="Search by product name, SKU, or size..."
+            className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <Tabs defaultValue="all" className="w-auto" onValueChange={(value) => setViewType(value as any)}>
+          <TabsList>
+            <TabsTrigger value="all">All Items</TabsTrigger>
+            <TabsTrigger value="low-stock">Low Stock</TabsTrigger>
+            <TabsTrigger value="out-of-stock">Out of Stock</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Product</TableHead>
+              <TableHead>Size</TableHead>
+              <TableHead>Total Quantity</TableHead>
+              <TableHead>Available</TableHead>
+              <TableHead>Reserved</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Last Restocked</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredInventory.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                  {searchTerm 
+                    ? "No inventory items match your search."
+                    : viewType === 'low-stock'
+                      ? "No low stock items found."
+                      : viewType === 'out-of-stock'
+                        ? "No out of stock items found."
+                        : "No inventory items found."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredInventory.map((item) => {
+                const status = getStockStatus(item);
+                const stockPercentage = Math.min(100, Math.max(0, Math.round((item.quantity / Math.max(item.lowStockThreshold * 2, 1)) * 100)));
                 
-                <Form {...addForm}>
-                  <form onSubmit={addForm.handleSubmit(onAddInventory)} className="space-y-4">
-                    <FormField
-                      control={addForm.control}
-                      name="productId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Product</FormLabel>
-                          <Select
-                            onValueChange={(value) => field.onChange(parseInt(value))}
-                            defaultValue={field.value?.toString()}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select product" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {products.map((product) => (
-                                <SelectItem key={product.id} value={product.id.toString()}>
-                                  {product.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={addForm.control}
-                      name="size"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Size</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Size (e.g. S, M, L, XL)" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={addForm.control}
-                      name="quantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Quantity</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={addForm.control}
-                      name="lowStockThreshold"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Low Stock Threshold</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="1"
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Alert will be triggered when available stock falls below this threshold
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <DialogFooter>
-                      <Button type="submit">Add Inventory</Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-            
-            <Button variant="outline" onClick={fetchInventory}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
-            </Button>
-          </div>
-        </div>
-        
-        <div className="grid gap-6 md:grid-cols-4 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Inventory Items
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{inventory.length}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Stock Quantity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {inventory.reduce((total, item) => total + item.quantity, 0)}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Low Stock Items
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-500">
-                {inventory.filter(item => {
-                  const available = getAvailableQuantity(item);
-                  return available <= item.lowStockThreshold && available > 0;
-                }).length}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Out of Stock Items
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-500">
-                {inventory.filter(item => getAvailableQuantity(item) <= 0).length}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm mb-6">
-          <div className="p-4 border-b flex flex-col gap-4 md:flex-row md:items-center justify-between">
-            <div className="flex-1 max-w-md">
-              <div className="relative">
-                <Input
-                  placeholder="Search products..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10"
-                />
-                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              </div>
-            </div>
-            
-            <div className="flex flex-wrap gap-2">
-              <Select value={filterSize} onValueChange={setFilterSize}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Filter by size" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Sizes</SelectItem>
-                  {uniqueSizes.map((size) => (
-                    <SelectItem key={size} value={size}>
-                      {size}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select value={filterStock} onValueChange={setFilterStock}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Filter by stock" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Stock Status</SelectItem>
-                  <SelectItem value="in-stock">In Stock</SelectItem>
-                  <SelectItem value="low-stock">Low Stock</SelectItem>
-                  <SelectItem value="out-of-stock">Out of Stock</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <Tabs defaultValue="all" value={selectedTab} onValueChange={setSelectedTab}>
-            <div className="px-4 pt-2">
-              <TabsList>
-                <TabsTrigger value="all">All Inventory</TabsTrigger>
-                <TabsTrigger value="low-stock" className="text-amber-500 font-medium">
-                  Low Stock
-                  <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-700 border-amber-200">
-                    {inventory.filter(item => {
-                      const available = getAvailableQuantity(item);
-                      return available <= item.lowStockThreshold && available > 0;
-                    }).length}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="out-of-stock" className="text-red-500 font-medium">
-                  Out of Stock
-                  <Badge variant="outline" className="ml-2 bg-red-100 text-red-700 border-red-200">
-                    {inventory.filter(item => getAvailableQuantity(item) <= 0).length}
-                  </Badge>
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            
-            <TabsContent value="all" className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[80px] cursor-pointer" onClick={() => toggleSort("productId")}>
-                        ID
-                        {sortField === "productId" && (
-                          <ArrowUpDown className={`ml-1 h-4 w-4 inline ${sortDirection === "desc" ? "rotate-180" : ""}`} />
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <div className="flex items-center">
+                        {item.product?.images?.length > 0 && (
+                          <img 
+                            src={item.product.images[0]} 
+                            alt={item.product?.name} 
+                            className="h-10 w-10 object-cover rounded mr-3" 
+                          />
                         )}
-                      </TableHead>
-                      <TableHead className="cursor-pointer" onClick={() => toggleSort("productName")}>
-                        Product
-                        {sortField === "productName" && (
-                          <ArrowUpDown className={`ml-1 h-4 w-4 inline ${sortDirection === "desc" ? "rotate-180" : ""}`} />
+                        <div>
+                          <div className="font-medium">{item.product?.name}</div>
+                          <div className="text-sm text-gray-500">{item.product?.sku}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{item.size}</TableCell>
+                    <TableCell>{item.quantity}</TableCell>
+                    <TableCell>{getAvailableQuantity(item)}</TableCell>
+                    <TableCell>{item.reservedQuantity || 0}</TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <Badge 
+                          variant={status.variant === 'success' ? 'default' : 
+                            status.variant === 'warning' ? 'outline' : 'destructive'}
+                        >
+                          {status.label}
+                        </Badge>
+                        <Progress value={stockPercentage} className="h-1.5" />
+                      </div>
+                    </TableCell>
+                    <TableCell>{new Date(item.lastRestocked).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="outline" size="icon" onClick={() => handleEditInventory(item)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={() => viewInventoryLogs(item)}>
+                          <Layers className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={() => handleReserveInventory(item)}>
+                          <AlertCircle className="h-4 w-4" />
+                        </Button>
+                        {item.reservedQuantity > 0 && (
+                          <Button variant="outline" size="icon" onClick={() => handleReleaseInventory(item)}>
+                            <CheckCircle2 className="h-4 w-4" />
+                          </Button>
                         )}
-                      </TableHead>
-                      <TableHead className="w-[80px] cursor-pointer" onClick={() => toggleSort("size")}>
-                        Size
-                        {sortField === "size" && (
-                          <ArrowUpDown className={`ml-1 h-4 w-4 inline ${sortDirection === "desc" ? "rotate-180" : ""}`} />
-                        )}
-                      </TableHead>
-                      <TableHead className="w-[100px] cursor-pointer" onClick={() => toggleSort("quantity")}>
-                        Total
-                        {sortField === "quantity" && (
-                          <ArrowUpDown className={`ml-1 h-4 w-4 inline ${sortDirection === "desc" ? "rotate-180" : ""}`} />
-                        )}
-                      </TableHead>
-                      <TableHead className="w-[100px] cursor-pointer" onClick={() => toggleSort("available")}>
-                        Available
-                        {sortField === "available" && (
-                          <ArrowUpDown className={`ml-1 h-4 w-4 inline ${sortDirection === "desc" ? "rotate-180" : ""}`} />
-                        )}
-                      </TableHead>
-                      <TableHead className="w-[100px] cursor-pointer" onClick={() => toggleSort("reserved")}>
-                        Reserved
-                        {sortField === "reserved" && (
-                          <ArrowUpDown className={`ml-1 h-4 w-4 inline ${sortDirection === "desc" ? "rotate-180" : ""}`} />
-                        )}
-                      </TableHead>
-                      <TableHead className="w-[100px] cursor-pointer" onClick={() => toggleSort("threshold")}>
-                        Threshold
-                        {sortField === "threshold" && (
-                          <ArrowUpDown className={`ml-1 h-4 w-4 inline ${sortDirection === "desc" ? "rotate-180" : ""}`} />
-                        )}
-                      </TableHead>
-                      <TableHead className="w-[120px] cursor-pointer" onClick={() => toggleSort("lastRestocked")}>
-                        Last Restocked
-                        {sortField === "lastRestocked" && (
-                          <ArrowUpDown className={`ml-1 h-4 w-4 inline ${sortDirection === "desc" ? "rotate-180" : ""}`} />
-                        )}
-                      </TableHead>
-                      <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead className="w-[180px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      Array.from({ length: 5 }).map((_, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                          <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                        </TableRow>
-                      ))
-                    ) : sortedInventory.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={10} className="h-24 text-center">
-                          No inventory items found
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      sortedInventory.map((item) => {
-                        const stockStatus = getStockStatus(item);
-                        const availableQuantity = getAvailableQuantity(item);
-                        const stockPercentage = Math.min(
-                          Math.max((availableQuantity / (item.lowStockThreshold * 2)) * 100, 0),
-                          100
-                        );
-                        
-                        return (
-                          <TableRow key={`${item.productId}-${item.size}`}>
-                            <TableCell>{item.productId}</TableCell>
-                            <TableCell>
-                              <div className="font-medium">
-                                {item.product?.name || `Product ID: ${item.productId}`}
-                              </div>
-                              {item.product && (
-                                <div className="text-xs text-muted-foreground">{item.product.sku}</div>
-                              )}
-                            </TableCell>
-                            <TableCell>{item.size}</TableCell>
-                            <TableCell>{item.quantity}</TableCell>
-                            <TableCell>{availableQuantity}</TableCell>
-                            <TableCell>{item.reservedQuantity || 0}</TableCell>
-                            <TableCell>{item.lowStockThreshold}</TableCell>
-                            <TableCell>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    {new Date(item.lastRestocked).toLocaleDateString()}
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {formatDate(item.lastRestocked)}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                <Badge className={stockStatus.color}>
-                                  {stockStatus.label}
-                                </Badge>
-                                <div className={`h-2 w-full rounded-full ${
-                                    stockStatus.status === "out-of-stock"
-                                      ? "bg-red-100"
-                                      : stockStatus.status === "low-stock"
-                                      ? "bg-amber-100"
-                                      : "bg-green-100"
-                                  }`}>
-                                  <div 
-                                    className={`h-full rounded-full ${
-                                      stockStatus.status === "out-of-stock"
-                                        ? "bg-red-500"
-                                        : stockStatus.status === "low-stock"
-                                        ? "bg-amber-500"
-                                        : "bg-green-500"
-                                    }`}
-                                    style={{ width: `${stockPercentage}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        onClick={() => handleEditInventory(item)}
-                                      >
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Edit</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        onClick={() => viewInventoryLogs(item)}
-                                      >
-                                        <Package className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>View Logs</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        onClick={() => handleReserveInventory(item)}
-                                        disabled={availableQuantity <= 0}
-                                      >
-                                        <ShoppingBag className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Reserve</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        onClick={() => handleReleaseInventory(item)}
-                                        disabled={(item.reservedQuantity || 0) <= 0}
-                                      >
-                                        <CheckCircle className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Release</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button
-                                      size="icon"
-                                      variant="destructive"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Confirm Deletion</DialogTitle>
-                                      <DialogDescription>
-                                        Are you sure you want to delete this inventory item?
-                                        This action cannot be undone.
-                                      </DialogDescription>
-                                    </DialogHeader>
-                                    <DialogFooter>
-                                      <DialogClose asChild>
-                                        <Button variant="outline">Cancel</Button>
-                                      </DialogClose>
-                                      <Button
-                                        variant="destructive"
-                                        onClick={() => deleteInventoryItem(item.productId, item.size)}
-                                      >
-                                        Delete
-                                      </Button>
-                                    </DialogFooter>
-                                  </DialogContent>
-                                </Dialog>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
-            <TabsContent value="low-stock" className="p-0">
-              {/* Content is the same as the "all" tab but filtered for low stock items */}
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[80px]">ID</TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead className="w-[80px]">Size</TableHead>
-                      <TableHead className="w-[100px]">Total</TableHead>
-                      <TableHead className="w-[100px]">Available</TableHead>
-                      <TableHead className="w-[100px]">Reserved</TableHead>
-                      <TableHead className="w-[100px]">Threshold</TableHead>
-                      <TableHead className="w-[120px]">Last Restocked</TableHead>
-                      <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead className="w-[180px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      Array.from({ length: 3 }).map((_, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                          <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                        </TableRow>
-                      ))
-                    ) : sortedInventory.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={10} className="h-24 text-center">
-                          <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-                          <p>No low stock items found</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      sortedInventory.map((item) => {
-                        const availableQuantity = getAvailableQuantity(item);
-                        const stockPercentage = Math.min(
-                          Math.max((availableQuantity / item.lowStockThreshold) * 100, 0),
-                          100
-                        );
-                        
-                        return (
-                          <TableRow key={`${item.productId}-${item.size}`}>
-                            <TableCell>{item.productId}</TableCell>
-                            <TableCell>
-                              <div className="font-medium">
-                                {item.product?.name || `Product ID: ${item.productId}`}
-                              </div>
-                              {item.product && (
-                                <div className="text-xs text-muted-foreground">{item.product.sku}</div>
-                              )}
-                            </TableCell>
-                            <TableCell>{item.size}</TableCell>
-                            <TableCell>{item.quantity}</TableCell>
-                            <TableCell>{availableQuantity}</TableCell>
-                            <TableCell>{item.reservedQuantity || 0}</TableCell>
-                            <TableCell>{item.lowStockThreshold}</TableCell>
-                            <TableCell>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    {new Date(item.lastRestocked).toLocaleDateString()}
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {formatDate(item.lastRestocked)}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                <Badge className="bg-amber-500 text-white">
-                                  Low Stock
-                                </Badge>
-                                <div className="h-2 w-full rounded-full bg-amber-100">
-                                  <div 
-                                    className="h-full rounded-full bg-amber-500"
-                                    style={{ width: `${stockPercentage}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        onClick={() => handleEditInventory(item)}
-                                      >
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Edit</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        onClick={() => viewInventoryLogs(item)}
-                                      >
-                                        <Package className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>View Logs</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        onClick={() => handleReserveInventory(item)}
-                                        disabled={availableQuantity <= 0}
-                                      >
-                                        <ShoppingBag className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Reserve</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        onClick={() => handleReleaseInventory(item)}
-                                        disabled={(item.reservedQuantity || 0) <= 0}
-                                      >
-                                        <CheckCircle className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Release</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button
-                                      size="icon"
-                                      variant="destructive"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Confirm Deletion</DialogTitle>
-                                      <DialogDescription>
-                                        Are you sure you want to delete this inventory item?
-                                        This action cannot be undone.
-                                      </DialogDescription>
-                                    </DialogHeader>
-                                    <DialogFooter>
-                                      <DialogClose asChild>
-                                        <Button variant="outline">Cancel</Button>
-                                      </DialogClose>
-                                      <Button
-                                        variant="destructive"
-                                        onClick={() => deleteInventoryItem(item.productId, item.size)}
-                                      >
-                                        Delete
-                                      </Button>
-                                    </DialogFooter>
-                                  </DialogContent>
-                                </Dialog>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
-            <TabsContent value="out-of-stock" className="p-0">
-              {/* Content is the same as the "all" tab but filtered for out of stock items */}
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[80px]">ID</TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead className="w-[80px]">Size</TableHead>
-                      <TableHead className="w-[100px]">Total</TableHead>
-                      <TableHead className="w-[100px]">Available</TableHead>
-                      <TableHead className="w-[100px]">Reserved</TableHead>
-                      <TableHead className="w-[100px]">Threshold</TableHead>
-                      <TableHead className="w-[120px]">Last Restocked</TableHead>
-                      <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead className="w-[180px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      Array.from({ length: 3 }).map((_, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                          <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                        </TableRow>
-                      ))
-                    ) : sortedInventory.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={10} className="h-24 text-center">
-                          <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-                          <p>No out of stock items found</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      sortedInventory.map((item) => {
-                        const availableQuantity = getAvailableQuantity(item);
-                        
-                        return (
-                          <TableRow key={`${item.productId}-${item.size}`}>
-                            <TableCell>{item.productId}</TableCell>
-                            <TableCell>
-                              <div className="font-medium">
-                                {item.product?.name || `Product ID: ${item.productId}`}
-                              </div>
-                              {item.product && (
-                                <div className="text-xs text-muted-foreground">{item.product.sku}</div>
-                              )}
-                            </TableCell>
-                            <TableCell>{item.size}</TableCell>
-                            <TableCell>{item.quantity}</TableCell>
-                            <TableCell>0</TableCell>
-                            <TableCell>{item.reservedQuantity || 0}</TableCell>
-                            <TableCell>{item.lowStockThreshold}</TableCell>
-                            <TableCell>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    {new Date(item.lastRestocked).toLocaleDateString()}
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {formatDate(item.lastRestocked)}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                <Badge className="bg-red-500 text-white">
-                                  Out of Stock
-                                </Badge>
-                                <div className="h-2 w-full rounded-full bg-red-100">
-                                  <div 
-                                    className="h-full rounded-full bg-red-500"
-                                    style={{ width: `0%` }}
-                                  />
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        onClick={() => handleEditInventory(item)}
-                                      >
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Edit</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        onClick={() => viewInventoryLogs(item)}
-                                      >
-                                        <Package className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>View Logs</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        disabled
-                                      >
-                                        <ShoppingBag className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Reserve (Not Available)</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        onClick={() => handleReleaseInventory(item)}
-                                        disabled={(item.reservedQuantity || 0) <= 0}
-                                      >
-                                        <CheckCircle className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Release</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button
-                                      size="icon"
-                                      variant="destructive"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Confirm Deletion</DialogTitle>
-                                      <DialogDescription>
-                                        Are you sure you want to delete this inventory item?
-                                        This action cannot be undone.
-                                      </DialogDescription>
-                                    </DialogHeader>
-                                    <DialogFooter>
-                                      <DialogClose asChild>
-                                        <Button variant="outline">Cancel</Button>
-                                      </DialogClose>
-                                      <Button
-                                        variant="destructive"
-                                        onClick={() => deleteInventoryItem(item.productId, item.size)}
-                                      >
-                                        Delete
-                                      </Button>
-                                    </DialogFooter>
-                                  </DialogContent>
-                                </Dialog>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </main>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Edit Inventory Dialog */}
       <Dialog open={selectedInventory !== null && updateForm.formState.isSubmitted === false} onOpenChange={(open) => !open && setSelectedInventory(null)}>
@@ -1498,12 +582,11 @@ export default function AdminInventory() {
           <DialogHeader>
             <DialogTitle>Update Inventory</DialogTitle>
             <DialogDescription>
-              Update stock for {selectedInventory?.product?.name || `Product ID: ${selectedInventory?.productId}`} - Size {selectedInventory?.size}
+              Update inventory for {selectedInventory?.product?.name} - Size: {selectedInventory?.size}
             </DialogDescription>
           </DialogHeader>
-          
           <Form {...updateForm}>
-            <form onSubmit={updateForm.handleSubmit(onUpdateInventory)} className="space-y-4">
+            <form onSubmit={updateForm.handleSubmit(handleUpdateInventory)} className="space-y-4">
               <FormField
                 control={updateForm.control}
                 name="quantity"
@@ -1511,21 +594,15 @@ export default function AdminInventory() {
                   <FormItem>
                     <FormLabel>Quantity</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
-                      />
+                      <Input type="number" {...field} min={0} />
                     </FormControl>
                     <FormDescription>
-                      Current reserved quantity: {selectedInventory?.reservedQuantity || 0}
+                      Current quantity: {selectedInventory?.quantity}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
               <FormField
                 control={updateForm.control}
                 name="lowStockThreshold"
@@ -1533,25 +610,30 @@ export default function AdminInventory() {
                   <FormItem>
                     <FormLabel>Low Stock Threshold</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min="1"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
-                      />
+                      <Input type="number" {...field} min={1} />
                     </FormControl>
                     <FormDescription>
-                      Alert will be triggered when available stock falls below this threshold
+                      Current threshold: {selectedInventory?.lowStockThreshold}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+              <FormField
+                control={updateForm.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reason for Update</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g. Restocking, Inventory adjustment" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setSelectedInventory(null)}>
-                  Cancel
-                </Button>
+                <Button variant="outline" type="button" onClick={() => setSelectedInventory(null)}>Cancel</Button>
                 <Button type="submit">Update Inventory</Button>
               </DialogFooter>
             </form>
@@ -1560,32 +642,16 @@ export default function AdminInventory() {
       </Dialog>
 
       {/* Reserve Inventory Dialog */}
-      <Dialog open={selectedInventory !== null && reserveForm.formState.isSubmitted === false && !updateForm.formState.isSubmitting && !releaseForm.formState.isSubmitting} onOpenChange={(open) => !open && setSelectedInventory(null)}>
+      <Dialog open={selectedInventory !== null && reserveForm.formState.isSubmitted === false && updateForm.formState.isSubmitted === true} onOpenChange={(open) => !open && setSelectedInventory(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Reserve Inventory</DialogTitle>
             <DialogDescription>
-              Reserve stock for {selectedInventory?.product?.name || `Product ID: ${selectedInventory?.productId}`} - Size {selectedInventory?.size}
+              Reserve inventory for {selectedInventory?.product?.name} - Size: {selectedInventory?.size}
             </DialogDescription>
           </DialogHeader>
-          
           <Form {...reserveForm}>
-            <form onSubmit={reserveForm.handleSubmit(onReserveInventory)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 py-2">
-                <div>
-                  <p className="text-sm font-medium">Available Stock</p>
-                  <p className="text-2xl font-bold">
-                    {selectedInventory ? getAvailableQuantity(selectedInventory) : 0}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Already Reserved</p>
-                  <p className="text-2xl font-bold">
-                    {selectedInventory?.reservedQuantity || 0}
-                  </p>
-                </div>
-              </div>
-              
+            <form onSubmit={reserveForm.handleSubmit(handleSubmitReserve)} className="space-y-4">
               <FormField
                 control={reserveForm.control}
                 name="quantity"
@@ -1593,19 +659,15 @@ export default function AdminInventory() {
                   <FormItem>
                     <FormLabel>Quantity to Reserve</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min="1"
-                        max={selectedInventory ? getAvailableQuantity(selectedInventory) : 1}
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
-                      />
+                      <Input type="number" {...field} min={1} max={selectedInventory?.quantity} />
                     </FormControl>
+                    <FormDescription>
+                      Available: {selectedInventory?.quantity} | Reserved: {selectedInventory?.reservedQuantity}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
               <FormField
                 control={reserveForm.control}
                 name="reason"
@@ -1613,13 +675,12 @@ export default function AdminInventory() {
                   <FormItem>
                     <FormLabel>Reason</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Order placed, Preorder" {...field} />
+                      <Input {...field} placeholder="e.g. Order #12345, Customer hold" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
               <FormField
                 control={reserveForm.control}
                 name="referenceId"
@@ -1627,21 +688,15 @@ export default function AdminInventory() {
                   <FormItem>
                     <FormLabel>Reference ID (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Order number" {...field} />
+                      <Input {...field} placeholder="e.g. Order number, Customer ID" />
                     </FormControl>
-                    <FormDescription>
-                      Optional order number or reference ID for tracking
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setSelectedInventory(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Reserve Stock</Button>
+                <Button variant="outline" type="button" onClick={() => setSelectedInventory(null)}>Cancel</Button>
+                <Button type="submit">Reserve</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -1649,88 +704,61 @@ export default function AdminInventory() {
       </Dialog>
 
       {/* Release Inventory Dialog */}
-      <Dialog open={selectedInventory !== null && releaseForm.formState.isSubmitted === false && !updateForm.formState.isSubmitting && !reserveForm.formState.isSubmitting} onOpenChange={(open) => !open && setSelectedInventory(null)}>
+      <Dialog open={selectedInventory !== null && reserveForm.formState.isSubmitted === false && updateForm.formState.isSubmitted === true && selectedInventory?.reservedQuantity > 0} onOpenChange={(open) => !open && setSelectedInventory(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Release Inventory</DialogTitle>
+            <DialogTitle>Release Reserved Inventory</DialogTitle>
             <DialogDescription>
-              Release reserved stock for {selectedInventory?.product?.name || `Product ID: ${selectedInventory?.productId}`} - Size {selectedInventory?.size}
+              Release reserved inventory for {selectedInventory?.product?.name} - Size: {selectedInventory?.size}
             </DialogDescription>
           </DialogHeader>
-          
-          <Form {...releaseForm}>
-            <form onSubmit={releaseForm.handleSubmit(onReleaseInventory)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 py-2">
-                <div>
-                  <p className="text-sm font-medium">Total Stock</p>
-                  <p className="text-2xl font-bold">
-                    {selectedInventory?.quantity || 0}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Currently Reserved</p>
-                  <p className="text-2xl font-bold">
-                    {selectedInventory?.reservedQuantity || 0}
-                  </p>
-                </div>
-              </div>
-              
+          <Form {...reserveForm}>
+            <form onSubmit={reserveForm.handleSubmit(handleSubmitRelease)} className="space-y-4">
               <FormField
-                control={releaseForm.control}
+                control={reserveForm.control}
                 name="quantity"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Quantity to Release</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min="1"
-                        max={selectedInventory?.reservedQuantity || 1}
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={releaseForm.control}
-                name="reason"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reason</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Order cancelled, Inventory correction" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={releaseForm.control}
-                name="referenceId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reference ID (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Order number" {...field} />
+                      <Input type="number" {...field} min={1} max={selectedInventory?.reservedQuantity} />
                     </FormControl>
                     <FormDescription>
-                      Optional order number or reference ID for tracking
+                      Currently Reserved: {selectedInventory?.reservedQuantity}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+              <FormField
+                control={reserveForm.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reason</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g. Order cancelled, Reservation expired" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={reserveForm.control}
+                name="referenceId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reference ID (Optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g. Order number, Customer ID" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setSelectedInventory(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Release Stock</Button>
+                <Button variant="outline" type="button" onClick={() => setSelectedInventory(null)}>Cancel</Button>
+                <Button type="submit">Release</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -1738,72 +766,63 @@ export default function AdminInventory() {
       </Dialog>
 
       {/* Inventory Logs Dialog */}
-      <Dialog open={selectedInventory !== null && logsLoading} onOpenChange={(open) => !open && setSelectedInventory(null)}>
-        <DialogContent className="max-w-4xl">
+      <Dialog open={selectedInventory !== null && inventoryLogs.length > 0} onOpenChange={(open) => !open && setInventoryLogs([])}>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Inventory Logs</DialogTitle>
+            <DialogTitle>Inventory History</DialogTitle>
             <DialogDescription>
-              History for {selectedInventory?.product?.name || `Product ID: ${selectedInventory?.productId}`} - Size {selectedInventory?.size}
+              History for {selectedInventory?.product?.name} - Size: {selectedInventory?.size}
             </DialogDescription>
           </DialogHeader>
           
-          {logsLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-            </div>
-          ) : inventoryLogs.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No logs found for this inventory item</p>
-            </div>
-          ) : (
-            <div className="overflow-y-auto max-h-[60vh] pr-3">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Previous</TableHead>
-                    <TableHead>New</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead>Reference</TableHead>
+          <div className="max-h-96 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Previous</TableHead>
+                  <TableHead>New</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Reference</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {inventoryLogs.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell>{new Date(log.createdAt).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        log.action === 'add' ? 'default' :
+                        log.action === 'subtract' ? 'destructive' :
+                        log.action === 'reserve' ? 'outline' : 'secondary'
+                      }>
+                        {log.action.charAt(0).toUpperCase() + log.action.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{log.quantity}</TableCell>
+                    <TableCell>{log.previousQuantity}</TableCell>
+                    <TableCell>{log.newQuantity}</TableCell>
+                    <TableCell>{log.reason}</TableCell>
+                    <TableCell>{log.referenceId || '-'}</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {inventoryLogs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell>{formatDate(log.createdAt)}</TableCell>
-                      <TableCell>
-                        <Badge className={
-                          log.action === "add"
-                            ? "bg-green-500 text-white"
-                            : log.action === "subtract"
-                            ? "bg-red-500 text-white"
-                            : log.action === "reserve"
-                            ? "bg-blue-500 text-white"
-                            : "bg-amber-500 text-white"
-                        }>
-                          {log.action.charAt(0).toUpperCase() + log.action.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{log.quantity}</TableCell>
-                      <TableCell>{log.previousQuantity}</TableCell>
-                      <TableCell>{log.newQuantity}</TableCell>
-                      <TableCell>{log.reason}</TableCell>
-                      <TableCell>{log.referenceId || "-"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           
           <DialogFooter>
-            <Button onClick={() => setSelectedInventory(null)}>Close</Button>
+            <Button onClick={() => setInventoryLogs([])}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  );
+  
+  return (
+    <AdminLayout title="Inventory Management">
+      {content}
+    </AdminLayout>
   );
 }
