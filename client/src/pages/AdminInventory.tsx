@@ -150,14 +150,23 @@ export default function AdminInventory() {
       const response = await fetch("/api/admin/inventory");
       const data = await response.json();
       
-      // Fetch product details for each inventory item
-      const inventoryWithProducts = await Promise.all(
-        data.map(async (item: InventoryItem) => {
-          const productResponse = await fetch(`/api/products/${item.productId}`);
-          const product = await productResponse.json();
-          return { ...item, product };
-        })
-      );
+      // Get all products first in a single call
+      const productsResponse = await fetch("/api/products");
+      const productsData = await productsResponse.json();
+      
+      // Create a map for quick product lookup
+      const productsMap = productsData.reduce((map: Record<string, Product>, product: Product) => {
+        map[product.id] = product;
+        return map;
+      }, {});
+      
+      // Attach product details to each inventory item
+      const inventoryWithProducts = data.map((item: InventoryItem) => {
+        return { 
+          ...item, 
+          product: productsMap[item.productId] || null
+        };
+      });
       
       setInventory(inventoryWithProducts);
     } catch (error) {
@@ -188,8 +197,15 @@ export default function AdminInventory() {
       });
       
       if (response.ok) {
+        // Close the dialog
         addForm.reset();
-        fetchInventory();
+        
+        // Force a timeout before fetching to ensure the server has processed the data
+        setTimeout(() => {
+          fetchInventory();
+          // Also refresh the products data
+          fetchProducts();
+        }, 500);
       } else {
         const errorData = await response.json();
         console.error("Error adding inventory:", errorData);
@@ -244,7 +260,13 @@ export default function AdminInventory() {
       if (response.ok) {
         updateForm.reset();
         setSelectedInventory(null);
-        fetchInventory();
+        
+        // Force a timeout before fetching to ensure the server has processed the data
+        setTimeout(() => {
+          fetchInventory();
+          // Also refresh the products data
+          fetchProducts();
+        }, 500);
       } else {
         const errorData = await response.json();
         console.error("Error updating inventory:", errorData);
@@ -280,7 +302,11 @@ export default function AdminInventory() {
       if (response.ok) {
         reserveForm.reset();
         setSelectedInventory(null);
-        fetchInventory();
+        
+        // Force a timeout before fetching to ensure the server has processed the data
+        setTimeout(() => {
+          fetchInventory();
+        }, 500);
       } else {
         const errorData = await response.json();
         console.error("Error reserving inventory:", errorData);
@@ -318,7 +344,11 @@ export default function AdminInventory() {
       if (response.ok) {
         reserveForm.reset();
         setSelectedInventory(null);
-        fetchInventory();
+        
+        // Force a timeout before fetching to ensure the server has processed the data
+        setTimeout(() => {
+          fetchInventory();
+        }, 500);
       } else {
         const errorData = await response.json();
         console.error("Error releasing inventory:", errorData);
@@ -521,16 +551,16 @@ export default function AdminInventory() {
                   <TableRow key={item.id}>
                     <TableCell>
                       <div className="flex items-center">
-                        {item.product?.images?.length > 0 && (
+                        {item.product && item.product.images && item.product.images.length > 0 && (
                           <img 
                             src={item.product.images[0]} 
-                            alt={item.product?.name} 
+                            alt={item.product.name || 'Product image'} 
                             className="h-10 w-10 object-cover rounded mr-3" 
                           />
                         )}
                         <div>
-                          <div className="font-medium">{item.product?.name}</div>
-                          <div className="text-sm text-gray-500">{item.product?.sku}</div>
+                          <div className="font-medium">{item.product?.name || 'Unknown product'}</div>
+                          <div className="text-sm text-gray-500">{item.product?.sku || 'No SKU'}</div>
                         </div>
                       </div>
                     </TableCell>
