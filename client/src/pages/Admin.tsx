@@ -9,7 +9,14 @@ import { TrendingUp, TrendingDown, Users, ShoppingBag, DollarSign, ClipboardList
 import EnhancedAdminDashboard from "@/components/admin/AdminDashboard";
 
 const AdminDashboard = () => {
-  const [tabValue, setTabValue] = useState("overview");
+  const [location] = useLocation();
+  const getInitialTab = () => {
+    if (location === "/admin/dashboard") return "enhanced";
+    if (location === "/admin/sales-analytics") return "sales";
+    return "overview";
+  };
+  
+  const [tabValue, setTabValue] = useState(getInitialTab());
   const [stats, setStats] = useState({
     users: 0,
     products: 0,
@@ -165,6 +172,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="sales">Sales Analytics</TabsTrigger>
             <TabsTrigger value="activity">Recent Activity</TabsTrigger>
           </TabsList>
+          <div className="flex justify-end gap-2 mt-2">
+            <a href="/admin/dashboard" className="text-sm text-blue-600 hover:underline">Direct Dashboard Link</a>
+            <a href="/admin/sales-analytics" className="text-sm text-blue-600 hover:underline">Direct Sales Analytics</a>
+          </div>
 
           <TabsContent value="overview" className="py-4">
             <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
