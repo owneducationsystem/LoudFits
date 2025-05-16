@@ -282,6 +282,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userData = insertUserSchema.parse(req.body);
       const user = await storage.createUser(userData);
+      
+      // Send welcome email to the new user
+      try {
+        emailService.sendWelcomeEmail(user).then(sent => {
+          if (sent) {
+            console.log(`Welcome email sent to ${user.email}`);
+          } else {
+            console.log(`Failed to send welcome email to ${user.email}`);
+          }
+        });
+      } catch (emailError) {
+        console.error("Error sending welcome email:", emailError);
+      }
+      
+      // Send notification about new user registration (if admin is connected)
+      try {
+        notificationService.sendAdminNotification({
+          type: NotificationType.USER_REGISTERED,
+          title: "New User Registered",
+          message: `A new user (${user.username}) has registered on the platform.`,
+          isAdmin: true,
+          priority: "low"
+        });
+      } catch (notificationError) {
+        console.error("Error sending registration notification:", notificationError);
+      }
+      
       res.status(201).json(user);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -298,6 +325,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!user || user.password !== password) {
         return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Get client IP address and user agent for security notifications
+      const ipAddress = req.ip || req.socket.remoteAddress;
+      const userAgent = req.get('user-agent');
+      
+      // Send login notification email
+      try {
+        emailService.sendLoginNotificationEmail(user, ipAddress, userAgent).then(sent => {
+          if (sent) {
+            console.log(`Login notification email sent to ${user.email}`);
+          } else {
+            console.log(`Failed to send login notification email to ${user.email}`);
+          }
+        });
+      } catch (emailError) {
+        console.error("Error sending login notification email:", emailError);
+      }
+      
+      // Send admin notification about login (useful for monitoring)
+      try {
+        notificationService.sendAdminNotification({
+          type: NotificationType.ADMIN_LOGIN,
+          title: "User Login",
+          message: `User ${user.username} logged in from ${ipAddress}`,
+          isAdmin: true,
+          priority: "low",
+          metadata: { userId: user.id, ipAddress, userAgent }
+        });
+      } catch (notificationError) {
+        console.error("Error sending login notification:", notificationError);
       }
 
       // In a real app, you would create a JWT token here
@@ -355,6 +413,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orderData = insertOrderSchema.parse(req.body);
       const order = await storage.createOrder(orderData);
+      
+      // Send order notifications
+      if (order.userId) {
+        // Get user information
+        const user = await storage.getUser(order.userId);
+        
+        if (user) {
+          // Get order items and products for detailed email
+          const orderItems = await storage.getOrderItems(order.id);
+          const products = [];
+          
+          // Fetch product details for each item
+          for (const item of orderItems) {
+            const product = await storage.getProduct(item.productId);
+            if (product) {
+              products.push(product);
+            }
+          }
+          
+          // Send email confirmation
+          emailService.sendOrderConfirmationEmail(order, user, products).then(sent => {
+            if (sent) {
+              console.log(`Order confirmation email sent to ${user.email} for order #${order.orderNumber}`);
+            } else {
+              console.log(`Failed to send order confirmation email to ${user.email}`);
+            }
+          }).catch(err => {
+            console.error(`Error sending order confirmation email: ${err.message}`);
+          });
+          
+          // Send user notification
+          notificationService.sendUserNotification({
+            type: NotificationType.ORDER_PLACED,
+            title: "Order Placed Successfully",
+            message: `Your order #${order.orderNumber} has been received and is being processed.`,
+            userId: user.id,
+            entityId: order.id,
+            entityType: 'order',
+            metadata: { orderNumber: order.orderNumber, total: order.total },
+            priority: "medium"
+          }).catch(err => {
+            console.error(`Error sending order notification: ${err.message}`);
+          });
+        }
+        
+        // Send admin notification about new order
+        notificationService.sendAdminNotification({
+          type: NotificationType.ORDER_PLACED,
+          title: "New Order Received",
+          message: `Order #${order.orderNumber} has been placed for a total of ₹${
+            typeof order.total === 'string' ? order.total : order.total.toFixed(2)
+          }`,
+          entityId: order.id,
+          entityType: 'order',
+          isAdmin: true,
+          priority: "high",
+          actionRequired: true,
+          actionType: "process_order"
+        }).catch(err => {
+          console.error(`Error sending admin order notification: ${err.message}`);
+        });
+      }
+      
       res.status(201).json(order);
     } catch (error) {
       if (error instanceof z.ZodError) {

@@ -252,38 +252,54 @@ class EmailService {
    * @param amount Payment amount
    * @param transactionId Transaction ID
    */
-  async sendPaymentConfirmationEmail(order: Order, user: User, amount: number, transactionId: string): Promise<boolean> {
+  /**
+   * Send a payment confirmation email
+   * @param email User's email address
+   * @param name User's name or username
+   * @param orderNumber Order number reference
+   * @param amount Total payment amount
+   * @param paymentMethod Payment method used
+   */
+  async sendPaymentConfirmationEmail(
+    email: string,
+    name: string,
+    orderNumber: string,
+    amount: string | number,
+    paymentMethod: string
+  ): Promise<boolean> {
     if (!this.isEnabled) return false;
-    if (!user.email) return false;
+    if (!email) return false;
 
     try {
+      // Convert amount to number if it's a string
+      const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+      
       const formattedAmount = new Intl.NumberFormat('en-IN', {
         style: 'currency',
         currency: 'INR'
-      }).format(amount);
+      }).format(numericAmount);
 
       const mailOptions = {
         from: this.fromEmail,
-        to: user.email,
-        subject: `Payment Confirmation for Order #${order.orderNumber}`,
+        to: email,
+        subject: `Payment Confirmation for Order #${orderNumber}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px;">
             <div style="text-align: center; margin-bottom: 20px;">
               <img src="https://i.imgur.com/YOUR_LOGO_URL.png" alt="Loudfits Logo" style="max-width: 150px;">
             </div>
             <h1 style="color: #582A34; text-align: center;">Payment Confirmation</h1>
-            <p style="font-size: 16px; line-height: 1.5; color: #333;">Hi ${user.username},</p>
-            <p style="font-size: 16px; line-height: 1.5; color: #333;">Thank you for your payment! We're pleased to confirm that your payment for order #${order.orderNumber} has been successfully processed.</p>
+            <p style="font-size: 16px; line-height: 1.5; color: #333;">Hi ${name},</p>
+            <p style="font-size: 16px; line-height: 1.5; color: #333;">Thank you for your payment! We're pleased to confirm that your payment for order #${orderNumber} has been successfully processed.</p>
             
             <div style="background-color: #f8f8f8; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <p style="margin: 5px 0; font-size: 14px;"><strong>Order Number:</strong> ${order.orderNumber}</p>
+              <p style="margin: 5px 0; font-size: 14px;"><strong>Order Number:</strong> ${orderNumber}</p>
               <p style="margin: 5px 0; font-size: 14px;"><strong>Payment Amount:</strong> ${formattedAmount}</p>
-              <p style="margin: 5px 0; font-size: 14px;"><strong>Transaction ID:</strong> ${transactionId}</p>
               <p style="margin: 5px 0; font-size: 14px;"><strong>Payment Date:</strong> ${new Date().toLocaleDateString()}</p>
-              <p style="margin: 5px 0; font-size: 14px;"><strong>Payment Method:</strong> ${order.paymentMethod || 'Online Payment'}</p>
+              <p style="margin: 5px 0; font-size: 14px;"><strong>Payment Method:</strong> ${paymentMethod || 'Online Payment'}</p>
             </div>
             
-            <p style="font-size: 16px; line-height: 1.5; color: #333;">Your order is now being processed. You can track your order status <a href="${process.env.WEBSITE_URL || 'https://loudfits.com'}/track-order/${order.orderNumber}" style="color: #582A34; text-decoration: underline;">here</a>.</p>
+            <p style="font-size: 16px; line-height: 1.5; color: #333;">Your order is now being processed. You can track your order status <a href="${process.env.WEBSITE_URL || 'https://loudfits.com'}/track-order/${orderNumber}" style="color: #582A34; text-decoration: underline;">here</a>.</p>
             
             <p style="font-size: 16px; line-height: 1.5; color: #333;">If you have any questions about your payment or order, please contact our customer service.</p>
             
@@ -299,7 +315,7 @@ class EmailService {
       };
 
       await this.transporter.sendMail(mailOptions);
-      console.log(`Payment confirmation email sent to ${user.email} for order #${order.orderNumber}`);
+      console.log(`Payment confirmation email sent to ${email} for order #${orderNumber}`);
       return true;
     } catch (error) {
       console.error('Error sending payment confirmation email:', error);
@@ -399,40 +415,56 @@ class EmailService {
    * @param amount Payment amount
    * @param errorMessage Error message (if available)
    */
-  async sendPaymentFailureEmail(order: Order, user: User, amount: number, errorMessage?: string): Promise<boolean> {
+  /**
+   * Send a payment failure notification email
+   * @param email User's email address
+   * @param name User's name or username
+   * @param orderNumber Order number reference
+   * @param amount Payment amount
+   * @param errorMessage Error message (if available)
+   */
+  async sendPaymentFailedEmail(
+    email: string,
+    name: string,
+    orderNumber: string,
+    amount: string | number,
+    errorMessage?: string
+  ): Promise<boolean> {
     if (!this.isEnabled) return false;
-    if (!user.email) return false;
+    if (!email) return false;
 
     try {
+      // Convert amount to number if it's a string
+      const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+      
       const formattedAmount = new Intl.NumberFormat('en-IN', {
         style: 'currency',
         currency: 'INR'
-      }).format(amount);
+      }).format(numericAmount);
 
       const mailOptions = {
         from: this.fromEmail,
-        to: user.email,
-        subject: `Payment Failed for Order #${order.orderNumber}`,
+        to: email,
+        subject: `Payment Failed for Order #${orderNumber}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px;">
             <div style="text-align: center; margin-bottom: 20px;">
               <img src="https://i.imgur.com/YOUR_LOGO_URL.png" alt="Loudfits Logo" style="max-width: 150px;">
             </div>
             <h1 style="color: #582A34; text-align: center;">Payment Failed</h1>
-            <p style="font-size: 16px; line-height: 1.5; color: #333;">Hi ${user.username},</p>
-            <p style="font-size: 16px; line-height: 1.5; color: #333;">We're sorry, but your recent payment attempt for order #${order.orderNumber} was unsuccessful.</p>
+            <p style="font-size: 16px; line-height: 1.5; color: #333;">Hi ${name},</p>
+            <p style="font-size: 16px; line-height: 1.5; color: #333;">We're sorry, but your recent payment attempt for order #${orderNumber} was unsuccessful.</p>
             
             <div style="background-color: #f8f8f8; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <p style="margin: 5px 0; font-size: 14px;"><strong>Order Number:</strong> ${order.orderNumber}</p>
+              <p style="margin: 5px 0; font-size: 14px;"><strong>Order Number:</strong> ${orderNumber}</p>
               <p style="margin: 5px 0; font-size: 14px;"><strong>Payment Amount:</strong> ${formattedAmount}</p>
-              <p style="margin: 5px 0; font-size: 14px;"><strong>Payment Method:</strong> ${order.paymentMethod || 'Online Payment'}</p>
               ${errorMessage ? `<p style="margin: 5px 0; font-size: 14px;"><strong>Error:</strong> ${errorMessage}</p>` : ''}
             </div>
             
             <p style="font-size: 16px; line-height: 1.5; color: #333;">Don't worry, your order is still saved. You can try making the payment again by visiting your <a href="${process.env.WEBSITE_URL || 'https://loudfits.com'}/account/orders" style="color: #582A34; text-decoration: underline;">account orders</a> page.</p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.WEBSITE_URL || 'https://loudfits.com'}/checkout/${order.id}" style="background-color: #582A34; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">TRY PAYMENT AGAIN</a>
+              <a href="${process.env.WEBSITE_URL || 'https://loudfits.com'}/checkout" style="background-color: #582A34; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">TRY PAYMENT AGAIN</a>
             </div>
             
             <p style="font-size: 16px; line-height: 1.5; color: #333;">Common reasons for payment failures include:</p>
@@ -458,7 +490,7 @@ class EmailService {
       };
 
       await this.transporter.sendMail(mailOptions);
-      console.log(`Payment failure email sent to ${user.email} for order #${order.orderNumber}`);
+      console.log(`Payment failure email sent to ${email} for order #${orderNumber}`);
       return true;
     } catch (error) {
       console.error('Error sending payment failure email:', error);
