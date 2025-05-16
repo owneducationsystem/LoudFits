@@ -24,6 +24,9 @@ export function StockIndicator({
   let label = '';
   let variant: 'default' | 'secondary' | 'destructive' | 'outline' = 'default';
   let icon = null;
+  
+  // Add urgent warning for very low stock
+  const showUrgentWarning = status === 'LOW_STOCK' && quantity !== undefined && quantity <= 3;
 
   switch (status) {
     case 'IN_STOCK':
@@ -49,13 +52,22 @@ export function StockIndicator({
   }
 
   return (
-    <Badge 
-      variant={variant} 
-      className={cn("flex items-center", className)}
-    >
-      {icon}
-      {showText && label}
-      {showQuantity && quantity !== undefined && ` (${quantity})`}
-    </Badge>
+    <div className="flex flex-col">
+      <Badge 
+        variant={variant} 
+        className={cn("flex items-center", className)}
+      >
+        {icon}
+        {showText && label}
+        {showQuantity && quantity !== undefined && ` (${quantity})`}
+      </Badge>
+      
+      {/* Show urgent warning message for very low stock */}
+      {showUrgentWarning && (
+        <span className="text-red-500 text-xs font-medium mt-1 animate-pulse">
+          Only {quantity} left! Order soon
+        </span>
+      )}
+    </div>
   );
 }

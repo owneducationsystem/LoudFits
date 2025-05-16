@@ -166,6 +166,25 @@ const ProductDetail = () => {
   };
 
   const incrementQuantity = () => {
+    // If stock is low, don't allow increasing beyond available quantity
+    if (stockDetails.status === 'LOW_STOCK' && quantity >= (stockDetails.quantity || 0)) {
+      toast({
+        title: "Maximum quantity reached",
+        description: `Only ${stockDetails.quantity} item(s) available.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // For safety, limit quantity to a reasonable number even for in-stock items
+    if (quantity >= 10 && stockDetails.status === 'IN_STOCK') {
+      toast({
+        title: "Maximum quantity reached",
+        description: "For larger orders, please contact customer service.",
+      });
+      return;
+    }
+    
     setQuantity(prev => prev + 1);
   };
 
@@ -193,6 +212,26 @@ const ProductDetail = () => {
     }
 
     if (!product) return;
+    
+    // Check stock status before adding to cart
+    if (stockDetails.status === 'OUT_OF_STOCK') {
+      toast({
+        title: "Out of Stock",
+        description: "Sorry, this item is currently out of stock.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Check if trying to order more than available for low stock items
+    if (stockDetails.status === 'LOW_STOCK' && quantity > (stockDetails.quantity || 0)) {
+      toast({
+        title: "Limited Stock",
+        description: `Only ${stockDetails.quantity} item(s) available. Please adjust quantity.`,
+        variant: "destructive",
+      });
+      return;
+    }
     
     addToCart({
       productId: product.id,
