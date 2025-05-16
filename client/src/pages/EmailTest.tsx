@@ -21,6 +21,16 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, CheckCircle, AlertCircle, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+// Import our email testing utility functions
+import {
+  sendWelcomeEmail,
+  sendLoginEmail,
+  sendOrderEmail,
+  sendPaymentSuccessEmail,
+  sendPaymentFailureEmail,
+  sendOrderStatusEmail
+} from "@/lib/emailTest";
+
 const EmailTest: React.FC = () => {
   const { toast } = useToast();
   const [userId, setUserId] = useState<string>('1');
@@ -44,7 +54,7 @@ const EmailTest: React.FC = () => {
   // Find currently selected email type
   const currentEmailType = emailEndpoints.find(email => email.id === selectedEmail);
 
-  // Handle sending test email
+  // Handle sending test email using our utility functions
   const sendTestEmail = async () => {
     if (!currentEmailType) return;
     
@@ -52,64 +62,58 @@ const EmailTest: React.FC = () => {
     setLastResult(null);
     
     try {
-      // Prepare request data based on required fields
-      const requestData: Record<string, any> = {};
+      // Convert string IDs to numbers
+      const userIdNum = parseInt(userId);
+      const orderIdNum = parseInt(orderId);
       
-      if (currentEmailType.requires.includes('userId')) {
-        requestData.userId = parseInt(userId);
+      // Call the appropriate function based on email type
+      let result;
+      
+      switch (selectedEmail) {
+        case 'welcome':
+          result = await sendWelcomeEmail(userIdNum);
+          break;
+        case 'login':
+          result = await sendLoginEmail(userIdNum);
+          break;
+        case 'order':
+          result = await sendOrderEmail(userIdNum, orderIdNum);
+          break;
+        case 'payment-success':
+          result = await sendPaymentSuccessEmail(userIdNum, orderIdNum);
+          break;
+        case 'payment-failure':
+          result = await sendPaymentFailureEmail(userIdNum, orderIdNum);
+          break;
+        case 'order-status':
+          result = await sendOrderStatusEmail(userIdNum, orderIdNum, orderStatus);
+          break;
+        default:
+          throw new Error(`Unknown email type: ${selectedEmail}`);
       }
       
-      if (currentEmailType.requires.includes('orderId')) {
-        requestData.orderId = parseInt(orderId);
-      }
-      
-      if (currentEmailType.requires.includes('status')) {
-        requestData.status = orderStatus;
-      }
-      
-      // Send API request
-      const response = await fetch(`/api/ajax/email/${selectedEmail}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(requestData)
-      });
-      
-      // Handle potentially non-JSON responses
-      const text = await response.text();
-      let data;
-      
-      try {
-        data = JSON.parse(text);
-      } catch (parseError) {
-        console.error('Failed to parse response as JSON:', text);
-        throw new Error('Server returned an invalid response format. Please try again.');
-      }
-      
-      if (data.success) {
+      if (result.success) {
         toast({
           title: "Email sent successfully",
-          description: `${currentEmailType.name} was sent to ${data.email}`,
+          description: result.message,
           variant: "default"
         });
         
         setLastResult({
           success: true,
-          message: data.message || 'Email sent successfully',
+          message: result.message,
           type: currentEmailType.name
         });
       } else {
         toast({
           title: "Failed to send email",
-          description: data.error || "Unknown error occurred",
+          description: result.message,
           variant: "destructive"
         });
         
         setLastResult({
           success: false,
-          message: data.error || 'Failed to send email',
+          message: result.message,
           type: currentEmailType.name
         });
       }
