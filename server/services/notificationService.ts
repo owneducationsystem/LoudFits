@@ -640,7 +640,8 @@ class NotificationService {
    * @param email Email
    */
   async sendUserRegistrationNotification(userId: number, username: string, email: string) {
-    return this.sendAdminNotification({
+    // Send to admin dashboard
+    await this.sendAdminNotification({
       type: NotificationType.USER_REGISTERED,
       title: 'New User Registration',
       message: `New user registered: ${username} (${email})`,
@@ -650,22 +651,137 @@ class NotificationService {
       metadata: {
         userId,
         username,
-        email
+        email,
+        timestamp: new Date().toISOString()
       }
     });
+
+    // Also update dashboard metrics (non-blocking)
+    this.updateDashboardMetrics('users').catch(err => {
+      console.error('Failed to update dashboard metrics after user registration:', err);
+    });
+    
+    return true;
+  }
+  
+  /**
+   * Update specific dashboard metrics in real-time
+   * @param metricType Type of metric to update (orders, revenue, users, stock)
+   */
+  async updateDashboardMetrics(metricType: 'orders' | 'revenue' | 'users' | 'stock' | 'all' = 'all') {
+    try {
+      let metricsData: any = {};
+      
+      // Get metrics based on the requested type
+      if (metricType === 'orders' || metricType === 'all') {
+        const totalOrders = await this.storage.countOrders();
+        const pendingOrders = await this.getPendingOrdersCount();
+        metricsData.totalOrders = totalOrders;
+        metricsData.pendingOrders = pendingOrders;
+      }
+      
+      if (metricType === 'revenue' || metricType === 'all') {
+        const todayRevenue = await this.getTodayRevenue();
+        metricsData.todayRevenue = todayRevenue;
+      }
+      
+      if (metricType === 'users' || metricType === 'all') {
+        const totalUsers = await this.storage.countUsers();
+        metricsData.totalUsers = totalUsers;
+      }
+      
+      if (metricType === 'stock' || metricType === 'all') {
+        const lowStockCount = await this.getLowStockCount();
+        metricsData.lowStockProducts = lowStockCount;
+      }
+      
+      // Add timestamp
+      metricsData.updatedAt = new Date().toISOString();
+      
+      // Send to all admin clients
+      this.sendAdminDashboardUpdate(metricsData);
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating dashboard metrics:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Get a count of pending orders
+   */
+  private async getPendingOrdersCount(): Promise<number> {
+    try {
+      // This is simplified - add actual implementation based on your storage layer
+      const allOrders = await this.storage.getAllOrders();
+      return allOrders.filter(order => 
+        order.status === 'pending' || 
+        order.status === 'processing'
+      ).length;
+    } catch (error) {
+      console.error('Error getting pending orders:', error);
+      return 0;
+    }
+  }
+  
+  /**
+   * Get today's revenue
+   */
+  private async getTodayRevenue(): Promise<string> {
+    try {
+      // This is simplified - add actual implementation based on your storage layer
+      const allOrders = await this.storage.getAllOrders();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const todayOrders = allOrders.filter(order => {
+        const orderDate = new Date(order.createdAt);
+        return orderDate >= today && order.status !== 'canceled';
+      });
+      
+      const totalRevenue = todayOrders.reduce((sum, order) => {
+        return sum + parseFloat(order.total.toString());
+      }, 0);
+      
+      return totalRevenue.toFixed(2);
+    } catch (error) {
+      console.error('Error calculating today revenue:', error);
+      return '0.00';
+    }
+  }
+  
+  /**
+   * Get count of products with low stock
+   */
+  private async getLowStockCount(): Promise<number> {
+    try {
+      // This is simplified - add actual implementation based on your storage layer
+      const allProducts = await this.storage.getAllProducts();
+      return allProducts.filter(product => 
+        product.stockQuantity !== null && 
+        product.stockQuantity !== undefined && 
+        product.stockQuantity <= 5
+      ).length;
+    } catch (error) {
+      console.error('Error getting low stock products count:', error);
+      return 0;
+    }
   }
   
   /**
    * Send a real-time dashboard update notification
    * @param data Dashboard update data
    */
-  async sendDashboardUpdate(data: {
+  async sendAdminDashboardUpdate(data: {
     totalOrders?: number;
     pendingOrders?: number;
     todayRevenue?: string;
-    activeUsers?: number;
+    totalUsers?: number;
     lowStockProducts?: number;
+    updatedAt?: string;
   }) {
+    // Broadcast to all admin clients
     this.clients.forEach((client, socket) => {
       if (client.isAdmin && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({
