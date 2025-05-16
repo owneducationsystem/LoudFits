@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { VariantProps } from 'class-variance-authority';
+import { toastVariants } from '@/components/ui/toast';
 
 // Define a simplified user type for our notification context
 interface NotificationUser {
@@ -215,7 +217,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
       
       // Determine toast variant based on notification type and priority
-      let variant: 'default' | 'destructive' | 'success' = 'default';
+      let variant: VariantProps<typeof toastVariants>['variant'] = 'default';
       
       // Handle critical alerts with destructive variant
       if (notification.type === NotificationType.PAYMENT_FAILED || 
