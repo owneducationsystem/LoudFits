@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { notificationService, NotificationType } from "./services/notificationService";
 import { emailService } from "./services/emailService";
+import directEmailRoutes from "./routes/public/emailRoutes";
 import {
   insertProductSchema,
   insertUserSchema,
