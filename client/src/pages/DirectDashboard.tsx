@@ -420,7 +420,7 @@ const DirectDashboard = () => {
         </div>
 
         {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div id="key-metrics" className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -465,7 +465,7 @@ const DirectDashboard = () => {
         </div>
 
         {/* Charts and Analytics Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div id="order-status" className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <CardHeader>
               <CardTitle>Revenue Overview</CardTitle>
@@ -531,7 +531,7 @@ const DirectDashboard = () => {
         </div>
 
         {/* Product Performance Section */}
-        <div className="mt-8">
+        <div id="product-performance" className="mt-8">
           <h2 className="text-2xl font-bold mb-4">Product Performance</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <Card>
@@ -607,7 +607,7 @@ const DirectDashboard = () => {
         </div>
 
         {/* Payment Performance Section */}
-        <div className="mt-4 mb-8">
+        <div id="payment-performance" className="mt-4 mb-8">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
             Payment Performance
@@ -726,7 +726,7 @@ const DirectDashboard = () => {
         </div>
 
         {/* User Signups Section */}
-        <div className="mt-4 mb-8">
+        <div id="user-signups" className="mt-4 mb-8">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
             User Signups
@@ -824,7 +824,7 @@ const DirectDashboard = () => {
         </div>
 
         {/* Notification Settings */}
-        <div className="mt-4 mb-8">
+        <div id="notification-settings" className="mt-4 mb-8">
           <h2 className="text-2xl font-bold mb-4">Notification Settings</h2>
           <Card>
             <CardHeader>
