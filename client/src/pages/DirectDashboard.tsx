@@ -330,6 +330,17 @@ const DirectDashboard = () => {
             size="sm"
             className="flex items-center gap-1"
             onClick={() => {
+              document.getElementById('key-metrics')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
+            <TrendingUp className="h-4 w-4" />
+            Key Metrics
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="flex items-center gap-1"
+            onClick={() => {
               document.getElementById('order-status')?.scrollIntoView({ behavior: 'smooth' });
             }}
           >
@@ -368,6 +379,17 @@ const DirectDashboard = () => {
           >
             <UserPlus className="h-4 w-4" />
             User Signups
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="flex items-center gap-1"
+            onClick={() => {
+              document.getElementById('notification-settings')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
+            <Bell className="h-4 w-4" />
+            Notification Settings
           </Button>
         </div>
 
@@ -532,7 +554,10 @@ const DirectDashboard = () => {
 
         {/* Product Performance Section */}
         <div id="product-performance" className="mt-8">
-          <h2 className="text-2xl font-bold mb-4">Product Performance</h2>
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Product Performance
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <Card>
               <CardHeader>
@@ -825,7 +850,10 @@ const DirectDashboard = () => {
 
         {/* Notification Settings */}
         <div id="notification-settings" className="mt-4 mb-8">
-          <h2 className="text-2xl font-bold mb-4">Notification Settings</h2>
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notification Settings
+          </h2>
           <Card>
             <CardHeader>
               <CardTitle>Notification Preferences</CardTitle>
