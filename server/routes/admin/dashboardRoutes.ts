@@ -164,18 +164,57 @@ dashboardRoutes.get("/user-signups", async (req, res) => {
     startOfWeek.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    // Count signups by time period
-    const signupsToday = users.filter(user => 
-      new Date(user.createdAt) >= today
-    ).length;
+    // Helper function for debugging
+    const debugDate = (date: Date) => {
+      return {
+        iso: date.toISOString(),
+        year: date.getFullYear(),
+        month: date.getMonth(),
+        day: date.getDate()
+      };
+    };
+
+    // Count signups by time period with more verbose date comparison
+    const signupsToday = users.filter(user => {
+      const createdAt = new Date(user.createdAt);
+      // Compare year, month, and day for "today" check - ignoring time
+      return createdAt.getFullYear() === today.getFullYear() && 
+             createdAt.getMonth() === today.getMonth() && 
+             createdAt.getDate() === today.getDate();
+    }).length;
     
-    const signupsThisWeek = users.filter(user => 
-      new Date(user.createdAt) >= startOfWeek
-    ).length;
+    // For this week, ensure we're comparing dates properly
+    const signupsThisWeek = users.filter(user => {
+      const createdAt = new Date(user.createdAt);
+      return createdAt >= startOfWeek;
+    }).length;
     
-    const signupsThisMonth = users.filter(user => 
-      new Date(user.createdAt) >= startOfMonth
-    ).length;
+    // For this month, ensure we're comparing dates properly
+    const signupsThisMonth = users.filter(user => {
+      const createdAt = new Date(user.createdAt);
+      return createdAt.getFullYear() === startOfMonth.getFullYear() && 
+             createdAt.getMonth() === startOfMonth.getMonth();
+    }).length;
+    
+    // Add some logging to help debug
+    console.log("Date reference points:", {
+      now: debugDate(now),
+      today: debugDate(today),
+      startOfWeek: debugDate(startOfWeek),
+      startOfMonth: debugDate(startOfMonth)
+    });
+    
+    // Log the actual user signup dates
+    console.log("User signup dates:", users.map(user => {
+      const date = new Date(user.createdAt);
+      return {
+        id: user.id,
+        date: debugDate(date),
+        isToday: date.getFullYear() === today.getFullYear() && 
+                 date.getMonth() === today.getMonth() && 
+                 date.getDate() === today.getDate()
+      };
+    }));
     
     // Generate data for signup graph
     // Group by day for past 30 days
