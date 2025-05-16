@@ -579,7 +579,7 @@ class NotificationService {
   }
   
   /**
-   * Send a payment notification
+   * Send a legacy payment notification 
    * @param orderId Order ID
    * @param orderNumber Order number
    * @param userId User ID
@@ -587,56 +587,19 @@ class NotificationService {
    * @param amount Payment amount
    * @param paymentMethod Payment method
    */
-  async sendPaymentNotification(orderId: number, orderNumber: string, userId: number, status: string, amount: string, paymentMethod: string) {
+  async sendPaymentStatusNotification(orderId: number, orderNumber: string, userId: number, status: string, amount: string, paymentMethod: string) {
     const isSuccess = status.toLowerCase() === 'success' || status.toLowerCase() === 'paid';
-    const type = isSuccess ? NotificationType.PAYMENT_RECEIVED : NotificationType.PAYMENT_FAILED;
+    const numericAmount = parseFloat(amount.replace(/[^\d.-]/g, ''));
     
-    // Send to customer
-    const userTitle = isSuccess ? 'Payment Successful' : 'Payment Failed';
-    const userMessage = isSuccess
-      ? `Your payment of ${amount} for order #${orderNumber} has been successfully processed.`
-      : `Your payment for order #${orderNumber} has failed. Please try again or contact our support team.`;
-    
-    await this.sendUserNotification({
-      type,
-      title: userTitle,
-      message: userMessage,
+    // Use the numeric payment notification method
+    return this.sendPaymentNotification(
+      0, // No payment ID available
+      orderId,
+      orderNumber,
       userId,
-      entityId: orderId,
-      entityType: 'order',
-      metadata: {
-        orderId,
-        orderNumber,
-        amount,
-        paymentMethod,
-        status
-      }
-    });
-    
-    // Send to admin
-    const adminTitle = isSuccess ? 'Payment Received' : 'Payment Failed';
-    const adminMessage = isSuccess
-      ? `Payment of ${amount} received for order #${orderNumber} via ${paymentMethod}.`
-      : `Payment failed for order #${orderNumber}. Amount: ${amount}, Method: ${paymentMethod}.`;
-    
-    return this.sendAdminNotification({
-      type,
-      title: adminTitle,
-      message: adminMessage,
-      entityId: orderId,
-      entityType: 'order',
-      priority: isSuccess ? 'medium' : 'high',
-      actionRequired: !isSuccess,
-      actionType: !isSuccess ? 'check_payment' : undefined,
-      metadata: {
-        orderId,
-        orderNumber,
-        userId,
-        amount,
-        paymentMethod,
-        status
-      }
-    });
+      numericAmount,
+      isSuccess
+    );
   }
   
   /**

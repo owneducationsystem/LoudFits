@@ -76,45 +76,19 @@ export function setupNotificationRoutes(app: Express) {
       // Generate a random order number
       const orderNumber = `TEST-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
       
-      if (success) {
-        // Payment success notification
-        await notificationService.sendUserNotification({
-          userId,
-          type: NotificationType.PAYMENT_RECEIVED,
-          title: "Payment Successful",
-          message: `Your payment for order #${orderNumber} has been successfully processed.`,
-          entityId: 123, // Mock order ID
-          entityType: 'order'
-        });
-        
-        await notificationService.sendAdminNotification({
-          type: NotificationType.PAYMENT_RECEIVED,
-          title: "Payment Received",
-          message: `Payment received for order #${orderNumber}.`,
-          entityId: 123, // Mock order ID
-          entityType: 'order',
-          isAdmin: true
-        });
-      } else {
-        // Payment failure notification
-        await notificationService.sendUserNotification({
-          userId,
-          type: NotificationType.PAYMENT_FAILED,
-          title: "Payment Failed",
-          message: `Your payment for order #${orderNumber} has failed. Please try again or contact our support team.`,
-          entityId: 123, // Mock order ID
-          entityType: 'order'
-        });
-        
-        await notificationService.sendAdminNotification({
-          type: NotificationType.PAYMENT_FAILED,
-          title: "Payment Failed",
-          message: `Payment failed for order #${orderNumber}.`,
-          entityId: 123, // Mock order ID
-          entityType: 'order',
-          isAdmin: true
-        });
-      }
+      // Test payment and order IDs
+      const paymentId = Math.floor(Math.random() * 1000);
+      const orderId = Math.floor(Math.random() * 1000);
+      
+      // Use our comprehensive payment notification system
+      await notificationService.sendPaymentNotification(
+        paymentId,
+        orderId,
+        orderNumber,
+        userId,
+        1299.00, // Test amount
+        success
+      );
       
       res.json({ success: true, orderNumber, paymentStatus: success ? 'success' : 'failed' });
     } catch (error: any) {
