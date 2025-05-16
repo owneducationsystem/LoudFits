@@ -404,7 +404,7 @@ export function setupPaymentRoutes(app: Express) {
         tax: amount.tax,
         shippingCost: amount.shipping, // Use correct field name
         discount: amount.discount,
-        orderDate: new Date()
+        // Don't include orderDate as it's automatically set by the database
       });
       
       // Create order items
@@ -559,13 +559,19 @@ export function setupPaymentRoutes(app: Express) {
     try {
       let paymentStatus;
       
-      // Debug/Test mode: If transaction ID starts with TEST, use mocked payment status
-      if (merchantTransactionId && merchantTransactionId.toString().startsWith('TEST')) {
+      // Debug/Test mode: If transaction ID starts with TEST or LF-, use mocked payment status
+      if (merchantTransactionId && 
+          (merchantTransactionId.toString().startsWith('TEST') || merchantTransactionId.toString().startsWith('LF-'))) {
         console.log('[DEV] Using mocked payment status for test transaction');
+        
+        // Determine success based on the code parameter
+        const isSuccess = code === 'PAYMENT_SUCCESS';
+        console.log(`Test payment ${isSuccess ? 'SUCCESS' : 'FAILED'} for ${merchantTransactionId}`);
+        
         paymentStatus = {
-          success: code === 'PAYMENT_SUCCESS',
+          success: isSuccess,
           code: code || 'PAYMENT_ERROR',
-          message: code === 'PAYMENT_SUCCESS' ? 'Payment successful' : 'Payment failed',
+          message: isSuccess ? 'Payment successful' : 'Payment failed',
           data: {
             merchantId: merchantTransactionId,
             transactionId: transactionId || `MOCKTRX${Date.now()}`,
@@ -619,12 +625,15 @@ export function setupPaymentRoutes(app: Express) {
       if (paymentStatus.success) {
         const order = updateResult.order || await storage.getOrderById(payment.orderId);
         if (order) {
-          return res.redirect(`/order-confirmation/${order.id}`);
+          console.log(`Redirecting to order confirmation for order ${order.id}`);
+          return res.redirect(`/order-confirmation/${order.orderNumber}`);
         } else {
+          console.log('Order not found, redirecting to general order confirmation');
           return res.redirect('/order-confirmation');
         }
       } else {
-        return res.redirect(`/payment-failed/${payment.orderId}`);
+        console.log(`Payment failed for order ${payment.orderId}, redirecting to payment failed page`);
+        return res.redirect(`/payment-failed?orderId=${payment.orderId}`);
       }
     } catch (error: any) {
       console.error('Payment callback error:', error);
