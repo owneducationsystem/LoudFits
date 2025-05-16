@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { setupPaymentRoutes } from "./routes/payment";
 import { setupAdminDashboardRoutes } from "./routes/admin/dashboardRoutes";
+import { setupPaymentPerformanceRoutes } from "./routes/admin/paymentPerformanceRoutes";
 import { getSystemHealth } from "./routes/admin/healthRoutes";
 import { setupPublicStatsRoutes } from "./routes/public/statsRoutes";
 import { storage } from "./storage";
@@ -1100,6 +1101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up admin dashboard routes
   setupAdminDashboardRoutes(app);
   setupPublicStatsRoutes(app);
+  setupPaymentPerformanceRoutes(app);
   
   // Server is already created at the top for WebSocket support
   return httpServer;
