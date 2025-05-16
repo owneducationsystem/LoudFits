@@ -83,7 +83,20 @@ export const useNotifications = () => {
 };
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  // Initialize notifications from localStorage if available
+  const [notifications, setNotifications] = useState<Notification[]>(() => {
+    const storedNotifications = localStorage.getItem('loudfits_notifications');
+    if (storedNotifications) {
+      try {
+        return JSON.parse(storedNotifications);
+      } catch (e) {
+        console.error('Error parsing stored notifications:', e);
+        return [];
+      }
+    }
+    return [];
+  });
+  
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
   const { toast } = useToast();
@@ -102,6 +115,17 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   
   // Calculate the number of unread notifications
   const unreadCount = notifications.filter((n: Notification) => !n.read).length;
+  
+  // Save notifications to localStorage whenever they change
+  useEffect(() => {
+    try {
+      // Limit to most recent 100 notifications to prevent storage issues
+      const notificationsToStore = notifications.slice(-100);
+      localStorage.setItem('loudfits_notifications', JSON.stringify(notificationsToStore));
+    } catch (e) {
+      console.error('Error saving notifications to localStorage:', e);
+    }
+  }, [notifications]);
   
   // Connect to WebSocket when component mounts
   useEffect(() => {
