@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { setupPaymentRoutes } from "./routes/payment";
+import { setupAdminDashboardRoutes } from "./routes/admin/dashboardRoutes"; 
 import { storage } from "./storage";
 import { z } from "zod";
 import { notificationService, NotificationType } from "./services/notificationService";
@@ -1083,6 +1084,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up notification routes
   const { setupNotificationRoutes } = await import('./routes/notificationRoutes');
   setupNotificationRoutes(app);
+  
+  // Set up admin dashboard routes
+  setupAdminDashboardRoutes(app);
   
   // Server is already created at the top for WebSocket support
   return httpServer;
