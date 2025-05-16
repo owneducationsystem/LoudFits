@@ -59,8 +59,15 @@ const ProductCard = ({ product }: ProductCardProps) => {
         </div>
         <div className="mt-3 flex flex-col">
           <h3 className="font-medium text-sm sm:text-base">{product.name}</h3>
-          <div className="flex justify-between items-center mt-1">
+          <div className="flex items-center gap-2 mt-1">
             <p className="font-bold">₹{product.price.toString()}</p>
+            <StockIndicator 
+              status={stockDetails.status} 
+              className="scale-75 origin-left"
+            />
+          </div>
+          <div className="flex justify-between items-center mt-1">
+            <div></div>
             <div className="flex gap-2">
               <button 
                 className="text-[#445672] hover:text-[#582A34] transition-colors"
