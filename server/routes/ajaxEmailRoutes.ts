@@ -83,11 +83,36 @@ export function setupAjaxEmailRoutes(app: Express) {
       const orderItems = await storage.getOrderItems(order.id);
       const products = [];
       
-      for (const item of orderItems) {
-        const product = await storage.getProduct(item.productId);
-        if (product) {
-          products.push(product);
+      try {
+        for (const item of orderItems) {
+          try {
+            // Try to get product information safely
+            const product = await storage.getProduct(item.productId);
+            if (product) {
+              // Add product with order item details
+              products.push({
+                ...product,
+                quantity: item.quantity,
+                size: item.size,
+                color: item.color
+              });
+            }
+          } catch (productError) {
+            console.error(`Error fetching product ${item.productId}:`, productError);
+            // Create a minimal product object with essential information
+            products.push({
+              id: item.productId,
+              name: `Product #${item.productId}`,
+              price: item.price,
+              quantity: item.quantity,
+              size: item.size,
+              color: item.color,
+              images: []
+            });
+          }
         }
+      } catch (itemError) {
+        console.error("Error processing order items:", itemError);
       }
       
       const result = await emailService.sendOrderConfirmationEmail(order, user, products);
