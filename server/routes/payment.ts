@@ -323,7 +323,7 @@ export function setupPaymentRoutes(app: Express) {
               // Redirect after a short delay to simulate processing
               setTimeout(() => {
                 const code = success ? 'PAYMENT_SUCCESS' : 'PAYMENT_ERROR';
-                window.location.href = '/payment/callback?merchantTransactionId=${merchantTransactionId}&code=' + code;
+                window.location.href = '/api/payment/callback?merchantTransactionId=${merchantTransactionId}&code=' + code;
               }, 2000);
             }
             
