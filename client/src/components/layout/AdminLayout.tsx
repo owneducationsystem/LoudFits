@@ -11,6 +11,7 @@ import {
   X,
   ChevronDown,
   ChevronRight,
+  Layers
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -96,6 +97,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
       title: "Orders",
       icon: <ClipboardList className="h-5 w-5" />,
       path: "/admin/orders",
+    },
+    {
+      title: "Inventory",
+      icon: <Layers className="h-5 w-5" />,
+      path: "/admin/inventory",
     },
     {
       title: "Settings",

@@ -76,7 +76,7 @@ import { Progress } from "@/components/ui/progress";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import AdminNav from "@/components/admin/AdminNav";
+import AdminLayout from "@/components/layout/AdminLayout";
 
 interface Product {
   id: number;
@@ -620,22 +620,18 @@ export default function AdminInventory() {
     fetchProducts();
   }, []);
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <AdminNav />
-      
-      <main className="container mx-auto py-8 px-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
-          
-          <div className="flex gap-2">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Inventory
-                </Button>
-              </DialogTrigger>
+  const content = (
+    <div className="bg-gray-50">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
+        <div className="flex gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Inventory
+              </Button>
+            </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Add New Inventory Item</DialogTitle>
