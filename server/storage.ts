@@ -84,6 +84,9 @@ export interface IStorage {
   getInventoryItem(productId: number, size: string): Promise<Inventory | undefined>;
   createInventoryItem(item: InsertInventory): Promise<Inventory>;
   updateInventoryQuantity(id: number, quantity: number, userId?: number): Promise<Inventory>;
+  updateInventoryItem(productId: number, size: string, data: Partial<InsertInventory>): Promise<Inventory>;
+  deleteInventoryItem(productId: number, size: string): Promise<boolean>;
+  getAllInventory(): Promise<Inventory[]>;
   reserveInventory(productId: number, size: string, quantity: number, reason: string, referenceId?: string): Promise<Inventory | undefined>;
   releaseInventory(productId: number, size: string, quantity: number, reason: string, referenceId?: string): Promise<Inventory | undefined>;
   getLowStockInventory(threshold?: number): Promise<Inventory[]>;
@@ -789,6 +792,111 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(asc(inventory.productId))
       .orderBy(asc(inventory.size));
+  }
+  
+  async getAllInventory(): Promise<Inventory[]> {
+    return await db
+      .select()
+      .from(inventory)
+      .orderBy(asc(inventory.productId))
+      .orderBy(asc(inventory.size));
+  }
+  
+  async updateInventoryItem(
+    productId: number, 
+    size: string, 
+    data: Partial<InsertInventory>
+  ): Promise<Inventory> {
+    // Get current inventory
+    const item = await this.getInventoryItem(productId, size);
+    
+    if (!item) {
+      throw new Error("Inventory item not found");
+    }
+    
+    // Update fields, keeping track if quantity changed
+    const quantityChanged = 'quantity' in data && data.quantity !== item.quantity;
+    const lastRestocked = quantityChanged && data.quantity > item.quantity 
+      ? new Date() 
+      : item.lastRestocked;
+    
+    // Calculate inStock status based on available inventory
+    const newQuantity = data.quantity ?? item.quantity;
+    const newReservedQuantity = data.reservedQuantity ?? item.reservedQuantity;
+    const availableStock = newQuantity - (newReservedQuantity || 0);
+    const inStock = availableStock > 0;
+    
+    // Update the inventory record
+    const [updatedInventory] = await db
+      .update(inventory)
+      .set({
+        ...data,
+        inStock,
+        lastRestocked: lastRestocked || item.lastRestocked,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(inventory.productId, productId),
+          eq(inventory.size, size)
+        )
+      )
+      .returning();
+    
+    // If quantity changed, create a log entry
+    if (quantityChanged) {
+      await this.createInventoryLog({
+        inventoryId: item.id,
+        userId: null,
+        action: data.quantity > item.quantity ? "add" : "subtract",
+        quantity: Math.abs((data.quantity || 0) - item.quantity),
+        previousQuantity: item.quantity,
+        newQuantity: data.quantity || 0,
+        reason: "adjustment",
+        referenceId: null
+      });
+    }
+    
+    // Update the product's overall stock status
+    await this.updateProductStockStatus(productId);
+    
+    return updatedInventory;
+  }
+  
+  async deleteInventoryItem(productId: number, size: string): Promise<boolean> {
+    // First check if item exists
+    const item = await this.getInventoryItem(productId, size);
+    
+    if (!item) {
+      return false;
+    }
+    
+    // Create a final log entry before deletion
+    await this.createInventoryLog({
+      inventoryId: item.id,
+      userId: null,
+      action: "subtract",
+      quantity: item.quantity,
+      previousQuantity: item.quantity,
+      newQuantity: 0,
+      reason: "deleted",
+      referenceId: null
+    });
+    
+    // Delete the inventory item
+    await db
+      .delete(inventory)
+      .where(
+        and(
+          eq(inventory.productId, productId),
+          eq(inventory.size, size)
+        )
+      );
+    
+    // Update the product's overall stock status
+    await this.updateProductStockStatus(productId);
+    
+    return true;
   }
 
   async createInventoryLog(log: InsertInventoryLog): Promise<InventoryLog> {
