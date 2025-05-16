@@ -791,12 +791,37 @@ export class DatabaseStorage implements IStorage {
 
 export const storage = new DatabaseStorage();
 
-// Initialize database
+// Initialize database with retry mechanism
 (async () => {
-  try {
-    await (storage as DatabaseStorage).seedInitialData();
-    console.log("Database initialized with seed data if needed");
-  } catch (error) {
-    console.error("Error initializing database:", error);
-  }
+  let retries = 0;
+  const maxRetries = 5;
+  const retryDelay = 3000; // 3 seconds
+  
+  const initializeDatabase = async () => {
+    try {
+      await (storage as DatabaseStorage).seedInitialData();
+      console.log("Database initialized with seed data if needed");
+      return true;
+    } catch (error) {
+      console.error(`Error initializing database (attempt ${retries + 1}/${maxRetries}):`, error);
+      return false;
+    }
+  };
+  
+  const attemptConnection = async () => {
+    if (await initializeDatabase()) {
+      return;
+    }
+    
+    retries++;
+    if (retries < maxRetries) {
+      console.log(`Retrying database connection in ${retryDelay / 1000} seconds...`);
+      setTimeout(attemptConnection, retryDelay);
+    } else {
+      console.error("Max retries reached. Could not establish database connection.");
+      console.log("The application will continue to function, but data will not be persisted until database connection is restored.");
+    }
+  };
+  
+  await attemptConnection();
 })();
