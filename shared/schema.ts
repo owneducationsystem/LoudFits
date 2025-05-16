@@ -39,9 +39,6 @@ export const products = pgTable("products", {
   trending: boolean("trending").default(false),
   collection: text("collection"),
   inStock: boolean("in_stock").default(true),
-  stockQuantity: integer("stock_quantity").default(0),
-  lowStockThreshold: integer("low_stock_threshold").default(5),
-  stockStatus: text("stock_status").default("IN_STOCK"),
 });
 
 export const carts = pgTable("carts", {

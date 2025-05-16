@@ -16,6 +16,8 @@ import {
   Minus,
   Camera
 } from "lucide-react";
+import { StockIndicator } from "@/components/ui/StockIndicator";
+import { useStockStatus } from "@/hooks/useStockStatus";
 import { 
   Tabs, 
   TabsContent, 
@@ -54,6 +56,9 @@ const ProductDetail = () => {
   const [isZoomed, setIsZoomed] = useState(false);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   const imageRef = useRef<HTMLDivElement>(null);
+  
+  // Get real-time stock status with enhanced details
+  const stockDetails = useStockStatus(product);
 
   const { data: product, isLoading, error } = useQuery<Product>({
     queryKey: [`/api/products/${id}`],
@@ -403,7 +408,13 @@ const ProductDetail = () => {
           <div className="flex flex-col space-y-6">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold mb-2">{product.name}</h1>
-              <p className="text-xl font-bold text-[#582A34]">₹{product.price.toString()}</p>
+              <div className="flex items-center gap-3 mb-2">
+                <p className="text-xl font-bold text-[#582A34]">₹{product.price.toString()}</p>
+                {/* Stock Availability Indicator */}
+                <StockIndicator 
+                  status={product.inStock ? 'IN_STOCK' : 'OUT_OF_STOCK'}
+                />
+              </div>
               <div className="flex items-center gap-4 mt-4">
                 <button
                   onClick={handleShare}
