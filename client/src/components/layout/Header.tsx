@@ -4,6 +4,7 @@ import { Search, User, Heart, ShoppingBag, Menu, ChevronDown, LogOut } from "luc
 import { useCartContext } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useWishlistContext } from "@/context/WishlistContext";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import MobileMenu from "./MobileMenu";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -247,6 +248,10 @@ const Header = () => {
               Search
             </span>
           </Link>
+          {/* Notification Bell */}
+          <div className="relative group">
+            <NotificationBell />
+          </div>
           <div className="relative">
             <button 
               onClick={toggleUserMenu}

@@ -2,6 +2,14 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { useAuth } from './AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
+// Define a simplified user type for our notification context
+interface NotificationUser {
+  uid?: string;
+  id?: number;
+  email?: string;
+  role?: string;
+}
+
 // Types for notifications
 export enum NotificationType {
   ORDER_PLACED = 'order_placed',
@@ -160,7 +168,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const handleNewNotification = (notification: Notification) => {
     // Check if this notification is already in the list
     setNotifications(prev => {
-      if (prev.some(n => n.id === notification.id)) {
+      if (prev.some((n: Notification) => n.id === notification.id)) {
         return prev;
       }
       

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { WishlistProvider } from "@/context/WishlistContext";
+import { NotificationProvider } from "@/context/NotificationContext";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import Home from "@/pages/Home";
@@ -93,10 +94,11 @@ function App() {
     <AuthProvider>
       <CartProvider>
         <WishlistProvider>
-          <TooltipProvider>
-            <div className="flex flex-col min-h-screen">
-              <Header />
-              <main className="flex-grow">
+          <NotificationProvider>
+            <TooltipProvider>
+              <div className="flex flex-col min-h-screen">
+                <Header />
+                <main className="flex-grow">
               <Switch>
                 <Route path="/" component={Home} />
                 <Route path="/shop" component={Shop} />
@@ -159,6 +161,7 @@ function App() {
             </div>
             <Toaster />
           </TooltipProvider>
+          </NotificationProvider>
         </WishlistProvider>
       </CartProvider>
     </AuthProvider>
