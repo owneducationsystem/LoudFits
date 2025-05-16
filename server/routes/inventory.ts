@@ -1,239 +1,424 @@
-import { Router } from "express";
-import { storage } from "../storage";
-import { insertInventorySchema } from "@shared/schema";
-import { notificationService } from "../services/notificationService";
+import { Router } from 'express';
+import { storage } from '../storage';
+import { z } from 'zod';
+import { sendLowStockNotification } from '../services/inventory-notification';
 
 export const inventoryRouter = Router();
 
-// Get inventory for a product
-inventoryRouter.get("/products/:productId/inventory", async (req, res) => {
-  try {
-    const productId = parseInt(req.params.productId);
-    if (isNaN(productId)) {
-      return res.status(400).json({ error: "Invalid product ID" });
-    }
+// Schema validation for inventory-related endpoints
+const inventoryUpdateSchema = z.object({
+  productId: z.number(),
+  size: z.string(),
+  quantity: z.number().int().nonnegative(),
+  reservedQuantity: z.number().int().nonnegative().optional(),
+  lowStockThreshold: z.number().int().nonnegative().optional()
+});
 
-    const inventory = await storage.getInventoryByProductId(productId);
-    res.json(inventory);
+const inventoryQuerySchema = z.object({
+  productId: z.string().transform(val => parseInt(val, 10)).optional(),
+  size: z.string().optional(),
+  lowStock: z.enum(['true', 'false']).optional().transform(val => val === 'true')
+});
+
+const bulkUpdateSchema = z.array(
+  z.object({
+    productId: z.number(), 
+    size: z.string(),
+    quantity: z.number().int().nonnegative(),
+    reservedQuantity: z.number().int().nonnegative().optional()
+  })
+);
+
+// Get inventory for a specific product
+inventoryRouter.get('/inventory/product/:productId', async (req, res) => {
+  try {
+    const productId = parseInt(req.params.productId, 10);
+    
+    if (isNaN(productId)) {
+      return res.status(400).json({ message: 'Invalid product ID' });
+    }
+    
+    const inventoryItems = await storage.getInventoryByProductId(productId);
+    
+    if (!inventoryItems || inventoryItems.length === 0) {
+      return res.status(404).json({ message: 'Inventory not found for this product' });
+    }
+    
+    return res.json(inventoryItems);
   } catch (error) {
-    console.error("Error fetching product inventory:", error);
-    res.status(500).json({ error: "Failed to fetch inventory" });
+    console.error('Error fetching product inventory:', error);
+    return res.status(500).json({ message: 'Failed to fetch inventory data' });
   }
 });
 
-// Get specific inventory item
-inventoryRouter.get("/products/:productId/inventory/:size", async (req, res) => {
+// Get all inventory (with optional filters)
+inventoryRouter.get('/inventory', async (req, res) => {
   try {
-    const productId = parseInt(req.params.productId);
-    const size = req.params.size;
+    const queryResult = inventoryQuerySchema.safeParse(req.query);
     
-    if (isNaN(productId)) {
-      return res.status(400).json({ error: "Invalid product ID" });
-    }
-
-    const inventoryItem = await storage.getInventoryItem(productId, size);
-    
-    if (!inventoryItem) {
-      return res.status(404).json({ error: "Inventory item not found" });
-    }
-    
-    res.json(inventoryItem);
-  } catch (error) {
-    console.error("Error fetching inventory item:", error);
-    res.status(500).json({ error: "Failed to fetch inventory item" });
-  }
-});
-
-// Create inventory item
-inventoryRouter.post("/products/:productId/inventory", async (req, res) => {
-  try {
-    const productId = parseInt(req.params.productId);
-    if (isNaN(productId)) {
-      return res.status(400).json({ error: "Invalid product ID" });
-    }
-    
-    // Validate request body
-    const parseResult = insertInventorySchema.safeParse({ 
-      ...req.body, 
-      productId 
-    });
-    
-    if (!parseResult.success) {
+    if (!queryResult.success) {
       return res.status(400).json({ 
-        error: "Invalid inventory data", 
-        details: parseResult.error.format() 
+        message: 'Invalid query parameters', 
+        errors: queryResult.error.errors 
       });
     }
     
-    // Check if inventory item for this size already exists
-    const existingItem = await storage.getInventoryItem(productId, parseResult.data.size);
+    const { productId, size, lowStock } = queryResult.data;
+    
+    let inventoryItems;
+    
+    if (productId && size) {
+      // Get specific item
+      const item = await storage.getInventoryItem(productId, size);
+      inventoryItems = item ? [item] : [];
+    } else if (productId) {
+      // Get all sizes for a product
+      inventoryItems = await storage.getInventoryByProductId(productId);
+    } else if (lowStock) {
+      // Get all low stock items
+      inventoryItems = await storage.getLowStockInventory();
+    } else {
+      // Get all inventory
+      inventoryItems = await storage.getAllInventory();
+    }
+    
+    return res.json(inventoryItems);
+  } catch (error) {
+    console.error('Error fetching inventory:', error);
+    return res.status(500).json({ message: 'Failed to fetch inventory data' });
+  }
+});
+
+// Create or update an inventory item
+inventoryRouter.post('/inventory', async (req, res) => {
+  try {
+    const result = inventoryUpdateSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      return res.status(400).json({ 
+        message: 'Invalid inventory data', 
+        errors: result.error.errors 
+      });
+    }
+    
+    const { productId, size, quantity, reservedQuantity, lowStockThreshold } = result.data;
+    
+    // Check if inventory item exists
+    const existingItem = await storage.getInventoryItem(productId, size);
+    
+    let inventory;
     
     if (existingItem) {
-      return res.status(409).json({ 
-        error: "Inventory item already exists for this size",
-        inventoryId: existingItem.id
+      // Update existing item
+      inventory = await storage.updateInventoryItem(
+        productId,
+        size,
+        {
+          quantity, 
+          reservedQuantity: reservedQuantity ?? existingItem.reservedQuantity,
+          lowStockThreshold: lowStockThreshold ?? existingItem.lowStockThreshold
+        }
+      );
+      
+      // Calculate available stock
+      const availableStock = inventory.quantity - (inventory.reservedQuantity || 0);
+      const threshold = inventory.lowStockThreshold || 5;
+      
+      // Check for low stock and send notification if necessary
+      if (availableStock <= threshold) {
+        await sendLowStockNotification(productId, size, availableStock, threshold);
+      }
+    } else {
+      // Create new inventory item
+      inventory = await storage.createInventoryItem({
+        productId,
+        size,
+        quantity,
+        reservedQuantity: reservedQuantity || 0,
+        lowStockThreshold: lowStockThreshold || 5
       });
     }
     
-    // Create new inventory item
-    const newItem = await storage.createInventoryItem(parseResult.data);
-    
-    // Send notification if low stock
-    const availableStock = newItem.quantity - (newItem.reservedQuantity || 0);
-    const lowStockThreshold = newItem.lowStockThreshold || 5;
-    
-    if (availableStock <= lowStockThreshold) {
-      await notificationService.sendLowStockNotification(
-        productId,
-        newItem.size,
-        availableStock,
-        lowStockThreshold
-      );
-    }
-    
-    res.status(201).json(newItem);
+    return res.status(existingItem ? 200 : 201).json(inventory);
   } catch (error) {
-    console.error("Error creating inventory item:", error);
-    res.status(500).json({ error: "Failed to create inventory item" });
+    console.error('Error updating inventory:', error);
+    return res.status(500).json({ message: 'Failed to update inventory' });
   }
 });
 
-// Update inventory quantity
-inventoryRouter.patch("/inventory/:id/quantity", async (req, res) => {
+// Bulk update inventory
+inventoryRouter.post('/inventory/bulk', async (req, res) => {
   try {
-    const inventoryId = parseInt(req.params.id);
-    const { quantity, userId } = req.body;
+    const result = bulkUpdateSchema.safeParse(req.body);
     
-    if (isNaN(inventoryId) || typeof quantity !== 'number') {
-      return res.status(400).json({ error: "Invalid inventory ID or quantity" });
+    if (!result.success) {
+      return res.status(400).json({ 
+        message: 'Invalid inventory data', 
+        errors: result.error.errors 
+      });
     }
     
-    // Update inventory quantity
-    const updatedItem = await storage.updateInventoryQuantity(
-      inventoryId, 
-      quantity,
-      userId ? parseInt(userId) : undefined
+    const updates = result.data;
+    const updatedItems = [];
+    const notifications = [];
+    
+    for (const update of updates) {
+      const { productId, size, quantity, reservedQuantity } = update;
+      
+      // Check if item exists
+      const existingItem = await storage.getInventoryItem(productId, size);
+      
+      let inventory;
+      
+      if (existingItem) {
+        // Update existing item
+        inventory = await storage.updateInventoryItem(
+          productId,
+          size,
+          {
+            quantity, 
+            reservedQuantity: reservedQuantity ?? existingItem.reservedQuantity
+          }
+        );
+      } else {
+        // Create new inventory item
+        inventory = await storage.createInventoryItem({
+          productId,
+          size,
+          quantity,
+          reservedQuantity: reservedQuantity || 0,
+          lowStockThreshold: 5 // Default threshold
+        });
+      }
+      
+      updatedItems.push(inventory);
+      
+      // Check for low stock
+      const availableStock = inventory.quantity - (inventory.reservedQuantity || 0);
+      const threshold = inventory.lowStockThreshold || 5;
+      
+      if (availableStock <= threshold) {
+        // Queue notification to avoid too many concurrent notifications
+        notifications.push({ productId, size, availableStock, threshold });
+      }
+    }
+    
+    // Send notifications after processing all updates
+    for (const notification of notifications) {
+      const { productId, size, availableStock, threshold } = notification;
+      await sendLowStockNotification(productId, size, availableStock, threshold);
+    }
+    
+    return res.status(200).json(updatedItems);
+  } catch (error) {
+    console.error('Error bulk updating inventory:', error);
+    return res.status(500).json({ message: 'Failed to update inventory' });
+  }
+});
+
+// Reserve inventory for a product size
+inventoryRouter.post('/inventory/reserve', async (req, res) => {
+  try {
+    const schema = z.object({
+      productId: z.number(),
+      size: z.string(),
+      quantity: z.number().int().positive()
+    });
+    
+    const result = schema.safeParse(req.body);
+    
+    if (!result.success) {
+      return res.status(400).json({ 
+        message: 'Invalid data', 
+        errors: result.error.errors 
+      });
+    }
+    
+    const { productId, size, quantity } = result.data;
+    
+    // Check if there's enough available inventory
+    const inventory = await storage.getInventoryItem(productId, size);
+    
+    if (!inventory) {
+      return res.status(404).json({ message: 'Inventory not found for this product and size' });
+    }
+    
+    const availableQuantity = inventory.quantity - (inventory.reservedQuantity || 0);
+    
+    if (availableQuantity < quantity) {
+      return res.status(400).json({ 
+        message: 'Not enough inventory available to reserve',
+        available: availableQuantity,
+        requested: quantity
+      });
+    }
+    
+    // Reserve the inventory
+    const updatedInventory = await storage.updateInventoryItem(
+      productId,
+      size,
+      {
+        reservedQuantity: (inventory.reservedQuantity || 0) + quantity
+      }
     );
     
-    // Check for low stock after update
-    const availableStock = updatedItem.quantity - (updatedItem.reservedQuantity || 0);
-    const lowStockThreshold = updatedItem.lowStockThreshold || 5;
-    
-    if (availableStock <= lowStockThreshold) {
-      await notificationService.sendLowStockNotification(
-        updatedItem.productId,
-        updatedItem.size,
-        availableStock,
-        lowStockThreshold
-      );
-    }
-    
-    res.json(updatedItem);
+    return res.json({
+      success: true,
+      inventory: updatedInventory,
+      reserved: quantity,
+      remaining: updatedInventory.quantity - updatedInventory.reservedQuantity
+    });
   } catch (error) {
-    console.error("Error updating inventory quantity:", error);
-    res.status(500).json({ error: "Failed to update inventory quantity" });
+    console.error('Error reserving inventory:', error);
+    return res.status(500).json({ message: 'Failed to reserve inventory' });
   }
 });
 
-// Reserve inventory
-inventoryRouter.post("/products/:productId/inventory/:size/reserve", async (req, res) => {
+// Release previously reserved inventory
+inventoryRouter.post('/inventory/release', async (req, res) => {
   try {
-    const productId = parseInt(req.params.productId);
+    const schema = z.object({
+      productId: z.number(),
+      size: z.string(),
+      quantity: z.number().int().positive()
+    });
+    
+    const result = schema.safeParse(req.body);
+    
+    if (!result.success) {
+      return res.status(400).json({ 
+        message: 'Invalid data', 
+        errors: result.error.errors 
+      });
+    }
+    
+    const { productId, size, quantity } = result.data;
+    
+    // Check reserved inventory
+    const inventory = await storage.getInventoryItem(productId, size);
+    
+    if (!inventory) {
+      return res.status(404).json({ message: 'Inventory not found for this product and size' });
+    }
+    
+    if (!inventory.reservedQuantity || inventory.reservedQuantity < quantity) {
+      return res.status(400).json({ 
+        message: 'Cannot release more than what is reserved',
+        reserved: inventory.reservedQuantity || 0,
+        requested: quantity
+      });
+    }
+    
+    // Release the inventory
+    const updatedInventory = await storage.updateInventoryItem(
+      productId,
+      size,
+      {
+        reservedQuantity: inventory.reservedQuantity - quantity
+      }
+    );
+    
+    return res.json({
+      success: true,
+      inventory: updatedInventory,
+      released: quantity,
+      remaining: updatedInventory.quantity - updatedInventory.reservedQuantity
+    });
+  } catch (error) {
+    console.error('Error releasing inventory:', error);
+    return res.status(500).json({ message: 'Failed to release inventory' });
+  }
+});
+
+// Finalize reserved inventory (reduce actual quantity after order completion)
+inventoryRouter.post('/inventory/finalize', async (req, res) => {
+  try {
+    const schema = z.object({
+      productId: z.number(),
+      size: z.string(),
+      quantity: z.number().int().positive()
+    });
+    
+    const result = schema.safeParse(req.body);
+    
+    if (!result.success) {
+      return res.status(400).json({ 
+        message: 'Invalid data', 
+        errors: result.error.errors 
+      });
+    }
+    
+    const { productId, size, quantity } = result.data;
+    
+    // Check reserved inventory
+    const inventory = await storage.getInventoryItem(productId, size);
+    
+    if (!inventory) {
+      return res.status(404).json({ message: 'Inventory not found for this product and size' });
+    }
+    
+    if (!inventory.reservedQuantity || inventory.reservedQuantity < quantity) {
+      return res.status(400).json({ 
+        message: 'Cannot finalize more than what is reserved',
+        reserved: inventory.reservedQuantity || 0,
+        requested: quantity
+      });
+    }
+    
+    // Reduce both quantity and reserved quantity
+    const updatedInventory = await storage.updateInventoryItem(
+      productId,
+      size,
+      {
+        quantity: inventory.quantity - quantity,
+        reservedQuantity: inventory.reservedQuantity - quantity
+      }
+    );
+    
+    // Calculate available stock
+    const availableStock = updatedInventory.quantity - (updatedInventory.reservedQuantity || 0);
+    const threshold = updatedInventory.lowStockThreshold || 5;
+    
+    // Check for low stock and send notification if necessary
+    if (availableStock <= threshold) {
+      await sendLowStockNotification(productId, size, availableStock, threshold);
+    }
+    
+    return res.json({
+      success: true,
+      inventory: updatedInventory,
+      finalized: quantity,
+      available: updatedInventory.quantity - updatedInventory.reservedQuantity
+    });
+  } catch (error) {
+    console.error('Error finalizing inventory:', error);
+    return res.status(500).json({ message: 'Failed to finalize inventory' });
+  }
+});
+
+// Delete inventory item
+inventoryRouter.delete('/inventory/:productId/:size', async (req, res) => {
+  try {
+    const productId = parseInt(req.params.productId, 10);
     const size = req.params.size;
-    const { quantity, reason, referenceId } = req.body;
     
-    if (isNaN(productId) || typeof quantity !== 'number' || !reason) {
-      return res.status(400).json({ error: "Invalid request parameters" });
+    if (isNaN(productId)) {
+      return res.status(400).json({ message: 'Invalid product ID' });
     }
     
-    // Reserve inventory
-    const updatedItem = await storage.reserveInventory(productId, size, quantity, reason, referenceId);
+    // Check if item exists
+    const existingItem = await storage.getInventoryItem(productId, size);
     
-    if (!updatedItem) {
-      return res.status(400).json({ error: "Not enough inventory available" });
+    if (!existingItem) {
+      return res.status(404).json({ message: 'Inventory item not found' });
     }
     
-    // Check for low stock after reservation
-    const availableStock = updatedItem.quantity - (updatedItem.reservedQuantity || 0);
-    const lowStockThreshold = updatedItem.lowStockThreshold || 5;
+    // Delete the item
+    await storage.deleteInventoryItem(productId, size);
     
-    if (availableStock <= lowStockThreshold) {
-      await notificationService.sendLowStockNotification(
-        productId,
-        size,
-        availableStock,
-        lowStockThreshold
-      );
-    }
-    
-    res.json(updatedItem);
+    return res.status(200).json({ success: true, message: 'Inventory item deleted' });
   } catch (error) {
-    console.error("Error reserving inventory:", error);
-    res.status(500).json({ error: "Failed to reserve inventory" });
-  }
-});
-
-// Release inventory
-inventoryRouter.post("/products/:productId/inventory/:size/release", async (req, res) => {
-  try {
-    const productId = parseInt(req.params.productId);
-    const size = req.params.size;
-    const { quantity, reason, referenceId } = req.body;
-    
-    if (isNaN(productId) || typeof quantity !== 'number' || !reason) {
-      return res.status(400).json({ error: "Invalid request parameters" });
-    }
-    
-    // Release inventory
-    const updatedItem = await storage.releaseInventory(productId, size, quantity, reason, referenceId);
-    
-    if (!updatedItem) {
-      return res.status(400).json({ error: "Cannot release more than what is reserved" });
-    }
-    
-    res.json(updatedItem);
-  } catch (error) {
-    console.error("Error releasing inventory:", error);
-    res.status(500).json({ error: "Failed to release inventory" });
-  }
-});
-
-// Get low stock inventory
-inventoryRouter.get("/inventory/low-stock", async (req, res) => {
-  try {
-    const threshold = req.query.threshold ? parseInt(req.query.threshold as string) : undefined;
-    const lowStockItems = await storage.getLowStockInventory(threshold);
-    res.json(lowStockItems);
-  } catch (error) {
-    console.error("Error fetching low stock inventory:", error);
-    res.status(500).json({ error: "Failed to fetch low stock inventory" });
-  }
-});
-
-// Get out of stock inventory
-inventoryRouter.get("/inventory/out-of-stock", async (req, res) => {
-  try {
-    const outOfStockItems = await storage.getOutOfStockInventory();
-    res.json(outOfStockItems);
-  } catch (error) {
-    console.error("Error fetching out of stock inventory:", error);
-    res.status(500).json({ error: "Failed to fetch out of stock inventory" });
-  }
-});
-
-// Get inventory logs for an item
-inventoryRouter.get("/inventory/:id/logs", async (req, res) => {
-  try {
-    const inventoryId = parseInt(req.params.id);
-    
-    if (isNaN(inventoryId)) {
-      return res.status(400).json({ error: "Invalid inventory ID" });
-    }
-    
-    const logs = await storage.getInventoryLogs(inventoryId);
-    res.json(logs);
-  } catch (error) {
-    console.error("Error fetching inventory logs:", error);
-    res.status(500).json({ error: "Failed to fetch inventory logs" });
+    console.error('Error deleting inventory item:', error);
+    return res.status(500).json({ message: 'Failed to delete inventory item' });
   }
 });
