@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest } from "@/lib/queryClient";
 import { TrendingUp, TrendingDown, Users, ShoppingBag, DollarSign, ClipboardList } from "lucide-react";
+import EnhancedAdminDashboard from "@/components/admin/AdminDashboard";
 
 const AdminDashboard = () => {
   const [tabValue, setTabValue] = useState("overview");
@@ -160,6 +161,7 @@ const AdminDashboard = () => {
         <Tabs value={tabValue} onValueChange={setTabValue} className="w-full">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="enhanced">Real-Time Dashboard</TabsTrigger>
             <TabsTrigger value="sales">Sales Analytics</TabsTrigger>
             <TabsTrigger value="activity">Recent Activity</TabsTrigger>
           </TabsList>
@@ -218,6 +220,10 @@ const AdminDashboard = () => {
                 </CardFooter>
               </Card>
             </div>
+          </TabsContent>
+          
+          <TabsContent value="enhanced" className="py-4">
+            <EnhancedAdminDashboard />
           </TabsContent>
 
           <TabsContent value="sales" className="py-4">
