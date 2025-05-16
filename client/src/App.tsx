@@ -46,6 +46,7 @@ import AdminAddUser from "@/pages/AdminAddUser";
 import AdminSettings from "@/pages/AdminSettings";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminRoute from "@/components/layout/AdminRoute";
+import AdminLayout from "@/components/layout/AdminLayout";
 import EnhancedAdminDashboard from "@/components/admin/AdminDashboard";
 
 import { useEffect, useState } from "react";
@@ -137,16 +138,11 @@ function App() {
                   <AdminRoute component={Admin} />
                 </Route>
                 <Route path="/admin/dashboard">
-                  {({ params }) => {
-                    // Force the enhanced dashboard to be active
-                    return (
-                      <AdminRoute>
-                        <div className="flex flex-col min-h-screen">
-                          <EnhancedAdminDashboard />
-                        </div>
-                      </AdminRoute>
-                    );
-                  }}
+                  <AdminRoute>
+                    <AdminLayout title="Real-Time Dashboard">
+                      <EnhancedAdminDashboard />
+                    </AdminLayout>
+                  </AdminRoute>
                 </Route>
                 <Route path="/admin/users">
                   <AdminRoute component={AdminUsers} />

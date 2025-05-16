@@ -394,7 +394,7 @@ const AdminDashboard: React.FC = () => {
                                 order.status === 'pending' ? 'outline' : 
                                 order.status === 'processing' ? 'secondary' :
                                 order.status === 'shipped' ? 'default' :
-                                order.status === 'delivered' ? 'success' : 'destructive'
+                                order.status === 'delivered' ? 'default' : 'destructive'
                               }>
                                 {order.status}
                               </Badge>
