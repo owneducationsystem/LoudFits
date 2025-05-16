@@ -71,11 +71,14 @@ export async function syncProductStock(productId: number): Promise<void> {
     }
     
     // Check for low stock and notify admins if needed
-    if (product.inStock && (product.stockQuantity !== null && product.stockQuantity !== undefined && product.stockQuantity <= 5)) {
+    // stockQuantity is now a proper field in the product schema
+    const stockQuantity = product.stockQuantity || 0;
+      
+    if (product.inStock && stockQuantity <= 5 && stockQuantity > 0) {
       await notificationService.sendAdminNotification({
-        type: NotificationType.STOCK_ALERT,
+        type: NotificationType.SYSTEM,
         title: 'Low Stock Alert',
-        message: `Product "${product.name}" (ID: ${product.id}) has low stock: ${product.stockQuantity} remaining.`,
+        message: `Product "${product.name}" (ID: ${product.id}) has low stock: ${stockQuantity} remaining.`,
         entityId: product.id,
         entityType: 'product',
         isAdmin: true

@@ -39,6 +39,10 @@ export const products = pgTable("products", {
   trending: boolean("trending").default(false),
   collection: text("collection"),
   inStock: boolean("in_stock").default(true),
+  stockQuantity: integer("stock_quantity"),
+  metadata: json("metadata").$type<Record<string, string>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const carts = pgTable("carts", {
