@@ -68,23 +68,13 @@ const Header = () => {
       hasSubmenu: false
     },
     { 
-      name: "MEN", 
-      path: "/shop?gender=men",
+      name: "T-SHIRTS", 
+      path: "/shop?category=t-shirts",
       hasSubmenu: true,
       submenu: [
-        { name: "T-Shirts", path: "/shop?gender=men&category=t-shirts" },
-        { name: "Printed Tees", path: "/shop?gender=men&category=printed-tees" },
-        { name: "Graphic Tees", path: "/shop?gender=men&category=graphic-tees" }
-      ]
-    },
-    { 
-      name: "WOMEN", 
-      path: "/shop?gender=women",
-      hasSubmenu: true,
-      submenu: [
-        { name: "T-Shirts", path: "/shop?gender=women&category=t-shirts" },
-        { name: "Printed Tees", path: "/shop?gender=women&category=printed-tees" },
-        { name: "Graphic Tees", path: "/shop?gender=women&category=graphic-tees" }
+        { name: "All T-Shirts", path: "/shop?category=t-shirts" },
+        { name: "Printed Tees", path: "/shop?category=printed-tees" },
+        { name: "Graphic Tees", path: "/shop?category=graphic-tees" }
       ]
     },
     { 
