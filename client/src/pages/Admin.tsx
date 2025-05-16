@@ -163,8 +163,8 @@ const AdminDashboard = () => {
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <Link href="/admin/dashboard">
-            <TabsTrigger value="enhanced">Real-Time Dashboard</TabsTrigger>
-          </Link>
+              <TabsTrigger value="enhanced" onClick={() => window.location.href = "/admin/dashboard"}>Real-Time Dashboard</TabsTrigger>
+            </Link>
             <TabsTrigger value="sales">Sales Analytics</TabsTrigger>
             <TabsTrigger value="activity">Recent Activity</TabsTrigger>
           </TabsList>

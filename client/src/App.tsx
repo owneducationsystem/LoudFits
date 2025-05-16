@@ -45,9 +45,8 @@ import AdminCategories from "@/pages/AdminCategories";
 import AdminAddUser from "@/pages/AdminAddUser";
 import AdminSettings from "@/pages/AdminSettings";
 import AdminLogin from "@/pages/AdminLogin";
+import AdminDashboardPage from "@/pages/AdminDashboard";
 import AdminRoute from "@/components/layout/AdminRoute";
-import AdminLayout from "@/components/layout/AdminLayout";
-import EnhancedAdminDashboard from "@/components/admin/AdminDashboard";
 
 import { useEffect, useState } from "react";
 import { handleAuthRedirect } from "@/lib/firebase";
@@ -138,11 +137,7 @@ function App() {
                   <AdminRoute component={Admin} />
                 </Route>
                 <Route path="/admin/dashboard">
-                  <AdminRoute>
-                    <AdminLayout title="Real-Time Dashboard">
-                      <EnhancedAdminDashboard />
-                    </AdminLayout>
-                  </AdminRoute>
+                  <AdminRoute component={AdminDashboardPage} />
                 </Route>
                 <Route path="/admin/users">
                   <AdminRoute component={AdminUsers} />
