@@ -98,7 +98,7 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
             user.firstName || user.username,
             order.orderNumber,
             order.total,
-            payment.paymentMethod
+            payment.method
           );
         }
         
@@ -185,12 +185,11 @@ export function setupPaymentRoutes(app: Express) {
           amount: amount.toString(),
           currency: 'INR',
           status: 'PENDING',
-          method: 'phonepe_test', // Use method instead of paymentMethod to match schema
-          gatewayResponse: JSON.stringify({
+          method: 'phonepe_test', // PhonePe test payment
+          gatewayResponse: {
             testMode: true,
             expectedResult: success ? 'success' : 'failure'
-          }),
-          timestamp: new Date()
+          }
         });
         
         console.log(`Test payment created: ${merchantTransactionId} for amount ${amount}`);
@@ -421,7 +420,7 @@ export function setupPaymentRoutes(app: Express) {
         amount: amount.total,
         currency: 'INR',
         status: 'PENDING',
-        paymentMethod,
+        method: paymentMethod,
         merchantTransactionId,
         timestamp: new Date()
       });
