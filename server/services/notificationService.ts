@@ -589,11 +589,18 @@ class NotificationService {
    */
   async sendPaymentStatusNotification(orderId: number, orderNumber: string, userId: number, status: string, amount: string, paymentMethod: string) {
     const isSuccess = status.toLowerCase() === 'success' || status.toLowerCase() === 'paid';
-    const numericAmount = parseFloat(amount.replace(/[^\d.-]/g, ''));
+    // Convert string amount to number, handling currency formatting
+    let numericAmount = 0;
+    try {
+      numericAmount = parseFloat(amount.replace(/[^\d.-]/g, ''));
+    } catch (e) {
+      console.error('Error parsing amount:', amount, e);
+      numericAmount = 0; // Fallback
+    }
     
     // Use the numeric payment notification method
     return this.sendPaymentNotification(
-      0, // No payment ID available
+      0, // No payment ID available for legacy methods
       orderId,
       orderNumber,
       userId,

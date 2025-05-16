@@ -12,7 +12,10 @@ import { NotificationBell } from '@/components/ui/NotificationBell';
 const NotificationTest = () => {
   const { toast } = useToast();
   const { currentUser } = useAuth();
-  const { notifications, connected } = useNotifications();
+  // Add a fallback in case notifications context isn't available yet
+  const notificationContext = useNotifications();
+  const notifications = notificationContext?.notifications || [];
+  const connected = notificationContext?.connected || false;
   
   const sendTestNotification = async () => {
     try {
@@ -39,7 +42,8 @@ const NotificationTest = () => {
 
   const sendOrderNotification = async () => {
     try {
-      const userId = currentUser?.id || currentUser?.uid || 1;
+      // Safely handle possible undefined user ID
+      const userId = currentUser ? ((currentUser as any).id || currentUser.uid || 1) : 1;
       
       const response = await apiRequest('POST', '/api/notifications/order-test', { 
         userId 
@@ -66,7 +70,8 @@ const NotificationTest = () => {
 
   const sendPaymentNotification = async (success: boolean) => {
     try {
-      const userId = currentUser?.id || currentUser?.uid || 1;
+      // Safely handle possible undefined user ID
+      const userId = currentUser ? ((currentUser as any).id || currentUser.uid || 1) : 1;
       
       const response = await apiRequest('POST', '/api/notifications/payment-test', { 
         userId,

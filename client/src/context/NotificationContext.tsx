@@ -127,95 +127,153 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }, [notifications]);
   
-  // Connect to WebSocket when component mounts
+  // Connect to WebSocket with automatic reconnection
   useEffect(() => {
-    // Initialize WebSocket connection
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    let ws: WebSocket | null = null;
+    let reconnectAttempts = 0;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let pingTimer: ReturnType<typeof setInterval> | null = null;
     
-    const ws = new WebSocket(wsUrl);
+    const maxReconnectAttempts = 10;
+    const reconnectInterval = 2000; // Start with 2 seconds
     
-    // Set up event handlers
-    ws.onopen = () => {
-      console.log('Connected to notification server');
-      setConnected(true);
-      
-      // Authenticate with the WebSocket server
-      if (notificationUser) {
-        ws.send(JSON.stringify({
-          type: 'auth',
-          data: {
-            userId: notificationUser.uid || notificationUser.id,
-            isAdmin: notificationUser.role === 'admin'
-          }
-        }));
+    // Function to create and set up websocket
+    const connectWebSocket = () => {
+      // Clear any existing timers
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
       }
-    };
-    
-    ws.onclose = () => {
-      console.log('Disconnected from notification server');
-      setConnected(false);
       
-      // Try to reconnect after 5 seconds
-      setTimeout(() => {
-        if (socket === ws) { // Only reconnect if this socket is still the current one
-          setSocket(null);
-        }
-      }, 5000);
-    };
-    
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setConnected(false);
-    };
-    
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+      if (pingTimer) {
+        clearInterval(pingTimer);
+        pingTimer = null;
+      }
+      
+      // Initialize WebSocket connection
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      
+      ws = new WebSocket(wsUrl);
+      setSocket(ws);
+      
+      // Set up event handlers
+      ws.onopen = () => {
+        console.log('Connected to notification server');
+        setConnected(true);
+        reconnectAttempts = 0; // Reset reconnect attempts on successful connection
         
-        switch (data.type) {
-          case 'notification':
-            handleNewNotification(data.data);
-            break;
-          case 'unread_notifications':
-            if (Array.isArray(data.data)) {
-              setNotifications(prev => {
-                const existingIds = new Set(prev.map((n: Notification) => n.id));
-                const newNotifications = data.data.filter((n: any) => !existingIds.has(n.id));
-                return [...prev, ...newNotifications];
-              });
+        // Authenticate with the WebSocket server
+        if (ws && notificationUser) {
+          ws.send(JSON.stringify({
+            type: 'auth',
+            data: {
+              userId: notificationUser.uid || notificationUser.id,
+              isAdmin: notificationUser.role === 'admin'
             }
-            break;
-          case 'admin_notifications':
-            if (Array.isArray(data.data)) {
-              setNotifications(prev => {
-                const existingIds = new Set(prev.map((n: Notification) => n.id));
-                const newNotifications = data.data.filter((n: any) => !existingIds.has(n.id));
-                return [...prev, ...newNotifications];
-              });
-            }
-            break;
-          case 'broadcast':
-            handleNewNotification(data.data);
-            break;
-          case 'auth_confirmation':
-            console.log('Authentication confirmed:', data);
-            break;
+          }));
         }
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
+        
+        // Setup a ping to keep the connection alive
+        pingTimer = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          }
+        }, 30000); // Send a ping every 30 seconds
+      };
+      
+      ws.onclose = () => {
+        console.log('Disconnected from notification server');
+        setConnected(false);
+        
+        // Clean up any ping timers
+        if (pingTimer) {
+          clearInterval(pingTimer);
+          pingTimer = null;
+        }
+        
+        // Try to reconnect with exponential backoff
+        if (reconnectAttempts < maxReconnectAttempts) {
+          const delay = Math.min(reconnectInterval * Math.pow(1.5, reconnectAttempts), 30000); // Max 30 seconds
+          console.log(`Attempting to reconnect in ${delay/1000} seconds (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+          
+          reconnectTimer = setTimeout(() => {
+            reconnectAttempts++;
+            connectWebSocket();
+          }, delay);
+        } else {
+          console.error(`Failed to reconnect after ${maxReconnectAttempts} attempts`);
+          toast({
+            title: "Connection Lost",
+            description: "Unable to connect to notification server. Please refresh the page.",
+            variant: "destructive"
+          });
+        }
+      };
+      
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setConnected(false);
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          switch (data.type) {
+            case 'notification':
+              handleNewNotification(data.data);
+              break;
+            case 'unread_notifications':
+              if (Array.isArray(data.data)) {
+                setNotifications(prev => {
+                  const existingIds = new Set(prev.map((n: Notification) => n.id));
+                  const newNotifications = data.data.filter((n: any) => !existingIds.has(n.id));
+                  return [...prev, ...newNotifications];
+                });
+              }
+              break;
+            case 'admin_notifications':
+              if (Array.isArray(data.data)) {
+                setNotifications(prev => {
+                  const existingIds = new Set(prev.map((n: Notification) => n.id));
+                  const newNotifications = data.data.filter((n: any) => !existingIds.has(n.id));
+                  return [...prev, ...newNotifications];
+                });
+              }
+              break;
+            case 'broadcast':
+              handleNewNotification(data.data);
+              break;
+            case 'auth_confirmation':
+              console.log('Authentication confirmed:', data);
+              break;
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
     };
     
-    setSocket(ws);
+    // Start the connection
+    connectWebSocket();
     
     // Clean up the WebSocket connection when the component unmounts
     return () => {
-      if (ws.readyState === WebSocket.OPEN) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
         ws.close();
       }
+      
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+      
+      if (pingTimer) {
+        clearInterval(pingTimer);
+      }
     };
-  }, [currentUser, notificationUser]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   // Re-authenticate when user changes
   useEffect(() => {
