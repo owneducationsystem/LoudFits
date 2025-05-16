@@ -22,11 +22,19 @@ const AdminRoute = ({ component: Component, children, ...rest }: AdminRouteProps
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [location] = useLocation();
   
+  // Log when the component renders and its props
+  console.log("AdminRoute rendering with props:", { 
+    hasComponent: !!Component, 
+    hasChildren: !!children,
+    path: location 
+  });
+  
   useEffect(() => {
     // Check if user is logged in as admin
     const checkAdminAuth = () => {
       console.log("Checking admin authentication for path:", location);
       const adminUserData = localStorage.getItem("adminUser");
+      console.log("Admin user data from localStorage:", adminUserData);
       
       if (!adminUserData) {
         console.log("No admin user data found in localStorage");

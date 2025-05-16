@@ -136,7 +136,9 @@ function App() {
                 <Route path="/admin">
                   <AdminRoute component={Admin} />
                 </Route>
-                <Route path="/admin/dashboard" component={AdminDashboardPage} />
+                <Route path="/admin/dashboard">
+                  <AdminRoute component={AdminDashboardPage} />
+                </Route>
                 <Route path="/admin/users">
                   <AdminRoute component={AdminUsers} />
                 </Route>
