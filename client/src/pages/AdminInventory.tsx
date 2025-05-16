@@ -1381,11 +1381,12 @@ export default function AdminInventory() {
                                 <Badge className="bg-red-500 text-white">
                                   Out of Stock
                                 </Badge>
-                                <Progress
-                                  value={0}
-                                  className="h-2 bg-red-100"
-                                  indicatorClassName="bg-red-500"
-                                />
+                                <div className="h-2 w-full rounded-full bg-red-100">
+                                  <div 
+                                    className="h-full rounded-full bg-red-500"
+                                    style={{ width: `0%` }}
+                                  />
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell>
