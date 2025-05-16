@@ -3,14 +3,36 @@ import { Server } from 'http';
 
 // Types for notifications
 export enum NotificationType {
+  // Order related notifications
   ORDER_PLACED = 'order_placed',
   ORDER_UPDATED = 'order_updated',
+  ORDER_SHIPPED = 'order_shipped',
+  ORDER_DELIVERED = 'order_delivered',
+  ORDER_CANCELED = 'order_canceled',
+  
+  // Payment related notifications
   PAYMENT_RECEIVED = 'payment_received',
   PAYMENT_FAILED = 'payment_failed',
+  PAYMENT_REFUNDED = 'payment_refunded',
+  
+  // User related notifications
   USER_REGISTERED = 'user_registered',
+  USER_UPDATED = 'user_updated',
+  
+  // Product related notifications
   PRODUCT_UPDATED = 'product_updated',
+  PRODUCT_ADDED = 'product_added',
+  STOCK_ALERT = 'stock_alert',
+  LOW_STOCK = 'low_stock',
+  OUT_OF_STOCK = 'out_of_stock',
+  
+  // Admin notifications
   ADMIN_ALERT = 'admin_alert',
-  SYSTEM = 'system'
+  ADMIN_LOGIN = 'admin_login',
+  
+  // System notifications
+  SYSTEM = 'system',
+  ERROR = 'error'
 }
 
 export interface Notification {
@@ -25,6 +47,9 @@ export interface Notification {
   metadata?: any; // Additional data
   read?: boolean;
   createdAt: Date;
+  priority?: 'low' | 'medium' | 'high' | 'urgent'; // Priority level for admin notifications
+  actionRequired?: boolean; // Whether the notification requires action
+  actionType?: string; // Type of action required (e.g., 'approve_order', 'check_stock')
 }
 
 // Client connection types
