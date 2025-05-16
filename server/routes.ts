@@ -79,6 +79,11 @@ const logAdminAction = async (req: Request, res: Response, next: NextFunction) =
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Create the HTTP server first so we can attach WebSockets to it
+  let httpServer = createServer(app);
+  
+  // Initialize the notification service with our HTTP server
+  notificationService.initialize(httpServer);
   // Simple test endpoint
   app.get("/api/test", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -803,10 +808,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Initialize server
   // Set up PhonePe payment routes
   setupPaymentRoutes(app);
   
-  const httpServer = createServer(app);
+  // Server is already created at the top for WebSocket support
   return httpServer;
 }
