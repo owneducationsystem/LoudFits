@@ -16,7 +16,8 @@ import {
   Mail,
   FilterX,
   Filter,
-  Info
+  Info,
+  RefreshCw
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ const DirectDashboard = () => {
     orders: 0
   });
   const [loading, setLoading] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState(new Date());
   const [productPerformance, setProductPerformance] = useState({
     topSelling: [],
     noSales: []
@@ -53,65 +55,55 @@ const DirectDashboard = () => {
     }
   });
 
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      // Fetch all data in parallel for better performance
+      const [statsRes, performanceRes, signupsRes, settingsRes] = await Promise.all([
+        fetch('/api/stats/public'),
+        fetch('/api/admin/dashboard/product-performance'),
+        fetch('/api/admin/dashboard/user-signups'),
+        fetch('/api/admin/dashboard/notification-settings')
+      ]);
+      
+      if (statsRes.ok) {
+        const data = await statsRes.json();
+        setStats(data);
+      }
+      
+      if (performanceRes.ok) {
+        const data = await performanceRes.json();
+        setProductPerformance(data);
+      }
+      
+      if (signupsRes.ok) {
+        const data = await signupsRes.json();
+        setUserSignups(data);
+      }
+      
+      if (settingsRes.ok) {
+        const data = await settingsRes.json();
+        setNotificationSettings(data);
+      }
+      
+      // Update last refreshed timestamp
+      setLastRefreshed(new Date());
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Set up data refresh on component mount and interval
   useEffect(() => {
-    // Simple method to fetch stats without authentication requirements
-    const fetchStats = async () => {
-      try {
-        const response = await fetch('/api/stats/public');
-        if (response.ok) {
-          const data = await response.json();
-          setStats(data);
-        }
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-      }
-    };
-
-    // Fetch product performance data
-    const fetchProductPerformance = async () => {
-      try {
-        const response = await fetch('/api/admin/dashboard/product-performance');
-        if (response.ok) {
-          const data = await response.json();
-          setProductPerformance(data);
-        }
-      } catch (error) {
-        console.error("Error fetching product performance:", error);
-      }
-    };
-
-    // Fetch user signup data
-    const fetchUserSignups = async () => {
-      try {
-        const response = await fetch('/api/admin/dashboard/user-signups');
-        if (response.ok) {
-          const data = await response.json();
-          setUserSignups(data);
-        }
-      } catch (error) {
-        console.error("Error fetching user signups:", error);
-      }
-    };
-
-    // Fetch notification settings
-    const fetchNotificationSettings = async () => {
-      try {
-        const response = await fetch('/api/admin/dashboard/notification-settings');
-        if (response.ok) {
-          const data = await response.json();
-          setNotificationSettings(data);
-        }
-      } catch (error) {
-        console.error("Error fetching notification settings:", error);
-      }
-    };
-
-    fetchStats();
-    fetchProductPerformance();
-    fetchUserSignups();
-    fetchNotificationSettings();
+    // Initial fetch
+    fetchAllData();
     
-    const interval = setInterval(fetchStats, 30000);
+    // Set up refresh interval for real-time updates (every 15 seconds)
+    const interval = setInterval(fetchAllData, 15000);
+    
+    // Clean up interval on component unmount
     return () => clearInterval(interval);
   }, []);
 
@@ -128,16 +120,40 @@ const DirectDashboard = () => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground">LoudFits Store Performance Overview</p>
+            <div className="flex flex-col">
+              <p className="text-muted-foreground">LoudFits Store Performance Overview</p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                Last updated: {lastRefreshed.toLocaleTimeString()}
+                {loading && (
+                  <div className="flex items-center text-xs text-blue-500">
+                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse mr-1"></div>
+                    Refreshing...
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2" 
-            onClick={() => navigate('/admin')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Admin
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2" 
+              onClick={fetchAllData}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh Data
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2" 
+              onClick={() => navigate('/admin')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Admin
+            </Button>
+          </div>
         </div>
 
         {/* System Health Overview */}
