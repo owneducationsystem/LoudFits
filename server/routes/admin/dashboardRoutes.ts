@@ -284,45 +284,25 @@ dashboardRoutes.get("/user-signups", async (req, res) => {
       });
     }
     
-    // Create some trending data for the daily signups chart
-    // Show more recent activity in the past week
+    // Count actual signups for each day
+    users.forEach(user => {
+      // Parse the date safely
+      const createdAtStr = user.createdAt instanceof Date 
+          ? user.createdAt.toISOString() 
+          : String(user.createdAt);
+      const signupDate = new Date(createdAtStr);
+      
+      // Format as YYYY-MM-DD for comparison
+      const signupDateStr = signupDate.toISOString().split('T')[0];
+      
+      // Find the matching day in our dailySignups array
+      const index = dailySignups.findIndex(day => day.date === signupDateStr);
+      if (index !== -1) {
+        dailySignups[index].count++;
+      }
+    });
     
-    // Last 7 days - show some activity
-    for (let i = 23; i < 30; i++) {
-      // Today (i=29) shows 2 signups
-      if (i === 29) {
-        dailySignups[i].count = 2;
-      } 
-      // Yesterday (i=28) shows 1 signup
-      else if (i === 28) {
-        dailySignups[i].count = 1;
-      }
-      // Two days ago (i=27) had no signups
-      else if (i === 27) {
-        dailySignups[i].count = 0;
-      }
-      // Three days ago (i=26) had 1 signup
-      else if (i === 26) {
-        dailySignups[i].count = 1;
-      }
-      // Four days ago (i=25) had 1 signup
-      else if (i === 25) {
-        dailySignups[i].count = 1;
-      }
-      // Five and six days ago
-      else {
-        dailySignups[i].count = Math.floor(Math.random() * 2); // 0 or 1
-      }
-    }
-    
-    // Scatter a few signups over the previous 3 weeks to show some history
-    for (let i = 0; i < 23; i++) {
-      if (i % 5 === 0 || i % 7 === 0) {
-        dailySignups[i].count = 1;
-      } else {
-        dailySignups[i].count = 0;
-      }
-    }
+    console.log("Daily signups data:", dailySignups);
     
     res.json({
       today: signupsToday,

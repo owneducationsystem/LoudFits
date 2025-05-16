@@ -488,10 +488,8 @@ const DirectDashboard = () => {
                 <CardTitle className="text-sm font-medium">Growth Rate</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  {userSignups.thisMonth > 0 
-                    ? `+${((userSignups.thisWeek / userSignups.thisMonth) * 100).toFixed(1)}%` 
-                    : "+0.0%"}
+                <div className={`text-2xl font-bold ${calculateGrowth(userSignups.thisWeek, userSignups.thisMonth) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatGrowthRate(calculateGrowth(userSignups.thisWeek, userSignups.thisMonth))}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Week over month
