@@ -5,6 +5,8 @@ import { dashboardService } from '../../services/dashboardService';
 import { getSystemHealth } from './healthRoutes';
 
 export const setupAdminDashboardRoutes = (app: Router) => {
+  // System health check
+  app.get('/api/admin/health', getSystemHealth);
   // Get order stats for admin dashboard
   app.get('/api/admin/orders/stats', async (req, res) => {
     try {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNotifications, NotificationType } from '@/context/NotificationContext';
 import { AdminNotificationCenter } from './AdminNotificationCenter';
+import { SystemHealthIndicator } from './SystemHealthIndicator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
