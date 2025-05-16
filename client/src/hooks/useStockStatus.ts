@@ -16,7 +16,7 @@ interface StockDetails {
  * This uses the inStock boolean field but enhances it with simulated stock levels
  * to give the appearance of a real-time stock availability indicator
  */
-export function useStockStatus(product: Product | undefined): StockDetails {
+export function useStockStatus(product: Product | undefined | null): StockDetails {
   return useMemo(() => {
     if (!product) {
       return {

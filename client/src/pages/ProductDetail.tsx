@@ -57,12 +57,12 @@ const ProductDetail = () => {
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   const imageRef = useRef<HTMLDivElement>(null);
   
-  // Get real-time stock status with enhanced details
-  const stockDetails = useStockStatus(product);
-
   const { data: product, isLoading, error } = useQuery<Product>({
     queryKey: [`/api/products/${id}`],
   });
+  
+  // Get real-time stock status with enhanced details
+  const stockDetails = useStockStatus(product);
 
   const { data: relatedProducts, isLoading: isLoadingRelated } = useQuery<Product[]>({
     queryKey: ["/api/products"],
@@ -412,7 +412,9 @@ const ProductDetail = () => {
                 <p className="text-xl font-bold text-[#582A34]">₹{product.price.toString()}</p>
                 {/* Stock Availability Indicator */}
                 <StockIndicator 
-                  status={product.inStock ? 'IN_STOCK' : 'OUT_OF_STOCK'}
+                  status={stockDetails.status}
+                  quantity={stockDetails.quantity}
+                  showQuantity={stockDetails.status === 'LOW_STOCK'}
                 />
               </div>
               <div className="flex items-center gap-4 mt-4">

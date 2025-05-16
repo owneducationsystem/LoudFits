@@ -5,6 +5,8 @@ import { useCartContext } from "@/context/CartContext";
 import { useWishlistContext } from "@/context/WishlistContext";
 import { Product } from "@shared/schema";
 import { toast } from "@/hooks/use-toast";
+import { StockIndicator } from "@/components/ui/StockIndicator";
+import { useStockStatus } from "@/hooks/useStockStatus";
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +15,7 @@ interface ProductCardProps {
 const ProductCard = ({ product }: ProductCardProps) => {
   const { addToCart } = useCartContext();
   const { addToWishlist, isInWishlist, removeFromWishlist } = useWishlistContext();
+  const stockDetails = useStockStatus(product);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
