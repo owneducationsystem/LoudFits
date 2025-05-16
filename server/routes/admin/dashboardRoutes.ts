@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { storage } from '../../storage';
 import { notificationService } from '../../services/notificationService';
 import { dashboardService } from '../../services/dashboardService';
+import { getSystemHealth } from './healthRoutes';
 
 export const setupAdminDashboardRoutes = (app: Router) => {
   // Get order stats for admin dashboard

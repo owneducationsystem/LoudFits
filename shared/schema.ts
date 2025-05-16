@@ -151,6 +151,8 @@ export const insertProductSchema = createInsertSchema(products).pick({
   trending: true,
   collection: true,
   inStock: true,
+  stockQuantity: true,
+  metadata: true,
 });
 
 export const insertCartSchema = createInsertSchema(carts).pick({

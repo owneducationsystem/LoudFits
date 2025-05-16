@@ -1,7 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { setupPaymentRoutes } from "./routes/payment";
-import { setupAdminDashboardRoutes } from "./routes/admin/dashboardRoutes"; 
+import { setupAdminDashboardRoutes } from "./routes/admin/dashboardRoutes";
+import { getSystemHealth } from "./routes/admin/healthRoutes";
 import { storage } from "./storage";
 import { z } from "zod";
 import { notificationService, NotificationType } from "./services/notificationService";

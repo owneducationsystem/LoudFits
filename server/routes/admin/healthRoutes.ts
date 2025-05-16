@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { storage } from '../../storage';
-import { sendTestEmail } from '../../services/emailService';
+import { emailService } from '../../services/emailService';
 
 export const getSystemHealth = async (req: Request, res: Response) => {
   const healthStatus = {
