@@ -224,7 +224,8 @@ export function setupPaymentRoutes(app: Express) {
       const isSuccess = success === 'true';
       
       // Show a mock payment page
-      res.send(`
+      const mtid = merchantTransactionId || 'Unknown';
+      const mockPaymentHtml = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -301,7 +302,7 @@ export function setupPaymentRoutes(app: Express) {
             </div>
             <p>Complete your payment of</p>
             <div class="amount">₹${amount || '100.00'}</div>
-            <p>Transaction ID: <span class="txn-id">${merchantTransactionId || 'Unknown'}</span></p>
+            <p>Transaction ID: <span class="txn-id">${mtid}</span></p>
             
             <div id="payment-options">
               <button onclick="simulatePayment(true)" class="button success">Complete Payment (Success)</button>
@@ -316,6 +317,8 @@ export function setupPaymentRoutes(app: Express) {
           </div>
           
           <script>
+            const merchantId = "${mtid}";
+            
             function simulatePayment(success) {
               document.getElementById('payment-options').style.display = 'none';
               document.getElementById('processing').style.display = 'block';
@@ -323,7 +326,7 @@ export function setupPaymentRoutes(app: Express) {
               // Redirect after a short delay to simulate processing
               setTimeout(() => {
                 const code = success ? 'PAYMENT_SUCCESS' : 'PAYMENT_ERROR';
-                window.location.href = '/api/payment/callback?merchantTransactionId=${merchantTransactionId}&code=' + code;
+                window.location.href = '/api/payment/callback?merchantTransactionId=' + merchantId + '&code=' + code;
               }, 2000);
             }
             
@@ -340,7 +343,9 @@ export function setupPaymentRoutes(app: Express) {
           </script>
         </body>
         </html>
-      `);
+      `;
+      
+      res.send(mockPaymentHtml);
     });
     
     app.get("/api/payment/config", (req, res) => {
