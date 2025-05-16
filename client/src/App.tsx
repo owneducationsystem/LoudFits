@@ -46,6 +46,7 @@ import AdminAddUser from "@/pages/AdminAddUser";
 import AdminSettings from "@/pages/AdminSettings";
 import AdminLogin from "@/pages/AdminLogin";
 import DirectDashboard from "@/pages/DirectDashboard";
+import AdminInventory from "@/pages/AdminInventory";
 import AdminRoute from "@/components/layout/AdminRoute";
 
 import { useEffect, useState } from "react";
@@ -160,6 +161,9 @@ function App() {
                 </Route>
                 <Route path="/admin/settings">
                   <AdminRoute component={AdminSettings} />
+                </Route>
+                <Route path="/admin/inventory">
+                  <AdminRoute component={AdminInventory} />
                 </Route>
                 
                 <Route component={NotFound} />
