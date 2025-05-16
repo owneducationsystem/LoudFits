@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { apiRequest } from "@/lib/queryClient";
+import { AdminNotificationCenter } from "@/components/admin/AdminNotificationCenter";
 
 // Form Schema
 const generalSettingsSchema = z.object({
@@ -204,6 +205,7 @@ const AdminSettings = () => {
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="email">Email</TabsTrigger>
           <TabsTrigger value="checkout">Checkout</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
         </TabsList>
         
         {/* General Settings Tab */}
