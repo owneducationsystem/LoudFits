@@ -10,14 +10,15 @@ interface AdminUser {
 }
 
 interface AdminRouteProps {
-  component: React.ComponentType<any>;
+  component?: React.ComponentType<any>;
+  children?: React.ReactNode;
 }
 
 /**
  * Protected route component that only allows access to admin users
  * Redirects to the admin login page if not authenticated
  */
-const AdminRoute = ({ component: Component, ...rest }: AdminRouteProps) => {
+const AdminRoute = ({ component: Component, children, ...rest }: AdminRouteProps) => {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [location] = useLocation();
   
@@ -95,7 +96,12 @@ const AdminRoute = ({ component: Component, ...rest }: AdminRouteProps) => {
   
   // Render admin component if authorized
   console.log("Rendering admin component for", location);
-  return <Component {...rest} />;
+  if (Component) {
+    return <Component {...rest} />;
+  }
+  
+  // If no component is provided, render children
+  return <>{children}</>;
 };
 
 export default AdminRoute;

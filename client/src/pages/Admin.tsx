@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Link } from "wouter";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -161,10 +162,9 @@ const AdminDashboard = () => {
         <Tabs value={tabValue} onValueChange={setTabValue} className="w-full">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger onClick={() => {
-            setTabValue("enhanced");
-            window.location.href = "/admin/dashboard";
-          }} value="enhanced">Real-Time Dashboard</TabsTrigger>
+            <Link href="/admin/dashboard">
+            <TabsTrigger value="enhanced">Real-Time Dashboard</TabsTrigger>
+          </Link>
             <TabsTrigger value="sales">Sales Analytics</TabsTrigger>
             <TabsTrigger value="activity">Recent Activity</TabsTrigger>
           </TabsList>

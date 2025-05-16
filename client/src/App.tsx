@@ -46,6 +46,7 @@ import AdminAddUser from "@/pages/AdminAddUser";
 import AdminSettings from "@/pages/AdminSettings";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminRoute from "@/components/layout/AdminRoute";
+import EnhancedAdminDashboard from "@/components/admin/AdminDashboard";
 
 import { useEffect, useState } from "react";
 import { handleAuthRedirect } from "@/lib/firebase";
@@ -136,7 +137,16 @@ function App() {
                   <AdminRoute component={Admin} />
                 </Route>
                 <Route path="/admin/dashboard">
-                  <AdminRoute component={Admin} />
+                  {({ params }) => {
+                    // Force the enhanced dashboard to be active
+                    return (
+                      <AdminRoute>
+                        <div className="flex flex-col min-h-screen">
+                          <EnhancedAdminDashboard />
+                        </div>
+                      </AdminRoute>
+                    );
+                  }}
                 </Route>
                 <Route path="/admin/users">
                   <AdminRoute component={AdminUsers} />
