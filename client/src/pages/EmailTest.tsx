@@ -71,12 +71,22 @@ const EmailTest: React.FC = () => {
       const response = await fetch(`/api/email/test-${selectedEmail}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify(requestData)
       });
       
-      const data = await response.json();
+      // Handle potentially non-JSON responses
+      const text = await response.text();
+      let data;
+      
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('Failed to parse response as JSON:', text);
+        throw new Error('Server returned an invalid response format. Please try again.');
+      }
       
       if (data.success) {
         toast({

@@ -1,8 +1,16 @@
-import { Express, Request, Response } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import { emailService } from "../services/emailService";
 import { storage } from "../storage";
 
 export function setupEmailRoutes(app: Express) {
+  // Middleware to ensure JSON content type for all email test routes
+  const ensureJsonResponse = (_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Content-Type', 'application/json');
+    next();
+  };
+  
+  // Apply middleware to all email test routes
+  app.use('/api/email/test-*', ensureJsonResponse);
   // Test sending welcome email
   app.post("/api/email/test-welcome", async (req: Request, res: Response) => {
     try {
