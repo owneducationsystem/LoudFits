@@ -94,7 +94,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     uid: currentUser.uid,
     id: (currentUser as any).id,
     email: currentUser.email || undefined,
-    role: (currentUser as any).role || 'customer'
+    role: (currentUser as any).role === 'admin' || 
+          (currentUser.email === 'admin@loudfits.com') ||
+          (currentUser.email === 'rajeshmatta3636@gmail.com') 
+          ? 'admin' : 'customer'
   } : null;
   
   // Calculate the number of unread notifications
