@@ -417,12 +417,13 @@ export function setupPaymentRoutes(app: Express) {
       // Create payment record
       const payment = await storage.createPayment({
         orderId: order.id,
+        userId: req.user?.id || 1,
         amount: amount.total,
         currency: 'INR',
         status: 'PENDING',
         method: paymentMethod,
         merchantTransactionId,
-        timestamp: new Date()
+        transactionId: merchantTransactionId
       });
       
       // Set up the redirect and callback URLs
@@ -472,10 +473,11 @@ export function setupPaymentRoutes(app: Express) {
           // Update payment record with error
           await storage.updatePaymentDetails(payment.id, {
             status: 'ERROR',
-            paymentDetails: JSON.stringify({
+            gatewayErrorMessage: error.message || 'Unknown error',
+            gatewayResponse: {
               error: error.message || 'Unknown error',
               timestamp: new Date().toISOString()
-            })
+            }
           });
         }
       }
@@ -496,11 +498,11 @@ export function setupPaymentRoutes(app: Express) {
         
         // Update payment record with test mode info
         await storage.updatePaymentDetails(payment.id, {
-          paymentDetails: JSON.stringify({
+          gatewayResponse: {
             testMode: true,
             mockTransactionId: paymentResult.transactionId,
             timestamp: new Date().toISOString()
-          })
+          }
         });
       }
       
@@ -594,11 +596,10 @@ export function setupPaymentRoutes(app: Express) {
       // Update payment details
       await storage.updatePaymentDetails(payment.id, {
         transactionId: paymentStatus.data?.transactionId || payment.transactionId,
-        paymentDetails: JSON.stringify({
-          ...JSON.parse(payment.paymentDetails || '{}'),
+        gatewayResponse: {
           statusCheckResponse: paymentStatus,
           callbackTimestamp: new Date().toISOString()
-        })
+        }
       });
       
       // Update order status and send notifications
