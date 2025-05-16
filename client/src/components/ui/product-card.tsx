@@ -62,8 +62,10 @@ const ProductCard = ({ product }: ProductCardProps) => {
           <div className="flex items-center gap-2 mt-1">
             <p className="font-bold">₹{product.price.toString()}</p>
             <StockIndicator 
-              status={stockDetails.status} 
+              status={stockDetails.status}
+              quantity={stockDetails.quantity}
               className="scale-75 origin-left"
+              showQuantity={stockDetails.status === 'LOW_STOCK' && (stockDetails.quantity || 0) <= 5}
             />
           </div>
           <div className="flex justify-between items-center mt-1">
