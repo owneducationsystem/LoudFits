@@ -280,3 +280,57 @@ export type Payment = typeof payments.$inferSelect;
 
 export type InsertAdminLog = z.infer<typeof insertAdminLogSchema>;
 export type AdminLog = typeof adminLogs.$inferSelect;
+
+// Inventory management table for tracking stock by product size
+export const inventory = pgTable("inventory", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id).notNull(),
+  size: text("size").notNull(),
+  quantity: integer("quantity").notNull().default(0),
+  reservedQuantity: integer("reserved_quantity").default(0), // Quantity in carts or processing orders
+  lowStockThreshold: integer("low_stock_threshold").default(5),
+  lastRestocked: timestamp("last_restocked"),
+  inStock: boolean("in_stock").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const inventoryLogs = pgTable("inventory_logs", {
+  id: serial("id").primaryKey(),
+  inventoryId: integer("inventory_id").references(() => inventory.id).notNull(),
+  userId: integer("user_id").references(() => users.id), // User who made the change, if applicable
+  action: text("action").notNull(), // "add", "subtract", "adjust", "reserve", "release"
+  quantity: integer("quantity").notNull(),
+  previousQuantity: integer("previous_quantity").notNull(),
+  newQuantity: integer("new_quantity").notNull(),
+  reason: text("reason").notNull(), // "order", "restock", "return", "adjustment", "cart"
+  referenceId: text("reference_id"), // Order ID, return ID, etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertInventorySchema = createInsertSchema(inventory).pick({
+  productId: true,
+  size: true, 
+  quantity: true,
+  reservedQuantity: true,
+  lowStockThreshold: true,
+  inStock: true,
+  lastRestocked: true,
+});
+
+export const insertInventoryLogSchema = createInsertSchema(inventoryLogs).pick({
+  inventoryId: true,
+  userId: true,
+  action: true,
+  quantity: true,
+  previousQuantity: true,
+  newQuantity: true,
+  reason: true,
+  referenceId: true,
+});
+
+export type InsertInventory = z.infer<typeof insertInventorySchema>;
+export type Inventory = typeof inventory.$inferSelect;
+
+export type InsertInventoryLog = z.infer<typeof insertInventoryLogSchema>;
+export type InventoryLog = typeof inventoryLogs.$inferSelect;

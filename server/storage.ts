@@ -7,7 +7,9 @@ import {
   orderItems, type OrderItem, type InsertOrderItem,
   testimonials, type Testimonial, type InsertTestimonial,
   adminLogs, type AdminLog, type InsertAdminLog,
-  payments, type Payment, type InsertPayment
+  payments, type Payment, type InsertPayment,
+  inventory, type Inventory, type InsertInventory,
+  inventoryLogs, type InventoryLog, type InsertInventoryLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, like, count, sql, not, asc, isNull, isNotNull, inArray } from "drizzle-orm";
@@ -76,6 +78,19 @@ export interface IStorage {
   getPaymentsByUserId(userId: number): Promise<Payment[]>;
   updatePaymentStatus(id: number, status: string): Promise<Payment>;
   updatePaymentDetails(id: number, details: Partial<InsertPayment>): Promise<Payment>;
+  
+  // Inventory methods
+  getInventoryByProductId(productId: number): Promise<Inventory[]>;
+  getInventoryItem(productId: number, size: string): Promise<Inventory | undefined>;
+  createInventoryItem(item: InsertInventory): Promise<Inventory>;
+  updateInventoryQuantity(id: number, quantity: number, userId?: number): Promise<Inventory>;
+  reserveInventory(productId: number, size: string, quantity: number, reason: string, referenceId?: string): Promise<Inventory | undefined>;
+  releaseInventory(productId: number, size: string, quantity: number, reason: string, referenceId?: string): Promise<Inventory | undefined>;
+  getLowStockInventory(threshold?: number): Promise<Inventory[]>;
+  getOutOfStockInventory(): Promise<Inventory[]>;
+  createInventoryLog(log: InsertInventoryLog): Promise<InventoryLog>;
+  getInventoryLogs(inventoryId: number): Promise<InventoryLog[]>;
+  updateProductStockStatus(productId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -789,10 +804,235 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Create database storage first
-const dbStorage = new DatabaseStorage();
+// Inventory methods
+  async getInventoryByProductId(productId: number): Promise<Inventory[]> {
+    return await db
+      .select()
+      .from(inventory)
+      .where(eq(inventory.productId, productId))
+      .orderBy(asc(inventory.size));
+  }
 
-// Export the database storage directly
+  async getInventoryItem(productId: number, size: string): Promise<Inventory | undefined> {
+    const [item] = await db
+      .select()
+      .from(inventory)
+      .where(
+        and(
+          eq(inventory.productId, productId),
+          eq(inventory.size, size)
+        )
+      );
+    return item;
+  }
+
+  async createInventoryItem(item: InsertInventory): Promise<Inventory> {
+    const [newItem] = await db
+      .insert(inventory)
+      .values(item)
+      .returning();
+    
+    // Update the product's overall stock status
+    await this.updateProductStockStatus(item.productId);
+    
+    return newItem;
+  }
+
+  async updateInventoryQuantity(id: number, quantity: number, userId?: number): Promise<Inventory> {
+    // Get current inventory record
+    const [currentInventory] = await db
+      .select()
+      .from(inventory)
+      .where(eq(inventory.id, id));
+    
+    if (!currentInventory) {
+      throw new Error("Inventory item not found");
+    }
+    
+    // Update the inventory with new quantity
+    const [updatedInventory] = await db
+      .update(inventory)
+      .set({
+        quantity,
+        updatedAt: new Date(),
+        inStock: quantity > 0,
+        lastRestocked: quantity > currentInventory.quantity ? new Date() : currentInventory.lastRestocked
+      })
+      .where(eq(inventory.id, id))
+      .returning();
+    
+    // Create inventory log
+    await this.createInventoryLog({
+      inventoryId: id,
+      userId,
+      action: quantity > currentInventory.quantity ? "add" : "subtract",
+      quantity: Math.abs(quantity - currentInventory.quantity),
+      previousQuantity: currentInventory.quantity,
+      newQuantity: quantity,
+      reason: "adjustment",
+      referenceId: null
+    });
+    
+    // Update the product's overall stock status
+    await this.updateProductStockStatus(updatedInventory.productId);
+    
+    return updatedInventory;
+  }
+
+  async reserveInventory(
+    productId: number, 
+    size: string, 
+    quantity: number, 
+    reason: string, 
+    referenceId?: string
+  ): Promise<Inventory | undefined> {
+    // Get current inventory
+    const item = await this.getInventoryItem(productId, size);
+    
+    if (!item || item.quantity < quantity) {
+      return undefined; // Not enough stock
+    }
+    
+    // Update reserved quantity
+    const [updatedInventory] = await db
+      .update(inventory)
+      .set({
+        reservedQuantity: item.reservedQuantity + quantity,
+        inStock: (item.quantity - (item.reservedQuantity + quantity)) > 0,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(inventory.productId, productId),
+          eq(inventory.size, size)
+        )
+      )
+      .returning();
+    
+    // Create inventory log
+    await this.createInventoryLog({
+      inventoryId: item.id,
+      userId: null,
+      action: "reserve",
+      quantity,
+      previousQuantity: item.quantity,
+      newQuantity: item.quantity, // Actual quantity doesn't change, just reserved
+      reason,
+      referenceId: referenceId || null
+    });
+    
+    // Update the product's overall stock status
+    await this.updateProductStockStatus(productId);
+    
+    return updatedInventory;
+  }
+
+  async releaseInventory(
+    productId: number, 
+    size: string, 
+    quantity: number, 
+    reason: string, 
+    referenceId?: string
+  ): Promise<Inventory | undefined> {
+    // Get current inventory
+    const item = await this.getInventoryItem(productId, size);
+    
+    if (!item || item.reservedQuantity < quantity) {
+      return undefined; // Can't release more than what's reserved
+    }
+    
+    // Update reserved quantity
+    const [updatedInventory] = await db
+      .update(inventory)
+      .set({
+        reservedQuantity: item.reservedQuantity - quantity,
+        inStock: (item.quantity - (item.reservedQuantity - quantity)) > 0,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(inventory.productId, productId),
+          eq(inventory.size, size)
+        )
+      )
+      .returning();
+    
+    // Create inventory log
+    await this.createInventoryLog({
+      inventoryId: item.id,
+      userId: null,
+      action: "release",
+      quantity,
+      previousQuantity: item.quantity,
+      newQuantity: item.quantity, // Actual quantity doesn't change, just reserved
+      reason,
+      referenceId: referenceId || null
+    });
+    
+    // Update the product's overall stock status
+    await this.updateProductStockStatus(productId);
+    
+    return updatedInventory;
+  }
+
+  async getLowStockInventory(threshold?: number): Promise<Inventory[]> {
+    return await db
+      .select()
+      .from(inventory)
+      .where(
+        sql`${inventory.quantity} - ${inventory.reservedQuantity} <= COALESCE(${inventory.lowStockThreshold}, ${threshold || 5})`
+      )
+      .orderBy([asc(inventory.productId), asc(inventory.size)]);
+  }
+
+  async getOutOfStockInventory(): Promise<Inventory[]> {
+    return await db
+      .select()
+      .from(inventory)
+      .where(
+        or(
+          eq(inventory.inStock, false),
+          sql`${inventory.quantity} - ${inventory.reservedQuantity} <= 0`
+        )
+      )
+      .orderBy([asc(inventory.productId), asc(inventory.size)]);
+  }
+
+  async createInventoryLog(log: InsertInventoryLog): Promise<InventoryLog> {
+    const [newLog] = await db
+      .insert(inventoryLogs)
+      .values(log)
+      .returning();
+    return newLog;
+  }
+
+  async getInventoryLogs(inventoryId: number): Promise<InventoryLog[]> {
+    return await db
+      .select()
+      .from(inventoryLogs)
+      .where(eq(inventoryLogs.inventoryId, inventoryId))
+      .orderBy(desc(inventoryLogs.createdAt));
+  }
+
+  async updateProductStockStatus(productId: number): Promise<boolean> {
+    // Get all inventory for this product
+    const inventoryItems = await this.getInventoryByProductId(productId);
+    
+    // Check if any size is in stock
+    const isInStock = inventoryItems.some(item => 
+      item.inStock && (item.quantity - item.reservedQuantity) > 0
+    );
+    
+    // Update the product's inStock status
+    await db
+      .update(products)
+      .set({ inStock: isInStock })
+      .where(eq(products.id, productId));
+    
+    return isInStock;
+  }
+}
+
 export const storage = dbStorage;
 
 // Try to initialize the database once
