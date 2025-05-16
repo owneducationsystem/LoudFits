@@ -32,6 +32,7 @@ import PaymentError from "@/pages/PaymentError";
 import TestPhonePe from "@/pages/TestPhonePe";
 import NotificationTest from "@/pages/NotificationTest";
 import EmailTest from "@/pages/EmailTest";
+import DirectEmailTest from "@/pages/DirectEmailTest";
 // Admin pages
 import Admin from "@/pages/Admin";
 import AdminUsers from "@/pages/AdminUsers";
@@ -127,6 +128,7 @@ function App() {
                 <Route path="/test-phonepe" component={TestPhonePe} />
                 <Route path="/test-notifications" component={NotificationTest} />
                 <Route path="/test-emails" component={EmailTest} />
+                <Route path="/direct-email-test" component={DirectEmailTest} />
                 
                 {/* Admin Routes - Protected */}
                 <Route path="/admin/login" component={AdminLogin} />

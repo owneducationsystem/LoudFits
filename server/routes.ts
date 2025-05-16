@@ -80,6 +80,8 @@ const logAdminAction = async (req: Request, res: Response, next: NextFunction) =
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register our direct email testing route
+  app.use("/api/direct-email", directEmailRoutes);
   // Create the HTTP server first so we can attach WebSockets to it
   let httpServer = createServer(app);
   
