@@ -19,11 +19,12 @@ export function setupEmailRoutes(app: Express) {
       
       const result = await emailService.sendWelcomeEmail(user);
       
-      res.json({
+      res.setHeader('Content-Type', 'application/json');
+      res.send(JSON.stringify({
         success: result,
         message: result ? "Welcome email sent successfully" : "Failed to send welcome email",
         email: user.email
-      });
+      }));
     } catch (error: any) {
       console.error("Error sending test welcome email:", error);
       res.status(500).json({ success: false, error: error.message });
