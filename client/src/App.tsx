@@ -45,7 +45,7 @@ import AdminCategories from "@/pages/AdminCategories";
 import AdminAddUser from "@/pages/AdminAddUser";
 import AdminSettings from "@/pages/AdminSettings";
 import AdminLogin from "@/pages/AdminLogin";
-import SimpleAdminDashboard from "@/pages/SimpleAdminDashboard";
+import DirectDashboard from "@/pages/DirectDashboard";
 import AdminRoute from "@/components/layout/AdminRoute";
 
 import { useEffect, useState } from "react";
@@ -136,7 +136,7 @@ function App() {
                 <Route path="/admin">
                   <AdminRoute component={Admin} />
                 </Route>
-                <Route path="/admin/dashboard" component={SimpleAdminDashboard} />
+                <Route path="/admin/dashboard" component={DirectDashboard} />
                 <Route path="/admin/users">
                   <AdminRoute component={AdminUsers} />
                 </Route>
