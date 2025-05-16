@@ -190,7 +190,7 @@ dashboardRoutes.get("/user-signups", async (req, res) => {
       day: today.getDate()
     });
     
-    // Count signups by time period, accounting for potential timezone issues
+    // Count signups by time period, using reliable date comparison
     const signupsToday = users.filter(user => {
       // Force createdAt to a string format first to ensure consistent handling
       const createdAtStr = user.createdAt instanceof Date 
@@ -200,30 +200,6 @@ dashboardRoutes.get("/user-signups", async (req, res) => {
       // Parse date with specific handling
       const createdAt = new Date(createdAtStr);
       
-      // For debugging: Log the comparison values
-      console.log(`User ${user.id} signup date check:`, {
-        createdAtOriginal: createdAtStr,
-        createdAtParsed: createdAt.toISOString(),
-        year: {
-          today: today.getFullYear(),
-          created: createdAt.getFullYear(),
-          matches: createdAt.getFullYear() === today.getFullYear()
-        },
-        month: {
-          today: today.getMonth(),
-          created: createdAt.getMonth(),
-          matches: createdAt.getMonth() === today.getMonth()
-        },
-        day: {
-          today: today.getDate(),
-          created: createdAt.getDate(),
-          matches: createdAt.getDate() === today.getDate()
-        },
-        isToday: createdAt.getFullYear() === today.getFullYear() && 
-                createdAt.getMonth() === today.getMonth() && 
-                createdAt.getDate() === today.getDate()
-      });
-      
       // Get today's date as a string in YYYY-MM-DD format
       const todayStr = today.toISOString().split('T')[0];
       
@@ -231,24 +207,11 @@ dashboardRoutes.get("/user-signups", async (req, res) => {
       const createdDateStr = createdAt.toISOString().split('T')[0];
       
       // Compare dates by string conversion (safer across timezones)
-      const isToday = createdDateStr === todayStr;
-      
-      // Special case for the newest users (4 and 5) - force them to count as today
-      if (user.id >= 4) {
-        return true;
-      }
-      
-      // Return true if signup happened today
-      return isToday;
+      return createdDateStr === todayStr;
     }).length;
     
     // For this week, ensure we're comparing dates properly
     const signupsThisWeek = users.filter(user => {
-      // Special case for the newest users (4 and 5) - force them to count as this week
-      if (user.id >= 4) {
-        return true;
-      }
-      
       // Parse the date safely
       const createdAtStr = user.createdAt instanceof Date 
           ? user.createdAt.toISOString() 
@@ -265,11 +228,6 @@ dashboardRoutes.get("/user-signups", async (req, res) => {
     
     // For this month, ensure we're comparing dates properly
     const signupsThisMonth = users.filter(user => {
-      // Special case for the newest users (4 and 5) - force them to count as this month
-      if (user.id >= 4) {
-        return true;
-      }
-      
       // Parse the date safely
       const createdAtStr = user.createdAt instanceof Date 
           ? user.createdAt.toISOString() 
