@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNotifications, NotificationType } from '@/context/NotificationContext';
 import { AdminNotificationCenter } from './AdminNotificationCenter';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ShoppingBag, 
@@ -54,6 +55,12 @@ const AdminDashboard: React.FC = () => {
     canceled: 0
   });
   const [recentOrders, setRecentOrders] = useState([]);
+  const [systemHealth, setSystemHealth] = useState({
+    database: connected,
+    email: true,
+    websocket: connected,
+    lastChecked: new Date().toISOString()
+  });
   const [loading, setLoading] = useState(true);
 
   // Listen for dashboard updates from the WebSocket
@@ -140,6 +147,43 @@ const AdminDashboard: React.FC = () => {
     fetchDashboardData();
   }, []);
 
+  // Update system health status
+  useEffect(() => {
+    // Update websocket status when connection changes
+    setSystemHealth(prev => ({
+      ...prev,
+      websocket: connected,
+      lastChecked: new Date().toISOString()
+    }));
+    
+    // Fetch recent orders
+    const fetchRecentOrders = async () => {
+      try {
+        const response = await apiRequest('GET', '/api/admin/orders/recent');
+        const data = await response.json();
+        setRecentOrders(data.orders || []);
+        
+        // Update database status on successful fetch
+        setSystemHealth(prev => ({
+          ...prev,
+          database: true,
+          lastChecked: new Date().toISOString()
+        }));
+      } catch (error) {
+        console.error('Error fetching recent orders:', error);
+        
+        // Update database status on failed fetch
+        setSystemHealth(prev => ({
+          ...prev,
+          database: false,
+          lastChecked: new Date().toISOString()
+        }));
+      }
+    };
+    
+    fetchRecentOrders();
+  }, [connected]);
+  
   // Get recent notifications (last 5) to display
   const recentNotifications = notifications
     .filter(n => n.isAdmin)
@@ -313,6 +357,70 @@ const AdminDashboard: React.FC = () => {
               </CardContent>
             </Card>
             
+            {/* Latest Orders Preview */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Latest Orders</CardTitle>
+                <CardDescription>Most recent customer orders</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentOrders.length > 0 ? (
+                    recentOrders.map((order: any) => (
+                      <div key={order.id} className="flex items-start space-x-3 border-b pb-3">
+                        <div className="shrink-0">
+                          <div className={`p-2 rounded-full 
+                            ${order.status === 'pending' ? 'bg-yellow-100' : 
+                             order.status === 'processing' ? 'bg-blue-100' :
+                             order.status === 'shipped' ? 'bg-indigo-100' :
+                             order.status === 'delivered' ? 'bg-green-100' : 'bg-gray-100'}`}>
+                            <ShoppingBag className={`h-4 w-4 
+                              ${order.status === 'pending' ? 'text-yellow-600' : 
+                               order.status === 'processing' ? 'text-blue-600' :
+                               order.status === 'shipped' ? 'text-indigo-600' :
+                               order.status === 'delivered' ? 'text-green-600' : 'text-gray-600'}`} />
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium">{order.orderNumber}</h4>
+                            <div className="text-xs">
+                              <Badge variant={
+                                order.status === 'pending' ? 'outline' : 
+                                order.status === 'processing' ? 'secondary' :
+                                order.status === 'shipped' ? 'default' :
+                                order.status === 'delivered' ? 'success' : 'destructive'
+                              }>
+                                {order.status}
+                              </Badge>
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {order.user ? `${order.user.username || order.user.email}` : 'Guest order'}
+                          </p>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-semibold">₹{parseFloat(order.total).toFixed(2)}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(order.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-muted-foreground">No recent orders</p>
+                  )}
+                </div>
+                
+                <div className="mt-4 text-center">
+                  <a href="/admin/orders" className="text-primary text-sm hover:underline">
+                    View all orders
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Recent Admin Notifications */}
             <Card>
               <CardHeader>
