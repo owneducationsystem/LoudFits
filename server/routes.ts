@@ -823,26 +823,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Set up test notification routes
-  app.get("/api/notifications/test", async (req, res) => {
-    const { sendTestNotification } = await import('./services/testNotifications');
-    const result = await sendTestNotification();
-    res.json(result);
-  });
-  
-  app.post("/api/notifications/order-test", async (req, res) => {
-    const { sendOrderNotification } = await import('./services/testNotifications');
-    const { userId = 1 } = req.body;
-    const result = await sendOrderNotification(userId);
-    res.json(result);
-  });
-  
-  app.post("/api/notifications/payment-test", async (req, res) => {
-    const { sendPaymentNotification } = await import('./services/testNotifications');
-    const { userId = 1, success = true } = req.body;
-    const result = await sendPaymentNotification(userId, success);
-    res.json(result);
-  });
+  // Set up notification routes
+  const { setupNotificationRoutes } = await import('./routes/notificationRoutes');
+  setupNotificationRoutes(app);
   
   // Server is already created at the top for WebSocket support
   return httpServer;
