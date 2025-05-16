@@ -31,7 +31,7 @@ type FilterType = 'all' | 'order' | 'payment' | 'product' | 'user' | 'system';
 type PriorityFilter = 'all' | 'low' | 'medium' | 'high' | 'urgent';
 
 export function AdminNotificationCenter() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotifications } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotifications, connected } = useNotifications();
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
