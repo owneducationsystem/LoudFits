@@ -60,6 +60,38 @@ import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
+interface OrderItem {
+  id: number;
+  orderId: number;
+  productId: number;
+  quantity: number;
+  price: string;
+  size: string;
+  color: string;
+  customization?: any;
+  product?: {
+    id: number;
+    name: string;
+    images: string[];
+    category: string;
+  }
+}
+
+interface CustomerDetails {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  address: {
+    street?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  }
+}
+
 interface Order {
   id: number;
   orderNumber: string;
@@ -84,6 +116,8 @@ interface Order {
     url?: string;
     estimatedDelivery?: string;
   };
+  customer?: CustomerDetails;
+  items?: OrderItem[];
 }
 
 const getStatusColor = (status: string) => {
@@ -592,13 +626,20 @@ const AdminOrders = () => {
                     Customer Information
                   </h4>
                   <div className="bg-gray-50 p-4 rounded-md">
-                    <p className="font-medium">{selectedOrder.shippingAddress.fullName}</p>
-                    <p className="text-sm text-gray-500">
-                      User ID: {selectedOrder.userId}
+                    <p className="font-medium">
+                      {selectedOrder.customer?.name || selectedOrder.shippingAddress.fullName}
                     </p>
-                    {selectedOrder.shippingAddress.phone && (
-                      <p className="text-sm text-gray-500">
-                        Phone: {selectedOrder.shippingAddress.phone}
+                    {selectedOrder.customer?.email && (
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Email:</span> {selectedOrder.customer.email}
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-700">
+                      <span className="font-medium">User ID:</span> {selectedOrder.userId}
+                    </p>
+                    {(selectedOrder.customer?.phone || selectedOrder.shippingAddress.phone) && (
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Phone:</span> {selectedOrder.customer?.phone || selectedOrder.shippingAddress.phone}
                       </p>
                     )}
                   </div>
@@ -608,12 +649,34 @@ const AdminOrders = () => {
                     Shipping Address
                   </h4>
                   <div className="bg-gray-50 p-4 rounded-md">
-                    <p>{selectedOrder.shippingAddress.address}</p>
-                    <p>
-                      {selectedOrder.shippingAddress.city},{" "}
-                      {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.postalCode}
-                    </p>
-                    <p>{selectedOrder.shippingAddress.country}</p>
+                    <div className="space-y-1">
+                      <p>{selectedOrder.shippingAddress.address}</p>
+                      {selectedOrder.customer?.address?.addressLine2 && (
+                        <p>{selectedOrder.customer.address.addressLine2}</p>
+                      )}
+                      <p>
+                        {selectedOrder.shippingAddress.city},{" "}
+                        {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.postalCode}
+                      </p>
+                      <p>{selectedOrder.shippingAddress.country}</p>
+                    </div>
+
+                    {/* If we have stored customer address that's different from shipping address */}
+                    {selectedOrder.customer?.address?.street &&
+                     selectedOrder.customer.address.street !== selectedOrder.shippingAddress.address && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <p className="text-sm font-medium mb-1">Billing/Account Address:</p>
+                        <p>{selectedOrder.customer.address.street}</p>
+                        {selectedOrder.customer.address.addressLine2 && (
+                          <p>{selectedOrder.customer.address.addressLine2}</p>
+                        )}
+                        <p>
+                          {selectedOrder.customer.address.city},{" "}
+                          {selectedOrder.customer.address.state} {selectedOrder.customer.address.postalCode}
+                        </p>
+                        <p>{selectedOrder.customer.address.country}</p>
+                      </div>
+                    )}
                   </div>
 
                   {selectedOrder.tracking && (

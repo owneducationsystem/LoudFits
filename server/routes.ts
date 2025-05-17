@@ -983,8 +983,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orders = await storage.getAllOrders(limit, offset);
       const count = await storage.countOrders();
       
-      res.json({ orders, total: count });
+      // Enhance order data with customer information and product details
+      const enhancedOrders = await Promise.all(orders.map(async (order) => {
+        // Get customer details if userId exists
+        let customerDetails = null;
+        if (order.userId) {
+          const customer = await storage.getUser(order.userId);
+          if (customer) {
+            customerDetails = {
+              id: customer.id,
+              name: customer.firstName && customer.lastName 
+                ? `${customer.firstName} ${customer.lastName}`
+                : customer.username,
+              email: customer.email,
+              phone: customer.phoneNumber,
+              address: {
+                street: customer.address,
+                addressLine2: customer.addressLine2,
+                city: customer.city,
+                state: customer.state,
+                postalCode: customer.postalCode,
+                country: customer.country
+              }
+            };
+          }
+        }
+        
+        // Get order items with product details
+        const orderItems = await storage.getOrderItems(order.id);
+        const itemsWithDetails = await Promise.all(orderItems.map(async (item) => {
+          const product = await storage.getProduct(item.productId);
+          return {
+            ...item,
+            product: product ? {
+              id: product.id,
+              name: product.name,
+              images: product.images,
+              category: product.category
+            } : null
+          };
+        }));
+        
+        // Return enhanced order with customer and item details
+        return {
+          ...order,
+          customer: customerDetails,
+          items: itemsWithDetails
+        };
+      }));
+      
+      res.json({ orders: enhancedOrders, total: count });
     } catch (error) {
+      console.error("Error fetching admin orders:", error);
       res.status(500).json({ message: "Failed to fetch orders" });
     }
   });
