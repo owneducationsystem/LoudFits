@@ -764,6 +764,81 @@ const AdminOrders = () => {
                       <span>{formatPrice(parseFloat(selectedOrder.total))}</span>
                     </div>
                   </div>
+
+                  {/* Product Items Section */}
+                  {selectedOrder.items && selectedOrder.items.length > 0 && (
+                    <>
+                      <h4 className="font-medium flex items-center gap-2 mt-4">
+                        <Package className="h-4 w-4" />
+                        Product Details
+                      </h4>
+                      <div className="bg-gray-50 p-4 rounded-md">
+                        <div className="space-y-4">
+                          {selectedOrder.items.map((item) => (
+                            <div 
+                              key={`${item.productId}-${item.size}-${item.color}`} 
+                              className="flex gap-3 pb-3 border-b border-gray-200 last:border-0 last:pb-0"
+                            >
+                              {/* Product Image */}
+                              <div className="flex-shrink-0 w-16 h-16 bg-gray-100 rounded-md overflow-hidden">
+                                {item.product?.images && item.product.images.length > 0 ? (
+                                  <img 
+                                    src={item.product.images[0]} 
+                                    alt={item.product?.name || 'Product'} 
+                                    className="w-full h-full object-cover" 
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                                    <Package className="h-6 w-6 text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Product Details */}
+                              <div className="flex-grow">
+                                <div className="flex justify-between">
+                                  <div>
+                                    <h5 className="font-medium">
+                                      {item.product?.name || `Product #${item.productId}`}
+                                    </h5>
+                                    <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-1">
+                                      <span>ID: {item.productId}</span>
+                                      <span>Size: {item.size}</span>
+                                      <span>Color: {item.color}</span>
+                                      {item.product?.category && (
+                                        <span>Category: {item.product.category}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="font-medium">
+                                      {formatPrice(parseFloat(item.price))}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      Qty: {item.quantity}
+                                    </div>
+                                    <div className="text-sm font-medium">
+                                      {formatPrice(parseFloat(item.price) * item.quantity)}
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* Show customization if available */}
+                                {item.customization && (
+                                  <div className="mt-2 p-2 bg-gray-100 rounded text-sm">
+                                    <p className="font-medium text-gray-700">Customization:</p>
+                                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
+                                      {JSON.stringify(item.customization, null, 2)}
+                                    </pre>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
