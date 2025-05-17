@@ -422,3 +422,171 @@ inventoryRouter.delete('/inventory/:productId/:size', async (req, res) => {
     return res.status(500).json({ message: 'Failed to delete inventory item' });
   }
 });
+
+// Reserve inventory by ID (for admin UI)
+inventoryRouter.post('/inventory/:id/reserve', async (req, res) => {
+  try {
+    const inventoryId = parseInt(req.params.id, 10);
+    
+    if (isNaN(inventoryId)) {
+      return res.status(400).json({ message: 'Invalid inventory ID' });
+    }
+    
+    const schema = z.object({
+      quantity: z.number().int().positive(),
+      reason: z.string(),
+      referenceId: z.string().optional()
+    });
+    
+    const result = schema.safeParse(req.body);
+    
+    if (!result.success) {
+      return res.status(400).json({ 
+        message: 'Invalid data', 
+        errors: result.error.errors 
+      });
+    }
+    
+    const { quantity, reason, referenceId } = result.data;
+    
+    // Get the inventory item by ID first
+    const inventory = await storage.getInventoryItemById(inventoryId);
+    
+    if (!inventory) {
+      return res.status(404).json({ message: 'Inventory not found' });
+    }
+    
+    const availableQuantity = inventory.quantity - (inventory.reservedQuantity || 0);
+    
+    if (availableQuantity < quantity) {
+      return res.status(400).json({ 
+        message: 'Not enough available inventory',
+        available: availableQuantity,
+        requested: quantity
+      });
+    }
+    
+    // Reserve the inventory
+    const updatedInventory = await storage.updateInventoryItem(
+      inventory.productId,
+      inventory.size,
+      {
+        reservedQuantity: (inventory.reservedQuantity || 0) + quantity
+      }
+    );
+    
+    // Log the inventory action if implemented
+    try {
+      // Create inventory log if the method exists
+      if (typeof storage.createInventoryLog === 'function') {
+        await storage.createInventoryLog({
+          inventoryId: inventory.id,
+          action: 'RESERVE',
+          quantity,
+          previousQuantity: inventory.quantity,
+          previousReservedQuantity: inventory.reservedQuantity || 0,
+          newQuantity: updatedInventory.quantity,
+          newReservedQuantity: updatedInventory.reservedQuantity,
+          reason,
+          referenceId: referenceId || null
+        });
+      }
+    } catch (logError) {
+      console.error('Error logging inventory action:', logError);
+      // Continue anyway, don't fail the main operation
+    }
+    
+    return res.json({
+      success: true,
+      inventory: updatedInventory,
+      reserved: quantity,
+      remaining: updatedInventory.quantity - updatedInventory.reservedQuantity
+    });
+  } catch (error) {
+    console.error('Error reserving inventory:', error);
+    return res.status(500).json({ message: 'Failed to reserve inventory' });
+  }
+});
+
+// Release inventory by ID (for admin UI)
+inventoryRouter.post('/inventory/:id/release', async (req, res) => {
+  try {
+    const inventoryId = parseInt(req.params.id, 10);
+    
+    if (isNaN(inventoryId)) {
+      return res.status(400).json({ message: 'Invalid inventory ID' });
+    }
+    
+    const schema = z.object({
+      quantity: z.number().int().positive(),
+      reason: z.string(),
+      referenceId: z.string().optional()
+    });
+    
+    const result = schema.safeParse(req.body);
+    
+    if (!result.success) {
+      return res.status(400).json({ 
+        message: 'Invalid data', 
+        errors: result.error.errors 
+      });
+    }
+    
+    const { quantity, reason, referenceId } = result.data;
+    
+    // Get the inventory item by ID first
+    const inventory = await storage.getInventoryItemById(inventoryId);
+    
+    if (!inventory) {
+      return res.status(404).json({ message: 'Inventory not found' });
+    }
+    
+    if (!inventory.reservedQuantity || inventory.reservedQuantity < quantity) {
+      return res.status(400).json({ 
+        message: 'Cannot release more than what is reserved',
+        reserved: inventory.reservedQuantity || 0,
+        requested: quantity
+      });
+    }
+    
+    // Release the inventory
+    const updatedInventory = await storage.updateInventoryItem(
+      inventory.productId,
+      inventory.size,
+      {
+        reservedQuantity: inventory.reservedQuantity - quantity
+      }
+    );
+    
+    // Log the inventory action if implemented
+    try {
+      // Create inventory log if the method exists
+      if (typeof storage.createInventoryLog === 'function') {
+        await storage.createInventoryLog({
+          inventoryId: inventory.id,
+          action: 'RELEASE',
+          quantity,
+          previousQuantity: inventory.quantity,
+          previousReservedQuantity: inventory.reservedQuantity || 0,
+          newQuantity: updatedInventory.quantity,
+          newReservedQuantity: updatedInventory.reservedQuantity,
+          reason,
+          referenceId: referenceId || null
+        });
+      }
+    } catch (logError) {
+      console.error('Error logging inventory action:', logError);
+      // Continue anyway, don't fail the main operation
+    }
+    
+    return res.json({
+      success: true,
+      inventory: updatedInventory,
+      released: quantity,
+      remaining: updatedInventory.quantity - updatedInventory.reservedQuantity
+    });
+  } catch (error) {
+    console.error('Error releasing inventory:', error);
+    return res.status(500).json({ message: 'Failed to release inventory' });
+  }
+});
