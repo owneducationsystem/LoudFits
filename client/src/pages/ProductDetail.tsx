@@ -332,12 +332,21 @@ const ProductDetail = () => {
         <meta name="description" content={product.description} />
       </Helmet>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="container mx-auto px-4 py-4 md:py-8">
+        {/* Mobile breadcrumb */}
+        <div className="mb-3 text-sm text-gray-500 hidden xs:flex items-center gap-1">
+          <Link href="/shop" className="hover:text-[#582A34] transition-colors">Shop</Link>
+          <span>/</span>
+          <Link href={`/shop?category=${product.category || 't-shirts'}`} className="hover:text-[#582A34] transition-colors">
+            {product.category || 'T-Shirts'}
+          </Link>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
           {/* Product Gallery */}
           <div className="relative">
             {/* Main Image */}
-            <div className="relative overflow-hidden rounded-md bg-gray-100 h-[500px]">
+            <div className="relative overflow-hidden rounded-md bg-gray-100 h-[350px] xs:h-[450px] md:h-[500px]">
               <div 
                 ref={imageRef}
                 className={`w-full h-full ${isZoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`} 
@@ -670,9 +679,9 @@ const ProductDetail = () => {
         </div>
 
         {/* Related Products */}
-        <div className="mt-16">
-          <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="mt-8 md:mt-16">
+          <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">You May Also Like</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             {(isLoadingRelated ? [] : filteredRelatedProducts).map((relatedProduct: Product, index: number) => (
               <motion.div
                 key={relatedProduct.id}
