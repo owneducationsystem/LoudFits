@@ -2,6 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom responsive breakpoints */
+@layer utilities {
+  /* XS screens - Very small mobile phones */
+  @screen xs {
+    /* XS screen specific styles */
+  }
+  
+  /* Custom zoom styles for product images */
+  .zoom-overlay {
+    @apply fixed inset-0 bg-black/80 z-50 flex items-center justify-center;
+  }
+  
+  .zoom-image-container {
+    @apply relative w-full h-full max-w-4xl max-h-screen p-4 md:p-8 overflow-hidden;
+  }
+  
+  .zoom-image {
+    @apply w-full h-auto max-h-[80vh] object-contain;
+  }
+  
+  /* Mobile-optimized scrollable tabs */
+  .mobile-tabs-scrollable {
+    @apply flex overflow-x-auto pb-2 snap-x whitespace-nowrap hide-scrollbar;
+  }
+  
+  .mobile-tab-item {
+    @apply inline-block snap-start px-4 py-2 text-sm font-medium;
+  }
+  
+  /* Hide scrollbar but maintain functionality */
+  .hide-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+  
+  /* Sticky mobile bottom bar */
+  .sticky-bottom-bar {
+    @apply fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 flex items-center justify-between z-40;
+  }
+}
+
 :root {
   --background: 0 0% 100%;
   --foreground: 20 14.3% 4.1%;

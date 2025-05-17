@@ -113,10 +113,11 @@ const Header = () => {
         <div className="container mx-auto">
           <p className="tracking-wide flex items-center justify-center gap-2 uppercase">
             <span className="inline-block w-2 h-2 rounded-full bg-white animate-pulse"></span>
-            FREE SHIPPING ON ORDERS ABOVE ₹1999
-            <span className="inline-block mx-1 w-1 h-1 rounded-full bg-white"></span>
-            EASY RETURNS
-            <span className="inline-block w-2 h-2 rounded-full bg-white animate-pulse"></span>
+            <span className="hidden xs:inline">FREE SHIPPING ON ORDERS ABOVE ₹1999</span>
+            <span className="xs:hidden">FREE SHIPPING OVER ₹1999</span>
+            <span className="hidden sm:inline-block mx-1 w-1 h-1 rounded-full bg-white"></span>
+            <span className="hidden sm:inline">EASY RETURNS</span>
+            <span className="hidden sm:inline-block w-2 h-2 rounded-full bg-white animate-pulse"></span>
           </p>
         </div>
       </div>
