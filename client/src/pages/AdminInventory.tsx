@@ -476,18 +476,44 @@ export default function AdminInventory() {
   
   // Load data on component mount
   useEffect(() => {
-    fetchInventory();
-    fetchProducts();
-  }, []);
+    // Initial data load
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        await fetchProducts();
+        await fetchInventory();
+      } catch (err) {
+        console.error("Error during initial data load:", err);
+        toast({
+          title: "Error Loading Data",
+          description: "Failed to load inventory data. Please try refreshing the page.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [fetchInventory, fetchProducts, toast]);
 
   const content = (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => fetchInventory(true)} 
+            disabled={isLoading}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          
           <Dialog>
             <DialogTrigger asChild>
-              <Button>
+              <Button disabled={isLoading}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Inventory
               </Button>
