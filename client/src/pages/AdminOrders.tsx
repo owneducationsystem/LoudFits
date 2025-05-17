@@ -569,8 +569,9 @@ const AdminOrders = () => {
     }
   ];
 
-  // For demo purposes, use mock data if API isn't working yet
-  const displayOrders = orders.length > 0 ? orders : mockOrders;
+  // Temporarily always show mock data to help with testing
+  // const displayOrders = orders.length > 0 ? orders : mockOrders;
+  const displayOrders = mockOrders;
 
   return (
     <AdminLayout title="Order Management">
