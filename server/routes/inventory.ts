@@ -484,9 +484,7 @@ inventoryRouter.post('/inventory/:id/reserve', async (req, res) => {
           action: 'RESERVE',
           quantity,
           previousQuantity: inventory.quantity,
-          previousReservedQuantity: inventory.reservedQuantity || 0,
           newQuantity: updatedInventory.quantity,
-          newReservedQuantity: updatedInventory.reservedQuantity,
           reason,
           referenceId: referenceId || null
         });
@@ -567,9 +565,7 @@ inventoryRouter.post('/inventory/:id/release', async (req, res) => {
           action: 'RELEASE',
           quantity,
           previousQuantity: inventory.quantity,
-          previousReservedQuantity: inventory.reservedQuantity || 0,
           newQuantity: updatedInventory.quantity,
-          newReservedQuantity: updatedInventory.reservedQuantity,
           reason,
           referenceId: referenceId || null
         });
