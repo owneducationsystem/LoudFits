@@ -271,7 +271,7 @@ inventoryRouter.post('/inventory/reserve', async (req, res) => {
       success: true,
       inventory: updatedInventory,
       reserved: quantity,
-      remaining: updatedInventory.quantity - updatedInventory.reservedQuantity
+      remaining: calculateRemaining(updatedInventory)
     });
   } catch (error) {
     console.error('Error reserving inventory:', error);
@@ -327,7 +327,7 @@ inventoryRouter.post('/inventory/release', async (req, res) => {
       success: true,
       inventory: updatedInventory,
       released: quantity,
-      remaining: updatedInventory.quantity - updatedInventory.reservedQuantity
+      remaining: calculateRemaining(updatedInventory)
     });
   } catch (error) {
     console.error('Error releasing inventory:', error);
@@ -393,7 +393,7 @@ inventoryRouter.post('/inventory/finalize', async (req, res) => {
       success: true,
       inventory: updatedInventory,
       finalized: quantity,
-      available: updatedInventory.quantity - updatedInventory.reservedQuantity
+      available: calculateRemaining(updatedInventory)
     });
   } catch (error) {
     console.error('Error finalizing inventory:', error);
@@ -503,7 +503,7 @@ inventoryRouter.post('/inventory/:id/reserve', async (req, res) => {
       success: true,
       inventory: updatedInventory,
       reserved: quantity,
-      remaining: updatedInventory.quantity - updatedInventory.reservedQuantity
+      remaining: calculateRemaining(updatedInventory)
     });
   } catch (error) {
     console.error('Error reserving inventory:', error);
@@ -584,7 +584,7 @@ inventoryRouter.post('/inventory/:id/release', async (req, res) => {
       success: true,
       inventory: updatedInventory,
       released: quantity,
-      remaining: updatedInventory.quantity - updatedInventory.reservedQuantity
+      remaining: calculateRemaining(updatedInventory)
     });
   } catch (error) {
     console.error('Error releasing inventory:', error);
