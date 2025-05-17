@@ -335,11 +335,11 @@ const ProductDetail = () => {
       <div className="container mx-auto px-4 py-4 md:py-8">
         {/* Mobile breadcrumb */}
         <div className="mb-3 text-sm text-gray-500 hidden xs:flex items-center gap-1">
-          <Link href="/shop" className="hover:text-[#582A34] transition-colors">Shop</Link>
+          <span onClick={() => navigate('/shop')} className="hover:text-[#582A34] transition-colors cursor-pointer">Shop</span>
           <span>/</span>
-          <Link href={`/shop?category=${product.category || 't-shirts'}`} className="hover:text-[#582A34] transition-colors">
+          <span onClick={() => navigate(`/shop?category=${product.category || 't-shirts'}`)} className="hover:text-[#582A34] transition-colors cursor-pointer">
             {product.category || 'T-Shirts'}
-          </Link>
+          </span>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
@@ -711,6 +711,24 @@ const ProductDetail = () => {
               </motion.div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Mobile Sticky Add to Cart Button */}
+      <div className="block md:hidden">
+        <div className="h-16"></div> {/* Spacer to prevent content from being hidden behind sticky bar */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 flex items-center gap-2 z-40 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+          <div className="flex-1 text-left">
+            <p className="font-bold text-[#582A34]">₹{product.salePrice || product.price}</p>
+            <p className="text-xs text-gray-500">{selectedSize ? selectedSize : 'Select size'}</p>
+          </div>
+          <Button 
+            className="h-12 px-5 bg-[#582A34] hover:bg-[#582A34]/90 text-white flex-1"
+            onClick={handleAddToCart}
+            disabled={!selectedSize || stockDetails.status === "out-of-stock"}
+          >
+            Add to Cart
+          </Button>
         </div>
       </div>
     </>
