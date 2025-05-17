@@ -650,6 +650,7 @@ const AdminOrders = () => {
                   </h4>
                   <div className="bg-gray-50 p-4 rounded-md">
                     <div className="space-y-1">
+                      <p className="font-medium">{selectedOrder.shippingAddress.fullName}</p>
                       <p>{selectedOrder.shippingAddress.address}</p>
                       {selectedOrder.customer?.address?.addressLine2 && (
                         <p>{selectedOrder.customer.address.addressLine2}</p>
@@ -659,6 +660,11 @@ const AdminOrders = () => {
                         {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.postalCode}
                       </p>
                       <p>{selectedOrder.shippingAddress.country}</p>
+                      {selectedOrder.shippingAddress.phone && (
+                        <p className="mt-1 text-gray-700">
+                          <span className="font-medium">Phone:</span> {selectedOrder.shippingAddress.phone}
+                        </p>
+                      )}
                     </div>
 
                     {/* If we have stored customer address that's different from shipping address */}
@@ -798,27 +804,41 @@ const AdminOrders = () => {
                               <div className="flex-grow">
                                 <div className="flex justify-between">
                                   <div>
-                                    <h5 className="font-medium">
+                                    <h5 className="font-medium flex items-center gap-2">
                                       {item.product?.name || `Product #${item.productId}`}
+                                      <span className="text-xs py-0.5 px-1.5 bg-gray-200 rounded-md text-gray-700">
+                                        ID: {item.productId}
+                                      </span>
                                     </h5>
-                                    <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-1">
-                                      <span>ID: {item.productId}</span>
-                                      <span>Size: {item.size}</span>
-                                      <span>Color: {item.color}</span>
+                                    <div className="flex flex-wrap gap-2 text-xs mt-2">
+                                      <span className="py-0.5 px-2 bg-blue-100 rounded text-blue-700 font-medium">
+                                        Size: {item.size}
+                                      </span>
+                                      <span className="py-0.5 px-2 bg-purple-100 rounded text-purple-700 font-medium">
+                                        Color: {item.color}
+                                      </span>
+                                      <span className="py-0.5 px-2 bg-green-100 rounded text-green-700 font-medium">
+                                        Qty: {item.quantity}
+                                      </span>
                                       {item.product?.category && (
-                                        <span>Category: {item.product.category}</span>
+                                        <span className="py-0.5 px-2 bg-amber-100 rounded text-amber-700 font-medium">
+                                          {item.product.category}
+                                        </span>
                                       )}
                                     </div>
                                   </div>
                                   <div className="text-right">
                                     <div className="font-medium">
                                       {formatPrice(parseFloat(item.price))}
+                                      <span className="text-xs text-gray-500 ml-1">
+                                        / each
+                                      </span>
                                     </div>
-                                    <div className="text-sm text-gray-500">
-                                      Qty: {item.quantity}
-                                    </div>
-                                    <div className="text-sm font-medium">
+                                    <div className="text-sm font-medium mt-2">
                                       {formatPrice(parseFloat(item.price) * item.quantity)}
+                                      <span className="text-xs text-gray-500 ml-1">
+                                        total
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
