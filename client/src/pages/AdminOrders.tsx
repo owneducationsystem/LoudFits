@@ -195,7 +195,30 @@ const AdminOrders = () => {
   };
 
   const handleViewOrder = (order: Order) => {
-    setSelectedOrder(order);
+    // If order has no items or customer info and we have mock orders, try to find a matching mock order
+    if ((!order.items || !order.customer || !order.shippingAddress.phone) && mockOrders.length > 0) {
+      const mockOrder = mockOrders.find(mo => mo.id === order.id) || 
+                        mockOrders.find(mo => mo.orderNumber === order.orderNumber);
+      
+      // If we found a matching mock order, use its details to supplement the real order
+      if (mockOrder) {
+        const supplementedOrder = {
+          ...order,
+          items: order.items || mockOrder.items,
+          customer: order.customer || mockOrder.customer,
+          shippingAddress: {
+            ...order.shippingAddress,
+            phone: order.shippingAddress.phone || mockOrder.shippingAddress.phone
+          }
+        };
+        setSelectedOrder(supplementedOrder);
+      } else {
+        setSelectedOrder(order);
+      }
+    } else {
+      setSelectedOrder(order);
+    }
+    
     setIsViewDialogOpen(true);
   };
 
@@ -267,7 +290,52 @@ const AdminOrders = () => {
         postalCode: "400001",
         country: "India",
         phone: "+91 9876543210"
-      }
+      },
+      customer: {
+        id: 2,
+        name: "Jane Smith",
+        email: "jane.smith@example.com",
+        phone: "+91 9876543210",
+        address: {
+          street: "123 Main Street",
+          city: "Mumbai",
+          state: "Maharashtra",
+          postalCode: "400001",
+          country: "India"
+        }
+      },
+      items: [
+        {
+          id: 101,
+          orderId: 1,
+          productId: 5,
+          quantity: 2,
+          price: "1299.50",
+          size: "M",
+          color: "Black",
+          product: {
+            id: 5,
+            name: "Premium Cotton T-Shirt",
+            images: ["https://example.com/images/tshirt1.jpg"],
+            category: "T-Shirts"
+          }
+        },
+        {
+          id: 102,
+          orderId: 1,
+          productId: 8,
+          quantity: 1,
+          price: "999.00",
+          size: "L",
+          color: "Blue",
+          product: {
+            id: 8,
+            name: "Graphic Print Hoodie",
+            images: ["https://example.com/images/hoodie1.jpg"],
+            category: "Hoodies"
+          }
+        }
+      ]
     },
     {
       id: 2,
@@ -292,7 +360,37 @@ const AdminOrders = () => {
         number: "SHIP12345678",
         url: "https://track.shipper.com/SHIP12345678",
         estimatedDelivery: "2023-05-15T00:00:00Z"
-      }
+      },
+      customer: {
+        id: 3,
+        name: "Mike Johnson",
+        email: "mike.johnson@example.com",
+        phone: "+91 8765432109",
+        address: {
+          street: "456 Park Avenue",
+          city: "Delhi",
+          state: "Delhi",
+          postalCode: "110001",
+          country: "India"
+        }
+      },
+      items: [
+        {
+          id: 201,
+          orderId: 2,
+          productId: 12,
+          quantity: 1,
+          price: "1499.00",
+          size: "XL",
+          color: "Red",
+          product: {
+            id: 12,
+            name: "Limited Edition Print T-Shirt",
+            images: ["https://example.com/images/tshirt-limited.jpg"],
+            category: "T-Shirts"
+          }
+        }
+      ]
     },
     {
       id: 3,
@@ -317,7 +415,57 @@ const AdminOrders = () => {
         number: "SHIP87654321",
         url: "https://track.shipper.com/SHIP87654321",
         estimatedDelivery: "2023-05-08T00:00:00Z"
-      }
+      },
+      customer: {
+        id: 4,
+        name: "Sara Williams",
+        email: "sara.williams@example.com",
+        phone: "+91 7654321098",
+        address: {
+          street: "789 Lake View",
+          city: "Bangalore",
+          state: "Karnataka",
+          postalCode: "560001",
+          country: "India"
+        }
+      },
+      items: [
+        {
+          id: 301,
+          orderId: 3,
+          productId: 3,
+          quantity: 1,
+          price: "1299.00",
+          size: "S",
+          color: "White",
+          product: {
+            id: 3,
+            name: "Casual Cotton T-Shirt",
+            images: ["https://example.com/images/cotton-tshirt.jpg"],
+            category: "T-Shirts"
+          }
+        },
+        {
+          id: 302,
+          orderId: 3,
+          productId: 9,
+          quantity: 1,
+          price: "899.00",
+          size: "M",
+          color: "Gray",
+          customization: {
+            text: "Custom Text",
+            position: "center",
+            fontSize: "medium"
+          },
+          product: {
+            id: 9,
+            name: "Customizable T-Shirt",
+            images: ["https://example.com/images/custom-tshirt.jpg"],
+            category: "Custom"
+          }
+        }
+      ]
     },
     {
       id: 4,
@@ -337,7 +485,37 @@ const AdminOrders = () => {
         postalCode: "600001",
         country: "India",
         phone: "+91 6543210987"
-      }
+      },
+      customer: {
+        id: 5,
+        name: "Robert Brown",
+        email: "robert.brown@example.com",
+        phone: "+91 6543210987",
+        address: {
+          street: "101 Hill Road",
+          city: "Chennai",
+          state: "Tamil Nadu",
+          postalCode: "600001",
+          country: "India"
+        }
+      },
+      items: [
+        {
+          id: 401,
+          orderId: 4,
+          productId: 7,
+          quantity: 1,
+          price: "899.00",
+          size: "L",
+          color: "Black",
+          product: {
+            id: 7,
+            name: "Basic T-Shirt",
+            images: ["https://example.com/images/basic-tshirt.jpg"],
+            category: "T-Shirts"
+          }
+        }
+      ]
     },
     {
       id: 5,
@@ -357,7 +535,37 @@ const AdminOrders = () => {
         postalCode: "700001",
         country: "India",
         phone: "+91 5432109876"
-      }
+      },
+      customer: {
+        id: 1,
+        name: "John Doe",
+        email: "john.doe@example.com",
+        phone: "+91 5432109876",
+        address: {
+          street: "222 Beach Road",
+          city: "Kolkata",
+          state: "West Bengal",
+          postalCode: "700001",
+          country: "India"
+        }
+      },
+      items: [
+        {
+          id: 501,
+          orderId: 5,
+          productId: 4,
+          quantity: 1,
+          price: "1299.00",
+          size: "M",
+          color: "Green",
+          product: {
+            id: 4,
+            name: "Premium Designer T-Shirt",
+            images: ["https://example.com/images/designer-tshirt.jpg"],
+            category: "T-Shirts"
+          }
+        }
+      ]
     }
   ];
 
