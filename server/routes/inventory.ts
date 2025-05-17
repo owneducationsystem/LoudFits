@@ -3,6 +3,11 @@ import { storage } from '../storage';
 import { z } from 'zod';
 import { sendLowStockNotification } from '../services/inventory-notification';
 
+// Helper function to safely calculate remaining inventory
+function calculateRemaining(inventory: { quantity: number, reservedQuantity: number | null }) {
+  return inventory.quantity - (inventory.reservedQuantity || 0);
+}
+
 export const inventoryRouter = Router();
 
 // Schema validation for inventory-related endpoints
