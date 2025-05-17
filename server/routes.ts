@@ -88,6 +88,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register our routes
   app.use("/api/direct-email", directEmailRoutes);
   app.use("/api", inventoryRouter);
+  // Also register inventory routes under admin prefix for admin UI
+  app.use("/api/admin", inventoryRouter);
   // Create the HTTP server first so we can attach WebSockets to it
   let httpServer = createServer(app);
   
