@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Search, Plus, Edit, Trash2, AlertCircle, CheckCircle2, Layers } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Search, Plus, Edit, Trash2, AlertCircle, CheckCircle2, Layers, RefreshCw } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -43,6 +43,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
 
 interface Product {
   id: number;
@@ -144,46 +145,86 @@ export default function AdminInventory() {
     },
   });
   
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [productMap, setProductMap] = useState<Record<number, Product>>({});
+  
   // Fetch inventory data
-  const fetchInventory = async () => {
+  const fetchInventory = useCallback(async (showToast = false) => {
     try {
+      setIsLoading(true);
       const response = await fetch("/api/admin/inventory");
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
       
-      // Get all products first in a single call
-      const productsResponse = await fetch("/api/products");
-      const productsData = await productsResponse.json();
-      
-      // Create a map for quick product lookup
-      const productsMap = productsData.reduce((map: Record<string, Product>, product: Product) => {
-        map[product.id] = product;
-        return map;
-      }, {});
+      // Only fetch products if we need to
+      let currentProductMap = productMap;
+      if (Object.keys(currentProductMap).length === 0) {
+        await fetchProducts();
+        currentProductMap = productMap;
+      }
       
       // Attach product details to each inventory item
       const inventoryWithProducts = data.map((item: InventoryItem) => {
         return { 
           ...item, 
-          product: productsMap[item.productId] || null
+          product: currentProductMap[item.productId] || null
         };
       });
       
       setInventory(inventoryWithProducts);
+      
+      if (showToast) {
+        toast({
+          title: "Inventory refreshed",
+          description: `Successfully loaded ${inventoryWithProducts.length} inventory items.`,
+          variant: "default",
+        });
+      }
     } catch (error) {
       console.error("Error fetching inventory:", error);
+      toast({
+        title: "Error loading inventory",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [productMap, toast]);
   
-  // Fetch products for dropdown
-  const fetchProducts = async () => {
+  // Fetch products for dropdown and product lookup
+  const fetchProducts = useCallback(async () => {
     try {
       const response = await fetch("/api/products");
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
       setProducts(data);
+      
+      // Create a map for quick product lookup
+      const map: Record<number, Product> = {};
+      data.forEach((product: Product) => {
+        map[product.id] = product;
+      });
+      setProductMap(map);
+      
     } catch (error) {
       console.error("Error fetching products:", error);
+      toast({
+        title: "Error loading products",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
     }
-  };
+  }, [toast]);
   
   // Handle adding new inventory
   const handleAddInventory = async (data: z.infer<typeof addInventorySchema>) => {
@@ -196,22 +237,31 @@ export default function AdminInventory() {
         body: JSON.stringify(data),
       });
       
-      if (response.ok) {
-        // Close the dialog
-        addForm.reset();
-        
-        // Force a timeout before fetching to ensure the server has processed the data
-        setTimeout(() => {
-          fetchInventory();
-          // Also refresh the products data
-          fetchProducts();
-        }, 500);
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        console.error("Error adding inventory:", errorData);
+        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
       }
+      
+      const newItem = await response.json();
+      
+      // Reset form and close dialog
+      addForm.reset();
+      
+      // Update the inventory state with the new item
+      await fetchInventory(true);
+      
+      toast({
+        title: "Inventory added",
+        description: `Successfully added ${newItem.quantity} units of product #${newItem.productId} size ${newItem.size}.`,
+        variant: "default",
+      });
     } catch (error) {
       console.error("Error adding inventory:", error);
+      toast({
+        title: "Error adding inventory",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
     }
   };
   
@@ -257,22 +307,32 @@ export default function AdminInventory() {
         }),
       });
       
-      if (response.ok) {
-        updateForm.reset();
-        setSelectedInventory(null);
-        
-        // Force a timeout before fetching to ensure the server has processed the data
-        setTimeout(() => {
-          fetchInventory();
-          // Also refresh the products data
-          fetchProducts();
-        }, 500);
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        console.error("Error updating inventory:", errorData);
+        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
       }
+      
+      const updatedItem = await response.json();
+      
+      // Reset form and close dialog
+      updateForm.reset();
+      setSelectedInventory(null);
+      
+      // Update the inventory state
+      await fetchInventory(true);
+      
+      toast({
+        title: "Inventory updated",
+        description: `Successfully updated inventory for product #${updatedItem.productId} size ${updatedItem.size}.`,
+        variant: "default",
+      });
     } catch (error) {
       console.error("Error updating inventory:", error);
+      toast({
+        title: "Error updating inventory",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
     }
   };
   
@@ -299,20 +359,32 @@ export default function AdminInventory() {
         body: JSON.stringify(data),
       });
       
-      if (response.ok) {
-        reserveForm.reset();
-        setSelectedInventory(null);
-        
-        // Force a timeout before fetching to ensure the server has processed the data
-        setTimeout(() => {
-          fetchInventory();
-        }, 500);
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        console.error("Error reserving inventory:", errorData);
+        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
       }
+      
+      const result = await response.json();
+      
+      // Reset form and close dialog
+      reserveForm.reset();
+      setSelectedInventory(null);
+      
+      // Update the inventory state
+      await fetchInventory(true);
+      
+      toast({
+        title: "Inventory reserved",
+        description: `Successfully reserved ${data.quantity} units from inventory #${selectedInventory.id}.`,
+        variant: "default",
+      });
     } catch (error) {
       console.error("Error reserving inventory:", error);
+      toast({
+        title: "Error reserving inventory",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
     }
   };
   
@@ -341,20 +413,32 @@ export default function AdminInventory() {
         body: JSON.stringify(data),
       });
       
-      if (response.ok) {
-        reserveForm.reset();
-        setSelectedInventory(null);
-        
-        // Force a timeout before fetching to ensure the server has processed the data
-        setTimeout(() => {
-          fetchInventory();
-        }, 500);
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        console.error("Error releasing inventory:", errorData);
+        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
       }
+      
+      const result = await response.json();
+      
+      // Reset form and close dialog
+      reserveForm.reset();
+      setSelectedInventory(null);
+      
+      // Update the inventory state
+      await fetchInventory(true);
+      
+      toast({
+        title: "Inventory released",
+        description: `Successfully released ${data.quantity} units back to available inventory.`,
+        variant: "default",
+      });
     } catch (error) {
       console.error("Error releasing inventory:", error);
+      toast({
+        title: "Error releasing inventory",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
     }
   };
   
