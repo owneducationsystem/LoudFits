@@ -189,7 +189,7 @@ const Shop = () => {
                       <RadioGroup value={selectedCategory} onValueChange={setSelectedCategory}>
                         <div className="space-y-2">
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="" id="category-all-mobile" />
+                            <RadioGroupItem value="all" id="category-all-mobile" />
                             <Label htmlFor="category-all-mobile">All Categories</Label>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -277,7 +277,7 @@ const Shop = () => {
                   <RadioGroup value={selectedCategory} onValueChange={setSelectedCategory}>
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="" id="category-all" />
+                        <RadioGroupItem value="all" id="category-all" />
                         <Label htmlFor="category-all">All Categories</Label>
                       </div>
                       <div className="flex items-center space-x-2">
