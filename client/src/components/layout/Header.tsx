@@ -263,8 +263,8 @@ const mobileNavLinks = [
             <NotificationBell />
           </div>
           
-          {/* User Account - hidden on all devices */}
-          <div className="hidden">
+          {/* User Account - hidden on mobile, visible on desktop */}
+          <div className="hidden md:block">
             <button 
               onClick={toggleUserMenu}
               className="relative group p-2 hover:bg-gray-100 rounded-full transition-colors"
