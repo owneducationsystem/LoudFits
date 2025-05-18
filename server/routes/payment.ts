@@ -71,6 +71,30 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
         // Update order payment status to paid
         const updatedOrder = await storage.updateOrderPaymentStatus(order.id, 'PAID');
         
+        // Update order status to CONFIRMED
+        await storage.updateOrderStatus(order.id, 'CONFIRMED');
+        
+        // Update inventory for each item in the order
+        try {
+          const orderItems = await storage.getOrderItems(order.id);
+          for (const item of orderItems) {
+            try {
+              // Deduct the quantity from inventory
+              await inventoryService.decreaseProductStock(
+                item.productId, 
+                item.size || 'ONE_SIZE', 
+                item.quantity
+              );
+              
+              console.log(`Inventory updated for product ${item.productId}, size ${item.size}, quantity ${item.quantity}`);
+            } catch (invError) {
+              console.error(`Error updating inventory for item ${item.id}:`, invError);
+            }
+          }
+        } catch (itemsError) {
+          console.error(`Error fetching order items for order ${order.id}:`, itemsError);
+        }
+        
         // Send notifications
         if (order.userId) {
           await notificationService.sendUserNotification({
