@@ -67,6 +67,41 @@ const Shop = () => {
     const color = params.get("color");
     if (color) setSelectedColors(color.split(","));
   }, [location]);
+  
+  // Update URL when filters change
+  useEffect(() => {
+    if (location.includes('/shop')) {
+      const params = new URLSearchParams();
+      
+      if (selectedCategory) {
+        params.set('category', selectedCategory);
+      }
+      
+      if (selectedGender) {
+        params.set('gender', selectedGender);
+      }
+      
+      if (selectedCollection) {
+        params.set('collection', selectedCollection);
+      }
+      
+      if (selectedSizes.length > 0) {
+        params.set('size', selectedSizes.join(','));
+      }
+      
+      if (selectedColors.length > 0) {
+        params.set('color', selectedColors.join(','));
+      }
+      
+      const queryString = params.toString();
+      const newLocation = queryString ? `/shop?${queryString}` : '/shop';
+      
+      // Only update if different to avoid loops
+      if (location !== newLocation) {
+        navigate(newLocation);
+      }
+    }
+  }, [selectedCategory, selectedGender, selectedCollection, selectedSizes, selectedColors]);
 
   const { data: products, isLoading, error } = useQuery<Product[]>({
     queryKey: ["/api/products"],

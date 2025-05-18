@@ -73,7 +73,7 @@ const navLinks = [
       path: "/shop?category=all",
       hasSubmenu: true,
       submenu: [
-        { name: "All T-Shirts", path: "/shop?category=all" },
+        { name: "All T-Shirts", path: "/shop" },
         { name: "Printed Tees", path: "/shop?category=printed-tees" },
         { name: "Graphic Tees", path: "/shop?category=graphic-tees" }
       ]
@@ -114,7 +114,7 @@ const mobileNavLinks = [
       path: "/shop?category=all",
       hasSubmenu: true,
       submenu: [
-        { name: "All T-Shirts", path: "/shop?category=all" },
+        { name: "All T-Shirts", path: "/shop" },
         { name: "Printed Tees", path: "/shop?category=printed-tees" },
         { name: "Graphic Tees", path: "/shop?category=graphic-tees" }
       ]
