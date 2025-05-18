@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Testimonial } from "@shared/schema";
 import { Helmet } from "react-helmet";
-import HeroSection from "@/components/ui/hero-section";
+import HeroCarousel from "@/components/ui/hero-carousel";
 import FeaturedCategories from "@/components/ui/featured-categories";
 import TrendingProducts from "@/components/ui/trending-products";
 import UspSection from "@/components/ui/usp-section";
@@ -43,10 +43,40 @@ const Home = () => {
         <meta name="description" content="Loudfits offers bold, expressive t-shirts that help you stand out and make a statement. Shop our collection of printed and customizable tees." />
       </Helmet>
       
-      <HeroSection 
-        image="https://images.unsplash.com/photo-1503341504253-dff4815485f1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1920&h=1080"
-        title="MAKE NOISE<br>WITH YOUR STYLE"
-        subtitle="Express yourself with our bold printed designs that speak volumes without saying a word."
+      <HeroCarousel 
+        images={[
+          {
+            src: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1920&h=1080",
+            alt: "Model wearing Loudfits t-shirt",
+            title: "MAKE NOISE<br>WITH YOUR STYLE",
+            subtitle: "Express yourself with our bold printed designs that speak volumes without saying a word.",
+            link: "/shop",
+            linkText: "SHOP NOW",
+            secondaryLink: "/shop?category=printed-tees",
+            secondaryLinkText: "PRINTED TEES"
+          },
+          {
+            src: "https://images.unsplash.com/photo-1589465885857-44edb59bbff2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1920&h=1080",
+            alt: "Urban fashion showcase",
+            title: "NEW COLLECTION<br>JUST ARRIVED",
+            subtitle: "Discover our latest designs that blend urban style with bold artistic expression.",
+            link: "/shop?category=new-arrivals",
+            linkText: "SHOP NEW ARRIVALS",
+            secondaryLink: "/shop",
+            secondaryLinkText: "VIEW ALL"
+          },
+          {
+            src: "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1920&h=1080",
+            alt: "Graphic tees collection",
+            title: "STATEMENT<br>GRAPHICS",
+            subtitle: "Our graphic tees feature bold designs that make a statement about who you are.",
+            link: "/shop?category=graphic-tees",
+            linkText: "SHOP GRAPHIC TEES",
+            secondaryLink: "/customize",
+            secondaryLinkText: "CUSTOMIZE YOUR OWN"
+          }
+        ]}
+        autoplaySpeed={6000}
       />
       
       <FeaturedCategories />
