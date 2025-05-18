@@ -116,12 +116,20 @@ const Shop = () => {
   const filteredProducts = displayProducts.filter((product: Product) => {
     let matches = true;
     
-      // Handle category filtering
+    // Handle category filtering
     if (selectedCategory && 
         selectedCategory !== "all" && 
-        selectedCategory !== "" && 
-        !product.category.includes(selectedCategory)) {
-      matches = false;
+        selectedCategory !== "") {
+      
+      // Special case for "t-shirts" to show all t-shirt products
+      if (selectedCategory === "t-shirts") {
+        // All products are t-shirts in our store, so keep all
+        matches = true;
+      } 
+      // For specific categories like "printed-tees", "graphic-tees", etc.
+      else if (!product.category.toLowerCase().includes(selectedCategory.toLowerCase())) {
+        matches = false;
+      }
     }
     
     if (selectedGender && product.gender !== selectedGender) {

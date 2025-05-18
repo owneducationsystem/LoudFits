@@ -48,22 +48,13 @@ const HeroSection = ({ image, title, subtitle }: HeroSectionProps) => {
             className="flex flex-col sm:flex-row gap-4"
             variants={fadeIn("up", "tween", 0.6, 1)}
           >
-            <Link href="/shop?category=t-shirts">
+            <Link href="/shop">
               <motion.a 
-                className="bg-white text-black hover:bg-[#582A34] hover:text-white font-bold py-3 px-8 inline-block text-center transition-colors"
+                className="bg-black text-white hover:bg-[#582A34] hover:text-white font-bold py-3 px-8 inline-block text-center transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                SHOP T-SHIRTS
-              </motion.a>
-            </Link>
-            <Link href="/shop?category=printed-tees">
-              <motion.a 
-                className="bg-white text-black hover:bg-[#582A34] hover:text-white font-bold py-3 px-8 inline-block text-center transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                PRINTED TEES
+                SHOP NOW
               </motion.a>
             </Link>
           </motion.div>
