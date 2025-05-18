@@ -57,6 +57,15 @@ const HeroSection = ({ image, title, subtitle }: HeroSectionProps) => {
                 SHOP NOW
               </motion.a>
             </Link>
+            <Link href="/shop?category=printed-tees">
+              <motion.a 
+                className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-black font-bold py-3 px-8 inline-block text-center transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                PRINTED TEES
+              </motion.a>
+            </Link>
           </motion.div>
         </motion.div>
       </div>
