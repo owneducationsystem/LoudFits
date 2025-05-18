@@ -6,6 +6,7 @@ import { PhonePeService } from "../services/phonePeService";
 import { storage } from "../storage";
 import { notificationService, NotificationType } from "../services/notificationService";
 import { emailService } from "../services/emailService";
+import { inventoryService } from "../services/inventoryService";
 
 // Generate unique order number
 function generateOrderNumber(): string {
@@ -121,6 +122,47 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
           const user = await storage.getUser(order.userId);
           if (user && user.email) {
             // Send payment confirmation email (non-blocking)
+            emailService.sendPaymentConfirmationEmail(
+              user.email,
+              user.firstName || user.username,
+              order.orderNumber,
+              order.total,
+              order.paymentMethod || 'PhonePe'
+            ).then(sent => {
+              if (sent) {
+                console.log(`Payment confirmation email sent to ${user.email} for order #${order.orderNumber}`);
+              } else {
+                console.log(`Failed to send payment confirmation email to ${user.email}`);
+              }
+            }).catch(err => {
+              console.error(`Error sending payment confirmation email: ${err.message}`);
+            });
+            
+            // Also send order confirmation if it hasn't been sent already
+            const products = [];
+            try {
+              const orderItems = await storage.getOrderItems(order.id);
+              for (const item of orderItems) {
+                const product = await storage.getProduct(item.productId);
+                if (product) {
+                  products.push(product);
+                }
+              }
+              
+              emailService.sendOrderConfirmationEmail(order, user, products)
+                .then(sent => {
+                  if (sent) {
+                    console.log(`Order confirmation email sent to ${user.email} for order #${order.orderNumber}`);
+                  } else {
+                    console.log(`Failed to send order confirmation email to ${user.email}`);
+                  }
+                }).catch(err => {
+                  console.error(`Error sending order confirmation email: ${err.message}`);
+                });
+                
+            } catch (emailError) {
+              console.error(`Error preparing order confirmation email: ${emailError}`);
+            }
             emailService.sendPaymentConfirmationEmail(
               user.email,
               user.firstName || user.username,
