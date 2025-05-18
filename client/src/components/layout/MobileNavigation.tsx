@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Home, Search, Heart, ShoppingBag, User } from "lucide-react";
+import { Home, Heart, ShoppingBag, User, Tag } from "lucide-react";
 import { useCartContext } from "@/context/CartContext";
 import { useWishlistContext } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
@@ -52,12 +52,12 @@ const MobileNavigation = () => {
       </button>
       
       <button 
-        onClick={() => navigate("/search")}
-        className={`mobile-nav-item ${location === "/search" ? "active" : ""}`}
-        aria-label="Search"
+        onClick={() => navigate("/shop?category=offers")}
+        className={`mobile-nav-item ${location.includes("offers") ? "active" : ""}`}
+        aria-label="Offers"
       >
-        <Search size={22} />
-        <span className="text-xs">Search</span>
+        <Tag size={22} />
+        <span className="text-xs">Offers</span>
       </button>
       
       <button 
