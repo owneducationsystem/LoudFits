@@ -72,17 +72,24 @@ const HeroCarousel = ({
 
   return (
     <div 
-      className="relative w-full h-[60vh] md:h-[80vh] overflow-hidden"
+      className="relative w-full h-[60vh] md:h-[80vh] overflow-hidden bg-black"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <AnimatePresence mode="wait">
+      {/* Preload all images in the background */}
+      <div className="hidden">
+        {images.map((image, index) => (
+          <img key={`preload-${index}`} src={image.src} alt="Preload" />
+        ))}
+      </div>
+      
+      <AnimatePresence initial={false}>
         <motion.div
           key={currentIndex}
-          initial={{ opacity: 0, scale: 1.05 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 1.2, ease: "easeInOut" }}
+          transition={{ duration: 1, ease: "easeInOut" }}
           className="absolute inset-0"
         >
           <motion.img 
