@@ -53,7 +53,7 @@ const FeaturedCollection = () => {
             <Skeleton className="h-[200px] w-full rounded-md" />
           </div>
         ) : (
-          <>
+          <div>
             {/* Desktop Grid Layout */}
             <div className="hidden md:grid md:grid-cols-2 md:gap-6">
               {collections.map((collection, index) => (
@@ -77,11 +77,11 @@ const FeaturedCollection = () => {
             
             {/* Mobile Horizontal Carousel */}
             <div className="md:hidden">
-              <div className="flex overflow-x-auto snap-x pb-4 gap-3 -mx-4 px-4">
+              <div className="mobile-carousel">
                 {collections.map((collection, index) => (
                   <motion.div
                     key={index}
-                    className="flex-shrink-0 snap-start w-[85%] xs:w-[70%] sm:w-[45%] rounded-lg overflow-hidden"
+                    className="mobile-carousel-item"
                     initial={{ opacity: 0, x: 20 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
@@ -97,7 +97,7 @@ const FeaturedCollection = () => {
                 ))}
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
     </section>

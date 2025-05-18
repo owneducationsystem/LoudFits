@@ -105,12 +105,9 @@ const ProductCarousel = ({ products, title }: ProductCarouselProps) => {
       
       {/* Mobile Horizontal Scrollable Carousel */}
       <div className="md:hidden">
-        <div className="flex overflow-x-auto snap-x pb-4 hide-scrollbar gap-3">
+        <div className="mobile-carousel">
           {products.map((product) => (
-            <div 
-              key={product.id} 
-              className="flex-shrink-0 snap-start w-[65%] xs:w-[55%] sm:w-[45%] rounded-lg overflow-hidden"
-            >
+            <div key={product.id} className="mobile-carousel-item"> 
               <ProductCard product={product} />
             </div>
           ))}
