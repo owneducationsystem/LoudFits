@@ -569,9 +569,8 @@ const AdminOrders = () => {
     }
   ];
 
-  // Temporarily always show mock data to help with testing
-  // const displayOrders = orders.length > 0 ? orders : mockOrders;
-  const displayOrders = mockOrders;
+  // Use real orders from database, fallback to mock data only if needed
+  const displayOrders = orders.length > 0 ? orders : mockOrders;
 
   return (
     <AdminLayout title="Order Management">
