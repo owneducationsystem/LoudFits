@@ -501,12 +501,7 @@ const ProductDetail = () => {
                     <h3 className="font-medium text-sm">Size</h3>
                     <button 
                       className="text-xs flex items-center gap-1 text-gray-600 hover:text-[#582A34] transition-colors"
-                      onClick={() => {
-                        toast({
-                          title: "Size Guide",
-                          description: "Size guide information would be displayed here.",
-                        });
-                      }}
+                      onClick={() => navigate("/size-guide")}
                     >
                       <Ruler className="h-3 w-3" />
                       <span>Size Guide</span>
