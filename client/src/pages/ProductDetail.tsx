@@ -4,18 +4,15 @@ import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet";
 import { 
-  ChevronLeft, 
-  ChevronRight, 
   Share2, 
   Heart, 
   TruckIcon, 
   RotateCcw, 
   Ruler,
   Upload,
-  Plus,
-  Minus,
   Camera
 } from "lucide-react";
+import ProductImageCarousel from "@/components/ui/product-image-carousel";
 import { StockIndicator } from "@/components/ui/StockIndicator";
 import { useStockStatus } from "@/hooks/useStockStatus";
 import { 
@@ -345,69 +342,13 @@ const ProductDetail = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
           {/* Product Gallery */}
           <div className="relative">
-            {/* Main Image */}
-            <div className="relative overflow-hidden rounded-md bg-gray-100 h-[350px] xs:h-[450px] md:h-[500px]">
-              <div 
-                ref={imageRef}
-                className={`w-full h-full ${isZoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`} 
-                onClick={() => isZoomed ? resetZoom() : handleZoomIn()}
-                onMouseDown={isZoomed ? handleDragStart : undefined}
-              >
-                <AnimatePresence mode="wait">
-                  <motion.img
-                    key={currentImageIndex}
-                    src={product.images[currentImageIndex]}
-                    alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-300"
-                    style={{ 
-                      transform: `scale(${zoomLevel}) translate(${dragPosition.x / (zoomLevel * 10)}px, ${dragPosition.y / (zoomLevel * 10)}px)`,
-                      transformOrigin: 'center'
-                    }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    draggable={false}
-                  />
-                </AnimatePresence>
-              </div>
-              
-              {/* Zoom controls */}
-              {isZoomed && (
-                <div className="absolute bottom-4 right-4 flex gap-2">
-                  <button 
-                    onClick={handleZoomOut}
-                    className="p-2 bg-white/80 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors"
-                    aria-label="Zoom out"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
-                  <button 
-                    onClick={handleZoomIn}
-                    className="p-2 bg-white/80 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors"
-                    aria-label="Zoom in"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-              
-              {/* Navigation Arrows */}
-              <button
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors"
-                onClick={prevImage}
-                aria-label="Previous image"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              
-              <button
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors"
-                onClick={nextImage}
-                aria-label="Next image"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
+            {/* Product Image Carousel with Auto-Rotation */}
+            <ProductImageCarousel 
+              images={product.images} 
+              productName={product.name}
+              autoRotate={true}
+              autoRotateInterval={5000}
+            />
               
               {/* Zoom Controls */}
               <div className="absolute bottom-2 right-2 flex gap-2">
