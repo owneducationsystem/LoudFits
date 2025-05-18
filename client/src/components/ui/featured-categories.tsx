@@ -1,10 +1,16 @@
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import CategoryCard from "@/components/ui/category-card";
 import { Product } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const FeaturedCategories = () => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const autoScrollRef = useRef<NodeJS.Timeout | null>(null);
+  
   // Fetch all products from the database
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ["/api/products"],
@@ -24,7 +30,7 @@ const FeaturedCategories = () => {
           title: category?.toUpperCase().replace(/-/g, " ") || "",
           link: `/shop?category=${category}`
         };
-      }).slice(0, 2) : []; // Limit to 2 categories
+      }).slice(0, 3) : []; // Get up to 3 categories for better scrolling
       
   // Always add the customize option
   const categories = [
@@ -35,12 +41,47 @@ const FeaturedCategories = () => {
       link: "/customize"
     }
   ];
+  
+  // Auto-scroll functionality for mobile carousel
+  useEffect(() => {
+    if (!isPaused && categories.length > 1) {
+      autoScrollRef.current = setInterval(() => {
+        nextSlide();
+      }, 4000);
+      
+      return () => {
+        if (autoScrollRef.current) {
+          clearInterval(autoScrollRef.current);
+        }
+      };
+    }
+  }, [currentIndex, isPaused, categories.length]);
+
+  const nextSlide = () => {
+    setCurrentIndex((prevIndex) => 
+      prevIndex === categories.length - 1 ? 0 : prevIndex + 1
+    );
+  };
+
+  const prevSlide = () => {
+    setCurrentIndex((prevIndex) => 
+      prevIndex === 0 ? categories.length - 1 : prevIndex - 1
+    );
+  };
+
+  const pauseAutoScroll = () => {
+    setIsPaused(true);
+  };
+
+  const resumeAutoScroll = () => {
+    setIsPaused(false);
+  };
 
   return (
     <section className="py-12 px-4 bg-white">
       <div className="container mx-auto">
         <motion.h2 
-          className="text-3xl font-bold mb-8 text-center"
+          className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-center"
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -56,24 +97,87 @@ const FeaturedCategories = () => {
             <Skeleton className="h-[300px] w-full rounded-md" />
           </div>
         ) : (
-          // Render categories
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {categories.map((category, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.2 }}
+          <>
+            {/* Desktop Grid Layout */}
+            <div className="hidden md:grid md:grid-cols-2 gap-6">
+              {categories.map((category, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.2 }}
+                >
+                  <CategoryCard
+                    image={category.image}
+                    title={category.title}
+                    link={category.link}
+                  />
+                </motion.div>
+              ))}
+            </div>
+            
+            {/* Mobile Auto-Scrolling Carousel */}
+            <div 
+              className="md:hidden relative"
+              onTouchStart={pauseAutoScroll}
+              onTouchEnd={resumeAutoScroll}
+            >
+              {/* Navigation arrows */}
+              <button 
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/70 p-2 rounded-full shadow-md text-gray-700"
+                onClick={prevSlide}
+                aria-label="Previous category"
               >
-                <CategoryCard
-                  image={category.image}
-                  title={category.title}
-                  link={category.link}
-                />
-              </motion.div>
-            ))}
-          </div>
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              
+              <button 
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/70 p-2 rounded-full shadow-md text-gray-700"
+                onClick={nextSlide}
+                aria-label="Next category"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+              
+              {/* Carousel container */}
+              <div className="overflow-hidden">
+                <motion.div
+                  className="flex"
+                  initial={false}
+                  animate={{ x: `-${currentIndex * 100}%` }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                >
+                  {categories.map((category, index) => (
+                    <div 
+                      key={index}
+                      className="w-full flex-shrink-0 px-1"
+                    >
+                      <CategoryCard
+                        image={category.image}
+                        title={category.title}
+                        link={category.link}
+                      />
+                    </div>
+                  ))}
+                </motion.div>
+              </div>
+              
+              {/* Indicator dots */}
+              <div className="flex justify-center mt-4 gap-1.5">
+                {categories.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentIndex(index)}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      index === currentIndex ? 'w-6 bg-[#582A34]' : 'w-2 bg-gray-300'
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
         )}
       </div>
     </section>

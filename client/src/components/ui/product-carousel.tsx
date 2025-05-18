@@ -8,12 +8,21 @@ import { Product } from "@shared/schema";
 interface ProductCarouselProps {
   products: Product[];
   title: string;
+  autoScroll?: boolean;
+  interval?: number;
 }
 
-const ProductCarousel = ({ products, title }: ProductCarouselProps) => {
+const ProductCarousel = ({ 
+  products, 
+  title,
+  autoScroll = true,
+  interval = 3000 
+}: ProductCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [displayCount, setDisplayCount] = useState(4);
+  const [isPaused, setIsPaused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -32,6 +41,21 @@ const ProductCarousel = ({ products, title }: ProductCarouselProps) => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Auto-scroll functionality
+  useEffect(() => {
+    if (autoScroll && !isPaused && products.length > displayCount) {
+      autoScrollRef.current = setInterval(() => {
+        nextSlide();
+      }, interval);
+      
+      return () => {
+        if (autoScrollRef.current) {
+          clearInterval(autoScrollRef.current);
+        }
+      };
+    }
+  }, [currentIndex, displayCount, isPaused, autoScroll, products.length]);
+
   const nextSlide = () => {
     if (currentIndex + displayCount < products.length) {
       setCurrentIndex(currentIndex + 1);
@@ -48,6 +72,14 @@ const ProductCarousel = ({ products, title }: ProductCarouselProps) => {
     }
   };
 
+  const pauseAutoScroll = () => {
+    setIsPaused(true);
+  };
+
+  const resumeAutoScroll = () => {
+    setIsPaused(false);
+  };
+
   const maxIndex = Math.max(0, products.length - displayCount);
 
   return (
@@ -55,13 +87,18 @@ const ProductCarousel = ({ products, title }: ProductCarouselProps) => {
       <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-center">{title}</h2>
       
       {/* Desktop Carousel with Controls */}
-      <div className="relative hidden md:block">
+      <div 
+        className="relative hidden md:block"
+        onMouseEnter={pauseAutoScroll}
+        onMouseLeave={resumeAutoScroll}
+        onTouchStart={pauseAutoScroll}
+        onTouchEnd={resumeAutoScroll}
+      >
         {/* Product Slider Controls */}
         <button 
           className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors"
           onClick={prevSlide}
           aria-label="Previous slide"
-          disabled={currentIndex === 0}
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -70,7 +107,6 @@ const ProductCarousel = ({ products, title }: ProductCarouselProps) => {
           className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors"
           onClick={nextSlide}
           aria-label="Next slide"
-          disabled={currentIndex === maxIndex}
         >
           <ChevronRight className="h-5 w-5" />
         </button>
@@ -101,13 +137,33 @@ const ProductCarousel = ({ products, title }: ProductCarouselProps) => {
             ))}
           </motion.div>
         </div>
+        
+        {/* Desktop Progress Indicator */}
+        <div className="flex justify-center mt-4 gap-1.5">
+          {Array.from({ length: Math.min(Math.ceil(products.length / displayCount), 5) }).map((_, i) => (
+            <div 
+              key={i} 
+              className={`h-1.5 rounded-full transition-all duration-300
+                ${i === Math.min(Math.floor(currentIndex / displayCount), 4) ? 'w-6 bg-[#582A34]' : 'w-1.5 bg-gray-300'}`}
+            />
+          ))}
+        </div>
       </div>
       
-      {/* Mobile Horizontal Scrollable Carousel */}
-      <div className="md:hidden">
+      {/* Mobile Auto-Scrolling Carousel */}
+      <div 
+        className="md:hidden"
+        onTouchStart={pauseAutoScroll}
+        onTouchEnd={resumeAutoScroll}
+      >
         <div className="mobile-carousel">
-          {products.map((product) => (
-            <div key={product.id} className="mobile-carousel-item"> 
+          {products.map((product, index) => (
+            <div 
+              key={product.id} 
+              className={`mobile-carousel-item transition-opacity duration-300 ${
+                index >= currentIndex && index < currentIndex + 2 ? 'opacity-100' : 'opacity-50'
+              }`}
+            > 
               <ProductCard product={product} />
             </div>
           ))}
@@ -115,11 +171,11 @@ const ProductCarousel = ({ products, title }: ProductCarouselProps) => {
         
         {/* Mobile indicator dots */}
         <div className="flex justify-center mt-4 gap-1.5">
-          {Array.from({ length: Math.min(5, products.length) }).map((_, i) => (
+          {Array.from({ length: Math.min(Math.ceil(products.length / 2), 5) }).map((_, i) => (
             <div 
               key={i} 
               className={`h-1.5 rounded-full transition-all duration-300
-                ${i < 3 ? 'w-6 bg-[#582A34]' : 'w-1.5 bg-gray-300'}`}
+                ${i === Math.min(Math.floor(currentIndex / 2), 4) ? 'w-6 bg-[#582A34]' : 'w-1.5 bg-gray-300'}`}
             />
           ))}
         </div>
