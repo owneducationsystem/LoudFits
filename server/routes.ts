@@ -977,46 +977,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/admin/orders", isAdmin, logAdminAction, async (req, res) => {
     try {
+      console.log("[ADMIN] Fetching orders for admin panel");
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const status = req.query.status as string;
+      const search = req.query.search as string;
       
-      const orders = await storage.getAllOrders(limit, offset);
+      // Get orders with filtering if needed
+      let orders;
+      if (search) {
+        orders = await storage.searchOrders(search);
+      } else if (status && status !== 'all') {
+        // This would typically use a specific filter method, but for now we'll get all and filter
+        const allOrders = await storage.getAllOrders(100, 0); // Get more to filter
+        orders = allOrders.filter(o => o.status === status).slice(offset, offset + limit);
+      } else {
+        orders = await storage.getAllOrders(limit, offset);
+      }
+      
       const count = await storage.countOrders();
+      console.log(`[ADMIN] Found ${orders.length} orders (total count: ${count})`);
       
-      // Enhance order data with customer information and product details
+      // Enhance order data with customer information and product details - IMPROVED VERSION
       const enhancedOrders = await Promise.all(orders.map(async (order) => {
-        // Get customer details if userId exists - IMPROVED REAL-TIME SYNC
+        console.log(`[ADMIN] Processing order #${order.orderNumber}, userId=${order.userId || 'none'}`);
+        
+        // Get customer details if userId exists
         let customerDetails = null;
         if (order.userId) {
           try {
-            console.log(`Getting real-time customer data for order ${order.orderNumber}, userId=${order.userId}`);
+            // CRITICAL FIX: Make sure we get the correct customer data in real-time
+            console.log(`[ADMIN] Getting customer data for order ${order.orderNumber}, userId=${order.userId}`);
             const customer = await storage.getUser(order.userId);
             
             if (customer) {
-              // Enhanced customer information with better phone handling
+              // Create a complete customer profile with data from both user and order
               customerDetails = {
                 id: customer.id,
                 name: customer.firstName && customer.lastName 
                   ? `${customer.firstName} ${customer.lastName}`
-                  : customer.username,
+                  : customer.username || 'Unknown',
                 email: customer.email,
-                phone: customer.phoneNumber || order.shippingAddress?.phone, // Use phone from both sources
+                // Get phone from customer data or from shipping address
+                phone: customer.phoneNumber || 
+                       (order.shippingAddress && typeof order.shippingAddress === 'object' && 'phone' in order.shippingAddress ? 
+                          order.shippingAddress.phone : null),
+                // Use address from customer profile if available
                 address: {
-                  street: customer.address,
+                  street: customer.address || 
+                         (order.shippingAddress && typeof order.shippingAddress === 'object' && 'address' in order.shippingAddress ? 
+                             order.shippingAddress.address : null),
                   addressLine2: customer.addressLine2,
-                  city: customer.city,
-                  state: customer.state,
-                  postalCode: customer.postalCode,
-                  country: customer.country
+                  city: customer.city || 
+                       (order.shippingAddress && typeof order.shippingAddress === 'object' && 'city' in order.shippingAddress ? 
+                           order.shippingAddress.city : null),
+                  state: customer.state || 
+                        (order.shippingAddress && typeof order.shippingAddress === 'object' && 'state' in order.shippingAddress ? 
+                            order.shippingAddress.state : null),
+                  postalCode: customer.postalCode || 
+                             (order.shippingAddress && typeof order.shippingAddress === 'object' && 'postalCode' in order.shippingAddress ? 
+                                 order.shippingAddress.postalCode : null),
+                  country: customer.country || 
+                          (order.shippingAddress && typeof order.shippingAddress === 'object' && 'country' in order.shippingAddress ? 
+                              order.shippingAddress.country : null)
                 }
               };
               
-              console.log(`Found customer data for order ${order.orderNumber}: ${customer.username} (${customer.id})`);
+              console.log(`[ADMIN] ✓ Found customer data for order ${order.orderNumber}: ${customer.username} (${customer.id})`);
             } else {
-              console.log(`No customer found for userId=${order.userId} in order ${order.orderNumber}`);
+              console.error(`[ADMIN ERROR] No customer found for userId=${order.userId} in order ${order.orderNumber}`);
             }
           } catch (error) {
-            console.error(`Error fetching customer for order ${order.orderNumber}, userId=${order.userId}:`, error);
+            console.error(`[ADMIN ERROR] Failed to fetch customer for order ${order.orderNumber}:`, error);
           }
         }
         

@@ -233,13 +233,15 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
     } 
     // Handle failed payment
     else if (status === 'FAILED' || status === 'PAYMENT_ERROR') {
-      const order = await storage.getOrderById(payment.orderId);
-      if (order) {
-        // Update order payment status to failed
-        const updatedOrder = await storage.updateOrderPaymentStatus(order.id, 'FAILED');
-        
-        // Send notifications
-        if (order.userId) {
+      console.log(`[PAYMENT] Payment failed for order #${order.orderNumber}`);
+      
+      // Update order payment status to failed
+      const updatedOrder = await storage.updateOrderPaymentStatus(order.id, 'FAILED');
+      
+      // Send notifications and emails - only if we have a userId
+      if (order.userId) {
+        try {
+          // Send app notification
           await notificationService.sendUserNotification({
             userId: order.userId,
             type: NotificationType.PAYMENT_FAILED,
@@ -248,65 +250,59 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
             entityId: order.id,
             entityType: 'order'
           });
-        }
-        
-        await notificationService.sendAdminNotification({
-          type: NotificationType.PAYMENT_FAILED,
-          title: 'Payment Failed',
-          message: `Payment failed for order #${order.orderNumber}`,
-          entityId: order.id,
-          entityType: 'order',
-          isAdmin: true
-        });
-        
-        // Send email notification for failed payment
-        if (order.userId) {
-          // Get the ACTUAL customer who placed the order
-          if (!order.userId) {
-            console.error(`Order ${order.id} (${order.orderNumber}) has no user ID associated with it`);
+          
+          // Get customer data for email
+          const user = await storage.getUser(order.userId);
+          
+          if (!user) {
+            console.error(`[PAYMENT ERROR] Customer with ID ${order.userId} not found`);
+          } else if (!user.email) {
+            console.error(`[PAYMENT ERROR] Customer ${user.id} has no email address`);
           } else {
-            console.log(`Getting user info for userId=${order.userId} to send payment failure email`);
+            console.log(`[PAYMENT] Found customer data: ID=${user.id}, email=${user.email}`);
             
-            // Get user by the order's userId, NOT a hardcoded value
-            const user = await storage.getUser(order.userId);
-            
-            if (!user) {
-              console.error(`User with ID ${order.userId} not found for order ${order.orderNumber}`);
-            } else if (!user.email) {
-              console.error(`User ${user.id} (${user.username}) has no email address for order ${order.orderNumber}`);
-            } else {
-              console.log(`Sending payment failure email to user ${user.id} (${user.email}) for order ${order.orderNumber}`);
-              
-              // Send payment failure email (non-blocking)
-              emailService.sendPaymentFailedEmail(
-                user.email,
-                user.firstName || user.username,
-                order.orderNumber,
-                order.total,
-                'The payment processor reported an error. Please try again or use a different payment method.'
-              ).then(sent => {
-                if (sent) {
-                  console.log(`Payment failure email sent to ${user.email} for order #${order.orderNumber}`);
-                } else {
-                  console.log(`Failed to send payment failure email to ${user.email}`);
-                }
-              }).catch(err => {
-                console.error(`Error sending payment failure email: ${err.message}`);
-              });
-            }
+            // Send payment failure email
+            emailService.sendPaymentFailedEmail(
+              user.email,
+              user.firstName || user.username,
+              order.orderNumber,
+              order.total,
+              'The payment processor reported an error. Please try again or use a different payment method.'
+            ).then(sent => {
+              console.log(sent 
+                ? `[PAYMENT] ✓ Payment failure email sent to ${user.email}`
+                : `[PAYMENT ERROR] Failed to send payment failure email to ${user.email}`);
+            }).catch(err => {
+              console.error(`[PAYMENT ERROR] Email sending exception:`, err);
+            });
           }
-        } else {
-          console.error(`Cannot send payment failure email: order ${order.id} has no associated user`);
+        } catch (notificationError) {
+          console.error(`[PAYMENT ERROR] Failed to send notifications:`, notificationError);
         }
-        
-        return { success: true, order: updatedOrder };
+      } else {
+        console.error(`[PAYMENT WARNING] Order ${order.id} has no associated user`);
       }
+      
+      // Always send admin notification
+      await notificationService.sendAdminNotification({
+        type: NotificationType.PAYMENT_FAILED,
+        title: 'Payment Failed',
+        message: `Payment failed for order #${order.orderNumber}`,
+        entityId: order.id,
+        entityType: 'order',
+        isAdmin: true
+      }).catch(err => {
+        console.error(`[PAYMENT ERROR] Failed to send admin notification:`, err);
+      });
+      
+      return { success: true, order: updatedOrder };
     }
     
-    return { success: true, order: undefined };
+    // For other statuses, just return success
+    return { success: true, order: order };
     
   } catch (error: any) {
-    console.error("Error updating payment status:", error);
+    console.error(`[PAYMENT ERROR] Failed to update payment status:`, error);
     return { success: false, error: error.message };
   }
 }
