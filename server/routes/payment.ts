@@ -36,35 +36,34 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
       // Use user ID from the request body if available (for testing)
       const userId = req.body?.userId || 1;
       
+      // Set default test user in case we can't get the real one
+      const testUser = {
+        id: 1,
+        username: 'testuser',
+        email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
+        phoneNumber: '9999999999',
+        role: 'user'
+      } as User;
+      
       // Try to get the actual user if possible
-      try {
-        const storedUser = await storage.getUser(userId);
-        if (storedUser) {
-          req.user = storedUser;
-        } else {
-          // Fallback to test user
-          req.user = {
-            id: 1,
-            username: 'testuser',
-            email: 'test@example.com',
-            firstName: 'Test',
-            lastName: 'User',
-            phoneNumber: '9999999999',
-            role: 'user'
-          } as User;
-        }
-      } catch (error) {
-        // Fallback to test user in case of error
-        req.user = {
-          id: 1,
-          username: 'testuser',
-          email: 'test@example.com',
-          firstName: 'Test',
-          lastName: 'User',
-          phoneNumber: '9999999999',
-          role: 'user'
-        } as User;
-      }
+      storage.getUser(userId)
+        .then(storedUser => {
+          if (storedUser) {
+            req.user = storedUser;
+          } else {
+            // Fallback to test user
+            req.user = testUser;
+          }
+        })
+        .catch(() => {
+          // Fallback to test user in case of error
+          req.user = testUser;
+        });
+      
+      // Initially set to test user, will be replaced if storage.getUser is successful
+      req.user = testUser;
     }
     
     return next();
@@ -219,6 +218,7 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
         
         // Send email notification for failed payment
         if (order.userId) {
+          // Get the actual customer who placed the order
           const user = await storage.getUser(order.userId);
           if (user && user.email) {
             // Send payment failure email (non-blocking)
@@ -237,7 +237,11 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
             }).catch(err => {
               console.error(`Error sending payment failure email: ${err.message}`);
             });
+          } else {
+            console.error(`Cannot send payment failure email: user ${order.userId} has no email address`);
           }
+        } else {
+          console.error(`Cannot send payment failure email: order ${order.id} has no associated user`);
         }
         
         return { success: true, order: updatedOrder };
