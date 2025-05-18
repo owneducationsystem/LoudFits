@@ -52,9 +52,10 @@ const ProductCarousel = ({ products, title }: ProductCarouselProps) => {
 
   return (
     <div className="w-full">
-      <h2 className="text-3xl font-bold mb-8 text-center">{title}</h2>
+      <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-center">{title}</h2>
       
-      <div className="relative">
+      {/* Desktop Carousel with Controls */}
+      <div className="relative hidden md:block">
         {/* Product Slider Controls */}
         <button 
           className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors"
@@ -102,8 +103,33 @@ const ProductCarousel = ({ products, title }: ProductCarouselProps) => {
         </div>
       </div>
       
-      <div className="mt-8 text-center">
-        <a href="/shop" className="border-2 border-black bg-white text-black hover:bg-black hover:text-white font-bold py-3 px-8 inline-block transition-colors">
+      {/* Mobile Horizontal Scrollable Carousel */}
+      <div className="md:hidden">
+        <div className="flex overflow-x-auto snap-x pb-4 hide-scrollbar gap-3">
+          {products.map((product) => (
+            <div 
+              key={product.id} 
+              className="flex-shrink-0 snap-start w-[65%] xs:w-[55%] sm:w-[45%] rounded-lg overflow-hidden"
+            >
+              <ProductCard product={product} />
+            </div>
+          ))}
+        </div>
+        
+        {/* Mobile indicator dots */}
+        <div className="flex justify-center mt-4 gap-1.5">
+          {Array.from({ length: Math.min(5, products.length) }).map((_, i) => (
+            <div 
+              key={i} 
+              className={`h-1.5 rounded-full transition-all duration-300
+                ${i < 3 ? 'w-6 bg-[#582A34]' : 'w-1.5 bg-gray-300'}`}
+            />
+          ))}
+        </div>
+      </div>
+      
+      <div className="mt-6 md:mt-8 text-center">
+        <a href="/shop" className="border-2 border-[#582A34] bg-white text-[#582A34] hover:bg-[#582A34] hover:text-white font-medium py-2.5 px-6 md:py-3 md:px-8 inline-block transition-colors rounded-md">
           VIEW ALL
         </a>
       </div>

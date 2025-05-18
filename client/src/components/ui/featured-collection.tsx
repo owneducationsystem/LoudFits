@@ -53,49 +53,51 @@ const FeaturedCollection = () => {
             <Skeleton className="h-[200px] w-full rounded-md" />
           </div>
         ) : (
-          // Render collections - Mobile Carousel / Desktop Grid
-          <div className="md:grid md:grid-cols-2 md:gap-6 hidden">
-            {collections.map((collection, index) => (
-              <motion.div
-                key={index}
-                className={collection.fullWidth ? "md:col-span-2" : ""}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.2 }}
-              >
-                <CategoryCard
-                  image={collection.image}
-                  title={collection.title}
-                  link={collection.link}
-                  fullWidth={collection.fullWidth}
-                />
-              </motion.div>
-            ))}
-          </div>
-          
-          {/* Mobile horizontal carousel */}
-          <div className="md:hidden">
-            <div className="mobile-carousel">
+          <>
+            {/* Desktop Grid Layout */}
+            <div className="hidden md:grid md:grid-cols-2 md:gap-6">
               {collections.map((collection, index) => (
                 <motion.div
                   key={index}
-                  className="mobile-carousel-item"
-                  initial={{ opacity: 0, x: 20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
+                  className={collection.fullWidth ? "md:col-span-2" : ""}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.3, delay: index * 0.15 }}
+                  transition={{ duration: 0.5, delay: index * 0.2 }}
                 >
                   <CategoryCard
                     image={collection.image}
                     title={collection.title}
                     link={collection.link}
-                    fullWidth={false}
+                    fullWidth={collection.fullWidth}
                   />
                 </motion.div>
               ))}
             </div>
-          </div>
+            
+            {/* Mobile Horizontal Carousel */}
+            <div className="md:hidden">
+              <div className="flex overflow-x-auto snap-x pb-4 gap-3 -mx-4 px-4">
+                {collections.map((collection, index) => (
+                  <motion.div
+                    key={index}
+                    className="flex-shrink-0 snap-start w-[85%] xs:w-[70%] sm:w-[45%] rounded-lg overflow-hidden"
+                    initial={{ opacity: 0, x: 20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.3, delay: index * 0.15 }}
+                  >
+                    <CategoryCard
+                      image={collection.image}
+                      title={collection.title}
+                      link={collection.link}
+                      fullWidth={false}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </>
         )}
       </div>
     </section>

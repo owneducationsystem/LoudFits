@@ -229,6 +229,7 @@ const Header = () => {
 
         {/* Right header icons */}
         <div className="flex items-center space-x-1 md:space-x-5">
+          {/* Search icon - visible on all devices */}
           <Link 
             href="/search" 
             className="relative group p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -239,10 +240,13 @@ const Header = () => {
               Search
             </span>
           </Link>
-          {/* Notification Bell */}
+          
+          {/* Notification Bell - visible on all devices */}
           <div className="relative group">
             <NotificationBell />
           </div>
+          
+          {/* User Account - visible on all devices */}
           <div className="relative">
             <button 
               onClick={toggleUserMenu}
@@ -323,9 +327,11 @@ const Header = () => {
               </div>
             )}
           </div>
+          
+          {/* Wishlist icon - only visible on desktop */}
           <Link 
             href="/wishlist" 
-            className="relative group p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="relative group p-2 hover:bg-gray-100 rounded-full transition-colors hidden md:block"
             aria-label="Wishlist"
           >
             <Heart className="h-[22px] w-[22px] text-gray-600 group-hover:text-[#582A34] transition-colors" />
@@ -342,9 +348,11 @@ const Header = () => {
               Wishlist
             </span>
           </Link>
+          
+          {/* Cart icon - only visible on desktop */}
           <Link 
             href="/cart" 
-            className="relative group p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="relative group p-2 hover:bg-gray-100 rounded-full transition-colors hidden md:block"
             aria-label="Cart"
           >
             <ShoppingBag className="h-[22px] w-[22px] text-gray-600 group-hover:text-[#582A34] transition-colors" />
