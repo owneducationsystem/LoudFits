@@ -194,14 +194,14 @@ const MobileMenu = ({ isOpen, onClose, links }: MobileMenuProps) => {
 
               <div className="px-3 mb-4">
                 <Link 
-                  href="/shop" 
+                  href="/shop?category=all" 
                   className={cn(
                     "flex items-center justify-between py-3 px-4 bg-[#582A34] text-white rounded-md font-medium",
                     "hover:bg-[#532E4E] transition-colors"
                   )}
                   onClick={onClose}
                 >
-                  <span>Shop All T-Shirts</span>
+                  <span>Shop All Categories</span>
                   <ShoppingCart size={18} />
                 </Link>
               </div>

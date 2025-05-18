@@ -202,7 +202,7 @@ const mobileNavLinks = [
               onMouseLeave={() => setHoveredMenu(null)}
             >
               <Link 
-                href={link.path}
+                href={link.name === "T-SHIRTS" ? "/shop?category=all" : link.path}
                 className={cn(
                   "px-3 py-2 text-gray-800 hover:text-[#582A34] transition-colors flex items-center relative",
                   (location === link.path || hoveredMenu === link.name) && "text-[#582A34]"
@@ -272,8 +272,8 @@ const mobileNavLinks = [
             <NotificationBell />
           </div>
           
-          {/* User Account - visible on all devices */}
-          <div className="relative">
+          {/* User Account - hidden on all devices */}
+          <div className="hidden">
             <button 
               onClick={toggleUserMenu}
               className="relative group p-2 hover:bg-gray-100 rounded-full transition-colors"
