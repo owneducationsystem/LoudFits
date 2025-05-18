@@ -150,15 +150,6 @@ const mobileNavLinks = [
 
       {/* Main header */}
       <div className="w-full mx-auto px-4 py-4 flex items-center justify-between max-w-7xl">
-        {/* Mobile menu button */}
-        <button 
-          className="md:hidden text-gray-600 bg-gray-100 p-2 rounded-md hover:bg-[#582A34]/10 hover:text-[#582A34] transition-colors"
-          onClick={toggleMobileMenu}
-          aria-label="Toggle mobile menu"
-        >
-          <Menu className="h-6 w-6" />
-        </button>
-
         {/* Logo */}
         <Link href="/" className="flex items-center">
           <div className="relative flex flex-col items-center group transform hover:scale-105 transition-transform">
@@ -395,6 +386,15 @@ const mobileNavLinks = [
               Cart
             </span>
           </Link>
+          
+          {/* Mobile menu button - moved to right side */}
+          <button 
+            className="md:hidden text-gray-600 bg-gray-100 p-2 rounded-md hover:bg-[#582A34]/10 hover:text-[#582A34] transition-colors"
+            onClick={toggleMobileMenu}
+            aria-label="Toggle mobile menu"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
         </div>
       </div>
 
