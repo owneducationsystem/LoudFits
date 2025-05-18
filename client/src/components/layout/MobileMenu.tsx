@@ -188,66 +188,8 @@ const MobileMenu = ({ isOpen, onClose, links }: MobileMenuProps) => {
             </div>
 
             <div className="flex-1 overflow-y-auto py-2">
-              {/* Quick action links */}
-              <div className="grid grid-cols-4 gap-1 px-3 mb-4">
-                <Link 
-                  href="/" 
-                  className={cn(
-                    "flex flex-col items-center gap-1 py-3 px-2 rounded-md text-xs",
-                    location === "/" ? "text-[#582A34] bg-[#582A34]/10" : "text-gray-600 hover:text-[#582A34] hover:bg-[#582A34]/5"
-                  )}
-                  onClick={onClose}
-                >
-                  <Home size={20} />
-                  <span>Home</span>
-                </Link>
-                <Link 
-                  href="/search" 
-                  className={cn(
-                    "flex flex-col items-center gap-1 py-3 px-2 rounded-md text-xs",
-                    location === "/search" ? "text-[#582A34] bg-[#582A34]/10" : "text-gray-600 hover:text-[#582A34] hover:bg-[#582A34]/5"
-                  )}
-                  onClick={onClose}
-                >
-                  <Search size={20} />
-                  <span>Search</span>
-                </Link>
-                <Link 
-                  href="/wishlist" 
-                  className={cn(
-                    "flex flex-col items-center gap-1 py-3 px-2 rounded-md text-xs relative",
-                    location === "/wishlist" ? "text-[#582A34] bg-[#582A34]/10" : "text-gray-600 hover:text-[#582A34] hover:bg-[#582A34]/5"
-                  )}
-                  onClick={onClose}
-                >
-                  <div className="relative">
-                    <Heart size={20} />
-                    {wishlistCount > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 bg-[#582A34] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-                        {wishlistCount}
-                      </span>
-                    )}
-                  </div>
-                  <span>Wishlist</span>
-                </Link>
-                <Link 
-                  href="/cart" 
-                  className={cn(
-                    "flex flex-col items-center gap-1 py-3 px-2 rounded-md text-xs relative",
-                    location === "/cart" ? "text-[#582A34] bg-[#582A34]/10" : "text-gray-600 hover:text-[#582A34] hover:bg-[#582A34]/5"
-                  )}
-                  onClick={onClose}
-                >
-                  <div className="relative">
-                    <ShoppingBag size={20} />
-                    {cartItems.length > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 bg-[#582A34] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-                        {cartItems.length}
-                      </span>
-                    )}
-                  </div>
-                  <span>Cart</span>
-                </Link>
+              <div className="py-2 px-4 mb-2">
+                <h2 className="text-base font-semibold text-[#582A34]">Browse Categories</h2>
               </div>
 
               <div className="px-3 mb-4">
