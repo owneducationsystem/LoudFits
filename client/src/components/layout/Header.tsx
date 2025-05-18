@@ -61,7 +61,8 @@ const Header = () => {
     }
   };
 
-  const navLinks = [
+  // Main navigation links for desktop
+const navLinks = [
     { 
       name: "NEW ARRIVALS", 
       path: "/shop?category=new-arrivals",
@@ -97,6 +98,31 @@ const Header = () => {
         { name: "Vintage", path: "/shop?collection=vintage" },
         { name: "Artistic Prints", path: "/shop?collection=artistic-prints" }
       ]
+    },
+  ];
+  
+// Simplified navigation links for mobile sidebar
+// Removed redundant "PRINTED TEES" and "COLLECTIONS" categories
+const mobileNavLinks = [
+    { 
+      name: "NEW ARRIVALS", 
+      path: "/shop?category=new-arrivals",
+      hasSubmenu: false
+    },
+    { 
+      name: "T-SHIRTS", 
+      path: "/shop?category=t-shirts",
+      hasSubmenu: true,
+      submenu: [
+        { name: "All T-Shirts", path: "/shop?category=t-shirts" },
+        { name: "Printed Tees", path: "/shop?category=printed-tees" },
+        { name: "Graphic Tees", path: "/shop?category=graphic-tees" }
+      ]
+    },
+    { 
+      name: "CUSTOMIZE", 
+      path: "/customize",
+      hasSubmenu: false
     },
   ];
 
@@ -372,11 +398,11 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Mobile navigation menu */}
+      {/* Mobile navigation menu - using simplified links for mobile */}
       <MobileMenu 
         isOpen={mobileMenuOpen} 
         onClose={toggleMobileMenu} 
-        links={navLinks} 
+        links={mobileNavLinks} 
       />
     </header>
   );
