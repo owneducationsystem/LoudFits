@@ -453,134 +453,144 @@ const ProductDetail = () => {
           </div>
 
           {/* Product Info */}
-          <div className="flex flex-col space-y-6">
+          <div className="flex flex-col space-y-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold mb-2">{product.name}</h1>
-              <div className="flex items-center gap-3 mb-2">
-                <p className="text-xl font-bold text-[#582A34]">₹{product.price.toString()}</p>
-                {/* Stock Availability Indicator */}
-                <StockIndicator 
-                  status={stockDetails.status}
-                  quantity={stockDetails.quantity}
-                  showQuantity={stockDetails.status === 'LOW_STOCK'}
-                />
-              </div>
-              <div className="flex items-center gap-4 mt-4">
-                <button
-                  onClick={handleShare}
-                  className="text-gray-600 hover:text-[#582A34] transition-colors"
-                  aria-label="Share product"
-                >
-                  <Share2 className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={handleAddToWishlist}
-                  className={`${isInWishlist(product?.id || 0) ? 'text-[#582A34]' : 'text-gray-600'} hover:text-[#582A34] transition-colors`}
-                  aria-label={isInWishlist(product?.id || 0) ? "Remove from wishlist" : "Add to wishlist"}
-                >
-                  <Heart 
-                    className={`h-5 w-5 ${isInWishlist(product?.id || 0) ? 'fill-current' : ''}`} 
+              
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-3">
+                  <p className="text-xl font-bold text-[#582A34]">₹{product.price.toString()}</p>
+                  {/* Stock Availability Indicator */}
+                  <StockIndicator 
+                    status={stockDetails.status}
+                    quantity={stockDetails.quantity}
+                    showQuantity={stockDetails.status === 'LOW_STOCK'}
                   />
-                </button>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Size Selection */}
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="font-bold">Select Size</h3>
-                <button 
-                  className="text-sm flex items-center gap-1 text-gray-600 hover:text-[#582A34] transition-colors"
-                  onClick={() => {
-                    toast({
-                      title: "Size Guide",
-                      description: "Size guide information would be displayed here.",
-                    });
-                  }}
-                >
-                  <Ruler className="h-4 w-4" />
-                  <span>Size Guide</span>
-                </button>
-              </div>
-              <RadioGroup
-                value={selectedSize}
-                onValueChange={setSelectedSize}
-                className="flex flex-wrap gap-2"
-              >
-                {product.sizes.map((size: string) => (
-                  <div key={size}>
-                    <RadioGroupItem
-                      value={size}
-                      id={`size-${size}`}
-                      className="sr-only"
-                    />
-                    <Label
-                      htmlFor={`size-${size}`}
-                      className={`flex items-center justify-center h-10 w-10 border border-gray-300 rounded-md cursor-pointer hover:border-black transition-colors ${
-                        selectedSize === size
-                          ? "bg-black text-white"
-                          : "bg-white text-black"
-                      }`}
-                    >
-                      {size}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            {/* Color Selection */}
-            <div>
-              <h3 className="font-bold mb-2">Select Color</h3>
-              <RadioGroup
-                value={selectedColor}
-                onValueChange={setSelectedColor}
-                className="flex flex-wrap gap-2"
-              >
-                {product.colors.map((color: string) => (
-                  <div key={color}>
-                    <RadioGroupItem
-                      value={color}
-                      id={`color-${color}`}
-                      className="sr-only"
-                    />
-                    <Label
-                      htmlFor={`color-${color}`}
-                      className={`flex items-center justify-center h-10 px-3 border border-gray-300 rounded-md cursor-pointer hover:border-black transition-colors ${
-                        selectedColor === color
-                          ? "bg-black text-white"
-                          : "bg-white text-black"
-                      }`}
-                    >
-                      {color}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            {/* Quantity Selection */}
-            <div>
-              <h3 className="font-bold mb-2">Quantity</h3>
-              <div className="flex items-center">
-                <button
-                  onClick={decrementQuantity}
-                  className="h-10 w-10 border border-gray-300 rounded-l-md flex items-center justify-center hover:bg-gray-100 transition-colors"
-                  disabled={quantity <= 1}
-                >
-                  -
-                </button>
-                <div className="h-10 w-12 border-t border-b border-gray-300 flex items-center justify-center">
-                  {quantity}
                 </div>
-                <button
-                  onClick={incrementQuantity}
-                  className="h-10 w-10 border border-gray-300 rounded-r-md flex items-center justify-center hover:bg-gray-100 transition-colors"
-                >
-                  +
-                </button>
+                
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleShare}
+                    className="text-gray-600 hover:text-[#582A34] transition-colors"
+                    aria-label="Share product"
+                  >
+                    <Share2 className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={handleAddToWishlist}
+                    className={`${isInWishlist(product?.id || 0) ? 'text-[#582A34]' : 'text-gray-600'} hover:text-[#582A34] transition-colors`}
+                    aria-label={isInWishlist(product?.id || 0) ? "Remove from wishlist" : "Add to wishlist"}
+                  >
+                    <Heart 
+                      className={`h-5 w-5 ${isInWishlist(product?.id || 0) ? 'fill-current' : ''}`} 
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <Separator className="my-1" />
+
+            {/* Compact Selectors Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+              {/* Left column: Size and Color */}
+              <div className="space-y-3">
+                {/* Size Selection */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className="font-medium text-sm">Size</h3>
+                    <button 
+                      className="text-xs flex items-center gap-1 text-gray-600 hover:text-[#582A34] transition-colors"
+                      onClick={() => {
+                        toast({
+                          title: "Size Guide",
+                          description: "Size guide information would be displayed here.",
+                        });
+                      }}
+                    >
+                      <Ruler className="h-3 w-3" />
+                      <span>Size Guide</span>
+                    </button>
+                  </div>
+                  <RadioGroup
+                    value={selectedSize}
+                    onValueChange={setSelectedSize}
+                    className="flex flex-wrap gap-1.5"
+                  >
+                    {product.sizes.map((size: string) => (
+                      <div key={size}>
+                        <RadioGroupItem
+                          value={size}
+                          id={`size-${size}`}
+                          className="sr-only"
+                        />
+                        <Label
+                          htmlFor={`size-${size}`}
+                          className={`flex items-center justify-center h-8 w-8 border border-gray-300 rounded-md cursor-pointer hover:border-black transition-colors ${
+                            selectedSize === size
+                              ? "bg-black text-white"
+                              : "bg-white text-black"
+                          }`}
+                        >
+                          {size}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+
+                {/* Color Selection */}
+                <div>
+                  <h3 className="font-medium text-sm mb-1">Color</h3>
+                  <RadioGroup
+                    value={selectedColor}
+                    onValueChange={setSelectedColor}
+                    className="flex flex-wrap gap-1.5"
+                  >
+                    {product.colors.map((color: string) => (
+                      <div key={color}>
+                        <RadioGroupItem
+                          value={color}
+                          id={`color-${color}`}
+                          className="sr-only"
+                        />
+                        <Label
+                          htmlFor={`color-${color}`}
+                          className={`flex items-center justify-center h-8 px-2 text-sm border border-gray-300 rounded-md cursor-pointer hover:border-black transition-colors ${
+                            selectedColor === color
+                              ? "bg-black text-white"
+                              : "bg-white text-black"
+                          }`}
+                        >
+                          {color}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+              </div>
+
+              {/* Right column: Quantity */}
+              <div>
+                <h3 className="font-medium text-sm mb-1">Quantity</h3>
+                <div className="flex items-center">
+                  <button
+                    onClick={decrementQuantity}
+                    className="h-8 w-8 border border-gray-300 rounded-l-md flex items-center justify-center hover:bg-gray-100 transition-colors"
+                    disabled={quantity <= 1}
+                  >
+                    -
+                  </button>
+                  <div className="h-8 w-10 border-t border-b border-gray-300 flex items-center justify-center text-sm">
+                    {quantity}
+                  </div>
+                  <button
+                    onClick={incrementQuantity}
+                    className="h-8 w-8 border border-gray-300 rounded-r-md flex items-center justify-center hover:bg-gray-100 transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             </div>
 
