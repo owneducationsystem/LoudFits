@@ -67,8 +67,6 @@ const ProductDetail = () => {
     queryKey: ["/api/products"],
   });
 
-  // No fallback data - only use authenticated data
-
   // Get related products from the same collection, excluding current product
   const filteredRelatedProducts = (relatedProducts && relatedProducts.length > 0 && product) 
     ? relatedProducts.filter(p => p.id !== product.id).slice(0, 4) 
@@ -357,47 +355,46 @@ const ProductDetail = () => {
               </div>
             )}
               
-              {/* Zoom Controls */}
-              <div className="absolute bottom-2 right-2 flex gap-2">
-                <button
-                  className="bg-white/80 p-2 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handleZoomOut}
-                  disabled={zoomLevel <= 1}
-                  aria-label="Zoom out"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <button
-                  className="bg-white/80 p-2 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handleZoomIn}
-                  disabled={zoomLevel >= 2.5}
-                  aria-label="Zoom in"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
+            {/* Zoom Controls */}
+            <div className="absolute bottom-2 right-2 flex gap-2">
+              <button
+                className="bg-white/80 p-2 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleZoomOut}
+                disabled={zoomLevel <= 1}
+                aria-label="Zoom out"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <button
+                className="bg-white/80 p-2 rounded-full shadow-md hover:bg-[#582A34] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleZoomIn}
+                disabled={zoomLevel >= 2.5}
+                aria-label="Zoom in"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
             </div>
+          </div>
 
-            {/* Thumbnail Navigation */}
-            <div className="flex mt-4 gap-2">
-              {product.images.map((image: string, index: number) => (
-                <button
-                  key={index}
-                  className={`w-16 h-16 rounded-md overflow-hidden border-2 ${
-                    index === currentImageIndex
-                      ? "border-[#582A34]"
-                      : "border-transparent"
-                  }`}
-                  onClick={() => setCurrentImageIndex(index)}
-                >
-                  <img
-                    src={image}
-                    alt={`${product.name} thumbnail ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
+          {/* Thumbnail Navigation */}
+          <div className="flex mt-4 gap-2">
+            {product.images.map((image: string, index: number) => (
+              <button
+                key={index}
+                className={`w-16 h-16 rounded-md overflow-hidden border-2 ${
+                  index === currentImageIndex
+                    ? "border-[#582A34]"
+                    : "border-transparent"
+                }`}
+                onClick={() => setCurrentImageIndex(index)}
+              >
+                <img
+                  src={image}
+                  alt={`${product.name} thumbnail ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
           </div>
 
           {/* Product Info */}
@@ -469,10 +466,10 @@ const ProductDetail = () => {
                         />
                         <Label
                           htmlFor={`size-${size}`}
-                          className={`flex items-center justify-center h-8 w-8 border border-gray-300 rounded-md cursor-pointer hover:border-black transition-colors ${
+                          className={`h-9 min-w-9 px-2 flex items-center justify-center rounded-md border border-gray-200 cursor-pointer text-sm ${
                             selectedSize === size
-                              ? "bg-black text-white"
-                              : "bg-white text-black"
+                              ? "bg-[#582A34] text-white"
+                              : "hover:border-[#582A34] hover:bg-gray-50"
                           }`}
                         >
                           {size}
@@ -481,7 +478,7 @@ const ProductDetail = () => {
                     ))}
                   </RadioGroup>
                 </div>
-
+                
                 {/* Color Selection */}
                 <div>
                   <h3 className="font-medium text-sm mb-1">Color</h3>
@@ -499,11 +496,14 @@ const ProductDetail = () => {
                         />
                         <Label
                           htmlFor={`color-${color}`}
-                          className={`flex items-center justify-center h-8 px-2 text-sm border border-gray-300 rounded-md cursor-pointer hover:border-black transition-colors ${
-                            selectedColor === color
-                              ? "bg-black text-white"
-                              : "bg-white text-black"
-                          }`}
+                          className={`
+                            h-9 min-w-9 px-3 flex items-center justify-center rounded-md 
+                            border border-gray-200 cursor-pointer text-sm
+                            ${selectedColor === color
+                              ? "border-[#582A34] ring-1 ring-[#582A34] font-medium"
+                              : "hover:border-[#582A34] hover:bg-gray-50"
+                            }
+                          `}
                         >
                           {color}
                         </Label>
@@ -512,117 +512,122 @@ const ProductDetail = () => {
                   </RadioGroup>
                 </div>
               </div>
-
-              {/* Right column: Quantity */}
-              <div>
-                <h3 className="font-medium text-sm mb-1">Quantity</h3>
-                <div className="flex items-center">
-                  <button
-                    onClick={decrementQuantity}
-                    className="h-8 w-8 border border-gray-300 rounded-l-md flex items-center justify-center hover:bg-gray-100 transition-colors"
-                    disabled={quantity <= 1}
-                  >
-                    -
-                  </button>
-                  <div className="h-8 w-10 border-t border-b border-gray-300 flex items-center justify-center text-sm">
-                    {quantity}
+              
+              {/* Right column: Quantity and Action Buttons */}
+              <div className="space-y-3">
+                {/* Quantity Selector */}
+                <div>
+                  <h3 className="font-medium text-sm mb-1">Quantity</h3>
+                  <div className="flex items-center border border-gray-200 rounded-md h-10 w-32">
+                    <button
+                      className="h-full w-10 flex items-center justify-center text-gray-600 hover:text-[#582A34] disabled:opacity-50 disabled:cursor-not-allowed border-r border-gray-200"
+                      onClick={decrementQuantity}
+                      disabled={quantity <= 1}
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <div className="flex-1 text-center text-sm font-medium">
+                      {quantity}
+                    </div>
+                    <button
+                      className="h-full w-10 flex items-center justify-center text-gray-600 hover:text-[#582A34] disabled:opacity-50 disabled:cursor-not-allowed border-l border-gray-200"
+                      onClick={incrementQuantity}
+                      disabled={
+                        (stockDetails.status === 'LOW_STOCK' && quantity >= (stockDetails.quantity || 0)) ||
+                        (stockDetails.status === 'IN_STOCK' && quantity >= 10)
+                      }
+                      aria-label="Increase quantity"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
                   </div>
-                  <button
-                    onClick={incrementQuantity}
-                    className="h-8 w-8 border border-gray-300 rounded-r-md flex items-center justify-center hover:bg-gray-100 transition-colors"
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    className="border-[#582A34] text-[#582A34] hover:bg-[#582A34]/10"
+                    onClick={handleCustomize}
                   >
-                    +
-                  </button>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Customize
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="border-[#582A34] text-[#582A34] hover:bg-[#582A34]/10"
+                    onClick={handleBuyNow}
+                    disabled={!selectedSize || !selectedColor || stockDetails.status === 'OUT_OF_STOCK'}
+                  >
+                    Buy Now
+                  </Button>
+                </div>
+                
+                <Button 
+                  className="w-full bg-[#582A34] hover:bg-[#582A34]/90 text-white" 
+                  size="lg"
+                  onClick={handleAddToCart}
+                  disabled={!selectedSize || !selectedColor || stockDetails.status === 'OUT_OF_STOCK'}
+                >
+                  Add to Cart
+                </Button>
+                
+                {/* Shipping Info */}
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <TruckIcon className="h-4 w-4" />
+                  <span>Free shipping on orders over ₹999</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <RotateCcw className="h-4 w-4" />
+                  <span>Easy 15-day returns</span>
                 </div>
               </div>
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-3">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button
-                  onClick={handleAddToCart}
-                  className="w-full bg-black text-white hover:bg-[#582A34] transition-colors py-6"
+            
+            {/* Product Tabs */}
+            <Tabs defaultValue="description" className="mt-6">
+              <TabsList className="w-full border-b border-gray-200 bg-transparent h-auto p-0 justify-start gap-6">
+                <TabsTrigger 
+                  value="description"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#582A34] data-[state=active]:bg-transparent text-gray-600 data-[state=active]:text-[#582A34] px-0 py-2 h-auto"
                 >
-                  ADD TO CART
-                </Button>
-              </motion.div>
-              
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button
-                  onClick={handleBuyNow}
-                  className="w-full bg-[#582A34] text-white hover:bg-black transition-colors py-6"
+                  Description
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="details"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#582A34] data-[state=active]:bg-transparent text-gray-600 data-[state=active]:text-[#582A34] px-0 py-2 h-auto"
                 >
-                  BUY NOW
-                </Button>
-              </motion.div>
-              
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button
-                  onClick={handleCustomize}
-                  variant="outline"
-                  className="w-full border-black text-black hover:bg-black hover:text-white transition-colors py-6 flex items-center justify-center gap-2"
-                >
-                  <Upload className="h-5 w-5" />
-                  CUSTOMIZE THIS TEE
-                </Button>
-              </motion.div>
-            </div>
-
-            {/* Shipping Info */}
-            <div className="flex gap-5 text-sm text-gray-700">
-              <div className="flex items-center gap-2">
-                <TruckIcon className="h-5 w-5 text-[#582A34]" />
-                <span>Free shipping above ₹1999</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <RotateCcw className="h-5 w-5 text-[#582A34]" />
-                <span>30-day returns</span>
-              </div>
-            </div>
-
-            {/* Product Details Tabs */}
-            <Tabs defaultValue="description" className="mt-8">
-              <TabsList className="grid grid-cols-3 w-full">
-                <TabsTrigger value="description">Description</TabsTrigger>
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="shipping">Shipping & Returns</TabsTrigger>
+                  Details
+                </TabsTrigger>
               </TabsList>
-
-              <TabsContent value="description" className="mt-4">
-                <p className="text-gray-700">{product.description}</p>
+              <TabsContent value="description" className="pt-4">
+                <p className="text-gray-700 leading-relaxed">
+                  {product.description}
+                </p>
               </TabsContent>
-
-              <TabsContent value="details" className="mt-4">
-                <ul className="text-gray-700 space-y-2">
-                  <li><span className="font-bold">Material:</span> 100% Premium Cotton</li>
-                  <li><span className="font-bold">Fit:</span> Regular</li>
-                  <li><span className="font-bold">Print:</span> High-quality digital print</li>
-                  <li><span className="font-bold">Care:</span> Machine wash cold, inside out</li>
-                </ul>
-              </TabsContent>
-
-              <TabsContent value="shipping" className="mt-4">
+              <TabsContent value="details" className="pt-4">
                 <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="shipping">
-                    <AccordionTrigger>Shipping Information</AccordionTrigger>
-                    <AccordionContent>
-                      <p className="text-gray-700">We offer free shipping on all orders above ₹1999. Standard delivery takes 3-5 business days.</p>
+                  <AccordionItem value="material">
+                    <AccordionTrigger className="text-sm font-medium">Material & Care</AccordionTrigger>
+                    <AccordionContent className="text-sm">
+                      <ul className="list-disc list-inside space-y-1 text-gray-600">
+                        <li>100% Cotton</li>
+                        <li>Machine wash cold</li>
+                        <li>Tumble dry low</li>
+                        <li>Do not bleach</li>
+                      </ul>
                     </AccordionContent>
                   </AccordionItem>
-                  <AccordionItem value="returns">
-                    <AccordionTrigger>Return Policy</AccordionTrigger>
-                    <AccordionContent>
-                      <p className="text-gray-700">We offer a 30-day return policy. Items must be unworn, unwashed, and in their original packaging.</p>
+                  <AccordionItem value="shipping">
+                    <AccordionTrigger className="text-sm font-medium">Shipping & Returns</AccordionTrigger>
+                    <AccordionContent className="text-sm">
+                      <p className="text-gray-600 mb-2">
+                        Free standard shipping on orders over ₹999. Delivery within 5-7 business days.
+                      </p>
+                      <p className="text-gray-600">
+                        Easy returns within 15 days of delivery. Items must be unworn, unwashed, and with original tags attached.
+                      </p>
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
@@ -635,21 +640,18 @@ const ProductDetail = () => {
         <div className="mt-8 md:mt-16">
           <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">You May Also Like</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            {(isLoadingRelated ? [] : filteredRelatedProducts).map((relatedProduct: Product, index: number) => (
+            {filteredRelatedProducts.map((relatedProduct) => (
               <motion.div
                 key={relatedProduct.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
+                transition={{ duration: 0.3 }}
+                whileHover={{ y: -5 }}
+                className="group cursor-pointer"
+                onClick={() => navigate(`/product/${relatedProduct.id}`)}
               >
-                <div 
-                  className="cursor-pointer"
-                  onClick={() => {
-                    setCurrentImageIndex(0);
-                    navigate(`/product/${relatedProduct.id}`);
-                  }}
-                >
-                  <div className="overflow-hidden">
+                <div className="bg-gray-50 rounded-lg overflow-hidden">
+                  <div className="relative aspect-square overflow-hidden">
                     <img 
                       src={relatedProduct.images[0]} 
                       alt={relatedProduct.name}
