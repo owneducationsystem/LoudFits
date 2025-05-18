@@ -985,27 +985,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Enhance order data with customer information and product details
       const enhancedOrders = await Promise.all(orders.map(async (order) => {
-        // Get customer details if userId exists
+        // Get customer details if userId exists - IMPROVED REAL-TIME SYNC
         let customerDetails = null;
         if (order.userId) {
-          const customer = await storage.getUser(order.userId);
-          if (customer) {
-            customerDetails = {
-              id: customer.id,
-              name: customer.firstName && customer.lastName 
-                ? `${customer.firstName} ${customer.lastName}`
-                : customer.username,
-              email: customer.email,
-              phone: customer.phoneNumber,
-              address: {
-                street: customer.address,
-                addressLine2: customer.addressLine2,
-                city: customer.city,
-                state: customer.state,
-                postalCode: customer.postalCode,
-                country: customer.country
-              }
-            };
+          try {
+            console.log(`Getting real-time customer data for order ${order.orderNumber}, userId=${order.userId}`);
+            const customer = await storage.getUser(order.userId);
+            
+            if (customer) {
+              // Enhanced customer information with better phone handling
+              customerDetails = {
+                id: customer.id,
+                name: customer.firstName && customer.lastName 
+                  ? `${customer.firstName} ${customer.lastName}`
+                  : customer.username,
+                email: customer.email,
+                phone: customer.phoneNumber || order.shippingAddress?.phone, // Use phone from both sources
+                address: {
+                  street: customer.address,
+                  addressLine2: customer.addressLine2,
+                  city: customer.city,
+                  state: customer.state,
+                  postalCode: customer.postalCode,
+                  country: customer.country
+                }
+              };
+              
+              console.log(`Found customer data for order ${order.orderNumber}: ${customer.username} (${customer.id})`);
+            } else {
+              console.log(`No customer found for userId=${order.userId} in order ${order.orderNumber}`);
+            }
+          } catch (error) {
+            console.error(`Error fetching customer for order ${order.orderNumber}, userId=${order.userId}:`, error);
           }
         }
         

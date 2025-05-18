@@ -868,9 +868,10 @@ const AdminOrders = () => {
                         {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.postalCode}
                       </p>
                       <p>{selectedOrder.shippingAddress.country}</p>
-                      {selectedOrder.shippingAddress.phone && (
+                      {/* Display phone from shipping address or customer info - whichever is available */}
+                      {(selectedOrder.shippingAddress.phone || selectedOrder.customer?.phone) && (
                         <p className="mt-1 text-gray-700">
-                          <span className="font-medium">Phone:</span> {selectedOrder.shippingAddress.phone}
+                          <span className="font-medium">Phone:</span> {selectedOrder.shippingAddress.phone || selectedOrder.customer?.phone}
                         </p>
                       )}
                     </div>
