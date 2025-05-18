@@ -52,12 +52,12 @@ const MobileNavigation = () => {
       </button>
       
       <button 
-        onClick={() => navigate("/shop?category=offers")}
-        className={`mobile-nav-item ${location.includes("offers") ? "active" : ""}`}
-        aria-label="Offers"
+        onClick={() => navigate("/shop?category=all")}
+        className={`mobile-nav-item ${location.includes("shop") ? "active" : ""}`}
+        aria-label="Shop"
       >
         <Tag size={22} />
-        <span className="text-xs">Offers</span>
+        <span className="text-xs">Shop</span>
       </button>
       
       <button 
