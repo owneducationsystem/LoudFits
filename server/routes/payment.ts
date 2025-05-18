@@ -26,7 +26,7 @@ declare global {
 }
 
 // Middleware to check if user is authenticated
-const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+const isAuthenticated = async (req: Request, res: Response, next: NextFunction) => {
   // For development environment, bypass authentication for easier testing
   if (process.env.NODE_ENV !== 'production') {
     console.log("[DEV] Authentication bypassed for payment routes");
@@ -34,10 +34,24 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
     // For non-authenticated requests in development, use a mock user for testing
     if (!req.isAuthenticated || !req.isAuthenticated()) {
       // Use user ID from the request body if available (for testing)
-      const userId = req.body?.userId || 1;
+      const userId = req.body?.userId;
       
-      // Set default test user in case we can't get the real one
-      const testUser = {
+      // If userId is provided, get the actual user and wait for it
+      if (userId) {
+        try {
+          const storedUser = await storage.getUser(userId);
+          if (storedUser) {
+            req.user = storedUser;
+            console.log(`[DEV] Using actual user ID ${userId} for payment flow`);
+            return next();
+          }
+        } catch (err) {
+          console.error(`[DEV] Error fetching user with ID ${userId}:`, err);
+        }
+      }
+      
+      // If we don't have a userId or couldn't find the user, use test user
+      req.user = {
         id: 1,
         username: 'testuser',
         email: 'test@example.com',
@@ -47,23 +61,7 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
         role: 'user'
       } as User;
       
-      // Try to get the actual user if possible
-      storage.getUser(userId)
-        .then(storedUser => {
-          if (storedUser) {
-            req.user = storedUser;
-          } else {
-            // Fallback to test user
-            req.user = testUser;
-          }
-        })
-        .catch(() => {
-          // Fallback to test user in case of error
-          req.user = testUser;
-        });
-      
-      // Initially set to test user, will be replaced if storage.getUser is successful
-      req.user = testUser;
+      console.log(`[DEV] Using default test user (ID: 1) for payment flow`);
     }
     
     return next();
@@ -269,9 +267,20 @@ export function setupPaymentRoutes(app: Express) {
     });
     
     // Test endpoint for creating a dummy payment request
-    app.post("/api/payment/test-create", async (req, res) => {
+    app.post("/api/payment/test-create", isAuthenticated, async (req, res) => {
       try {
         const { amount = 100, success = true } = req.body;
+        
+        // Ensure we have a valid user
+        if (!req.user || !req.user.id) {
+          return res.status(401).json({
+            success: false,
+            error: "User not authenticated or invalid user"
+          });
+        }
+        
+        // Log which user is creating this test payment
+        console.log(`[TEST] Creating test payment for user: ${req.user.id} (${req.user.username || req.user.email})`);
         
         const orderNumber = generateOrderNumber();
         const merchantTransactionId = `TEST${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -279,10 +288,35 @@ export function setupPaymentRoutes(app: Express) {
         // App base URL for redirects
         const appBaseUrl = `${req.protocol}://${req.get('host')}`;
         
-        // Create a test payment record
+        // Create a test order first to link everything correctly
+        const testOrder = await storage.createOrder({
+          userId: req.user.id, // Always use the actual user's ID
+          orderNumber,
+          status: 'PENDING',
+          paymentStatus: 'PENDING',
+          shippingAddress: req.body.shippingAddress || {
+            fullName: req.user.firstName && req.user.lastName ? 
+                     `${req.user.firstName} ${req.user.lastName}` : req.user.username,
+            address: '123 Test Street',
+            city: 'Test City',
+            state: 'Test State',
+            postalCode: '12345',
+            country: 'India',
+            phone: req.user.phoneNumber || '9999999999'
+          },
+          paymentMethod: 'phonepe_test',
+          shippingMethod: 'standard',
+          total: amount.toString(),
+          subtotal: amount.toString(),
+          tax: '0',
+          shippingCost: '0',
+          discount: '0'
+        });
+        
+        // Create a test payment record linked to the actual order
         const payment = await storage.createPayment({
-          userId: req.user?.id || 1, // Use the actual authenticated user ID
-          orderId: req.body.orderId || 1, // Use provided order ID if available
+          userId: req.user.id, // Always use the actual user's ID
+          orderId: testOrder.id, // Link to the real test order
           transactionId: merchantTransactionId,
           merchantTransactionId: merchantTransactionId,
           amount: amount.toString(),
