@@ -40,17 +40,39 @@ const Shop = () => {
 
   // Handle filter changes and update the URL
   const handleCategoryChange = (category: string) => {
+    // Set the selected category
     setSelectedCategory(category);
-    const newParams = new URLSearchParams(searchParams);
     
+    // Create a new URL parameters object
+    const newParams = new URLSearchParams();
+    
+    // Add the category parameter if needed
     if (category && category !== "all") {
       newParams.set("category", category);
-    } else {
-      newParams.delete("category");
     }
     
+    // Keep other existing filters if they exist
+    if (selectedGender) {
+      newParams.set("gender", selectedGender);
+    }
+    
+    if (selectedCollection) {
+      newParams.set("collection", selectedCollection);
+    }
+    
+    if (selectedSizes.length > 0) {
+      newParams.set("size", selectedSizes.join(","));
+    }
+    
+    if (selectedColors.length > 0) {
+      newParams.set("color", selectedColors.join(","));
+    }
+    
+    // Build the new URL
     const queryString = newParams.toString();
     const newLocation = queryString ? `/shop?${queryString}` : '/shop';
+    
+    // Navigate to the new URL
     navigate(newLocation);
   };
   
@@ -66,12 +88,16 @@ const Shop = () => {
     const size = urlParams.get("size");
     const color = urlParams.get("color");
     
-    // Apply filters from URL parameters
-    setSelectedCategory(category || "");
+    // Apply filters from URL parameters - this ensures the UI elements are properly set
+    // Default to "all" category when no category is specified
+    setSelectedCategory(category || "all");
     setSelectedGender(gender || "");
     setSelectedCollection(collection || "");
     setSelectedSizes(size ? size.split(",") : []);
     setSelectedColors(color ? color.split(",") : []);
+    
+    // Force scroll to top when filters change
+    window.scrollTo(0, 0);
   }, [location]);
 
   const { data: products, isLoading, error } = useQuery<Product[]>({

@@ -208,7 +208,7 @@ const Account = () => {
                   
                   <button 
                     className="w-full p-4 border-b border-gray-100 flex items-center justify-between"
-                    onClick={() => navigate("/faqs")}
+                    onClick={() => navigate("/faq")}
                   >
                     <div className="flex items-center">
                       <ClipboardList className="w-5 h-5 text-gray-500 mr-3" />
