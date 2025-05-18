@@ -120,6 +120,7 @@ function App() {
                 <Route path="/search" component={Search} />
                 <Route path="/wishlist" component={Wishlist} />
                 <Route path="/size-guide" component={SizeGuide} />
+                <Route path="/faq" component={FAQ} />
                 <Route path="/faqs" component={FAQ} />
                 <Route path="/shipping-returns" component={ShippingReturns} />
                 <Route path="/contact" component={Contact} />
