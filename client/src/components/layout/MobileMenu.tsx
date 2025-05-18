@@ -258,7 +258,7 @@ const MobileMenu = ({ isOpen, onClose, links }: MobileMenuProps) => {
                       </div>
                     ) : (
                       <Link
-                        href={link.path}
+                        href={link.name === "T-SHIRTS" ? "/shop?category=all" : link.path}
                         className={cn(
                           "block py-3 px-4 rounded-md font-medium",
                           location === link.path 
