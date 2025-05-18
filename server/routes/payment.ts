@@ -107,42 +107,53 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
   order?: Order | undefined;
 }> {
   try {
+    console.log(`[PAYMENT] Updating payment status for payment ID ${payment.id} to ${status}`);
+    
     // Update payment status in database
     const updatedPayment = await storage.updatePaymentStatus(payment.id, status);
     
-    // If payment is successful or failed, update the order status
+    // Get the order associated with this payment
+    const order = await storage.getOrderById(payment.orderId);
+    if (!order) {
+      console.error(`[PAYMENT] Order not found for orderId ${payment.orderId}`);
+      return { success: false, error: `Order not found for orderId ${payment.orderId}` };
+    }
+    
+    console.log(`[PAYMENT] Processing payment for order #${order.orderNumber}, userId=${order.userId || 'none'}`);
+    
+    // Handle successful payment
     if (status === 'SUCCESS' || status === 'PAYMENT_SUCCESS') {
-      const order = await storage.getOrderById(payment.orderId);
-      if (order) {
-        // Update order payment status to paid
-        const updatedOrder = await storage.updateOrderPaymentStatus(order.id, 'PAID');
-        
-        // Update order status to CONFIRMED
-        await storage.updateOrderStatus(order.id, 'CONFIRMED');
-        
-        // Update inventory for each item in the order
-        try {
-          const orderItems = await storage.getOrderItems(order.id);
-          for (const item of orderItems) {
-            try {
-              // Deduct the quantity from inventory
-              await inventoryService.decreaseProductStock(
-                item.productId, 
-                item.size || 'ONE_SIZE', 
-                item.quantity
-              );
-              
-              console.log(`Inventory updated for product ${item.productId}, size ${item.size}, quantity ${item.quantity}`);
-            } catch (invError) {
-              console.error(`Error updating inventory for item ${item.id}:`, invError);
-            }
+      console.log(`[PAYMENT] Payment successful, updating order status`);
+      
+      // Update order payment status to paid
+      const updatedOrder = await storage.updateOrderPaymentStatus(order.id, 'PAID');
+      
+      // Update order status to CONFIRMED
+      await storage.updateOrderStatus(order.id, 'CONFIRMED');
+      
+      // Update inventory for each item in the order
+      try {
+        const orderItems = await storage.getOrderItems(order.id);
+        for (const item of orderItems) {
+          try {
+            await inventoryService.decreaseProductStock(
+              item.productId, 
+              item.size || 'ONE_SIZE', 
+              item.quantity
+            );
+            console.log(`[INVENTORY] Updated for product ${item.productId}, size ${item.size}, quantity ${item.quantity}`);
+          } catch (invError) {
+            console.error(`[INVENTORY ERROR] Failed for item ${item.id}:`, invError);
           }
-        } catch (itemsError) {
-          console.error(`Error fetching order items for order ${order.id}:`, itemsError);
         }
-        
-        // Send notifications
-        if (order.userId) {
+      } catch (itemsError) {
+        console.error(`[INVENTORY ERROR] Failed to fetch order items:`, itemsError);
+      }
+      
+      // Send notifications and emails - only if we have a userId
+      if (order.userId) {
+        try {
+          // Send app notification
           await notificationService.sendUserNotification({
             userId: order.userId,
             type: NotificationType.PAYMENT_RECEIVED,
@@ -151,32 +162,18 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
             entityId: order.id,
             entityType: 'order'
           });
-        }
-        
-        await notificationService.sendAdminNotification({
-          type: NotificationType.PAYMENT_RECEIVED,
-          title: 'Payment Received',
-          message: `Payment received for order #${order.orderNumber}`,
-          entityId: order.id,
-          entityType: 'order',
-          isAdmin: true
-        });
-        
-        // Send email notification for successful payment
-        if (order.userId) {
-          console.log(`Getting user info for userId=${order.userId} to send payment confirmation emails`);
           
-          // Get user by the order's userId, NOT a hardcoded value
+          // Get customer data for email
           const user = await storage.getUser(order.userId);
           
           if (!user) {
-            console.error(`User with ID ${order.userId} not found for order ${order.orderNumber}`);
+            console.error(`[PAYMENT ERROR] Customer with ID ${order.userId} not found`);
           } else if (!user.email) {
-            console.error(`User ${user.id} (${user.username}) has no email address for order ${order.orderNumber}`);
+            console.error(`[PAYMENT ERROR] Customer ${user.id} has no email address`);
           } else {
-            console.log(`Sending payment confirmation emails to user ${user.id} (${user.email}) for order ${order.orderNumber}`);
+            console.log(`[PAYMENT] Found customer data: ID=${user.id}, email=${user.email}`);
             
-            // Send payment confirmation email (non-blocking)
+            // Send payment confirmation email
             emailService.sendPaymentConfirmationEmail(
               user.email,
               user.firstName || user.username,
@@ -184,48 +181,58 @@ async function updatePaymentStatus(payment: Payment, status: any): Promise<{
               order.total,
               order.paymentMethod || 'PhonePe'
             ).then(sent => {
-              if (sent) {
-                console.log(`Payment confirmation email sent to ${user.email} (userId: ${user.id}) for order #${order.orderNumber}`);
-              } else {
-                console.log(`Failed to send payment confirmation email to ${user.email}`);
-              }
+              console.log(sent 
+                ? `[PAYMENT] ✓ Payment confirmation email sent to ${user.email}`
+                : `[PAYMENT ERROR] Failed to send payment email to ${user.email}`);
             }).catch(err => {
-              console.error(`Error sending payment confirmation email: ${err.message}`);
+              console.error(`[PAYMENT ERROR] Email sending exception:`, err);
             });
             
-            // Also send order confirmation if it hasn't been sent already
+            // Send order confirmation email with product details
             try {
               const orderItems = await storage.getOrderItems(order.id);
               const products = [];
               
               for (const item of orderItems) {
                 const product = await storage.getProduct(item.productId);
-                if (product) {
-                  products.push(product);
-                }
+                if (product) products.push(product);
               }
               
               emailService.sendOrderConfirmationEmail(order, user, products)
                 .then(sent => {
-                  if (sent) {
-                    console.log(`Order confirmation email sent to ${user.email} (userId: ${user.id}) for order #${order.orderNumber}`);
-                  } else {
-                    console.log(`Failed to send order confirmation email to ${user.email}`);
-                  }
+                  console.log(sent 
+                    ? `[PAYMENT] ✓ Order confirmation email sent to ${user.email}`
+                    : `[PAYMENT ERROR] Failed to send order email to ${user.email}`);
                 }).catch(err => {
-                  console.error(`Error sending order confirmation email: ${err.message}`);
+                  console.error(`[PAYMENT ERROR] Order email exception:`, err);
                 });
-                
             } catch (emailError) {
-              console.error(`Error preparing order confirmation email: ${emailError}`);
+              console.error(`[PAYMENT ERROR] Failed to prepare order email:`, emailError);
             }
           }
-        } else {
-          console.error(`Cannot send payment confirmation email: order ${order.id} has no associated user`);
+        } catch (notificationError) {
+          console.error(`[PAYMENT ERROR] Failed to send notifications:`, notificationError);
         }
-        return { success: true, order: updatedOrder };
+      } else {
+        console.error(`[PAYMENT WARNING] Order ${order.id} has no associated user`);
       }
-    } else if (status === 'FAILED' || status === 'PAYMENT_ERROR') {
+      
+      // Always send admin notification
+      await notificationService.sendAdminNotification({
+        type: NotificationType.PAYMENT_RECEIVED,
+        title: 'Payment Received',
+        message: `Payment received for order #${order.orderNumber}`,
+        entityId: order.id,
+        entityType: 'order',
+        isAdmin: true
+      }).catch(err => {
+        console.error(`[PAYMENT ERROR] Failed to send admin notification:`, err);
+      });
+      
+      return { success: true, order: updatedOrder };
+    } 
+    // Handle failed payment
+    else if (status === 'FAILED' || status === 'PAYMENT_ERROR') {
       const order = await storage.getOrderById(payment.orderId);
       if (order) {
         // Update order payment status to failed
