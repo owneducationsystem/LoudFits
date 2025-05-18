@@ -476,8 +476,7 @@ export class DatabaseStorage implements IStorage {
   async getTestimonials(): Promise<Testimonial[]> {
     return await db
       .select()
-      .from(testimonials)
-      .orderBy(desc(testimonials.createdAt));
+      .from(testimonials);
   }
 
   async createTestimonial(

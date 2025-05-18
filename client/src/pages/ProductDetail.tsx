@@ -10,7 +10,9 @@ import {
   RotateCcw, 
   Ruler,
   Upload,
-  Camera
+  Camera,
+  Plus,
+  Minus
 } from "lucide-react";
 import ProductImageCarousel from "@/components/ui/product-image-carousel";
 import { StockIndicator } from "@/components/ui/StockIndicator";
