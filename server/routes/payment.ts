@@ -281,8 +281,8 @@ export function setupPaymentRoutes(app: Express) {
         
         // Create a test payment record
         const payment = await storage.createPayment({
-          userId: 1, // Default test user ID
-          orderId: 1, // Sample order ID
+          userId: req.user?.id || 1, // Use the actual authenticated user ID
+          orderId: req.body.orderId || 1, // Use provided order ID if available
           transactionId: merchantTransactionId,
           merchantTransactionId: merchantTransactionId,
           amount: amount.toString(),
@@ -526,7 +526,7 @@ export function setupPaymentRoutes(app: Express) {
       // Create payment record
       const payment = await storage.createPayment({
         orderId: order.id,
-        userId: req.user?.id || 1,
+        userId: req.user!.id, // Use the same user ID as the order, don't default to 1
         amount: amount.total,
         currency: 'INR',
         status: 'PENDING',
