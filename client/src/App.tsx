@@ -7,6 +7,7 @@ import { WishlistProvider } from "@/context/WishlistContext";
 import { NotificationProvider } from "@/context/NotificationContext";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import MobileNavigation from "@/components/layout/MobileNavigation";
 import Home from "@/pages/Home";
 import Shop from "@/pages/Shop";
 import ProductDetail from "@/pages/ProductDetail";
@@ -103,7 +104,7 @@ function App() {
             <TooltipProvider>
               <div className="flex flex-col min-h-screen">
                 <Header />
-                <main className="flex-grow">
+                <main className="flex-grow pb-16 md:pb-0"> {/* Added padding for mobile nav */}
               <Switch>
                 <Route path="/" component={Home} />
                 <Route path="/shop" component={Shop} />
@@ -170,6 +171,9 @@ function App() {
               </Switch>
             </main>
             <Footer />
+            
+            {/* Mobile Bottom Navigation (Hidden on Desktop) */}
+            <MobileNavigation />
             </div>
             <Toaster />
           </TooltipProvider>

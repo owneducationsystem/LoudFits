@@ -53,8 +53,8 @@ const FeaturedCollection = () => {
             <Skeleton className="h-[200px] w-full rounded-md" />
           </div>
         ) : (
-          // Render collections
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          // Render collections - Mobile Carousel / Desktop Grid
+          <div className="md:grid md:grid-cols-2 md:gap-6 hidden">
             {collections.map((collection, index) => (
               <motion.div
                 key={index}
@@ -72,6 +72,29 @@ const FeaturedCollection = () => {
                 />
               </motion.div>
             ))}
+          </div>
+          
+          {/* Mobile horizontal carousel */}
+          <div className="md:hidden">
+            <div className="mobile-carousel">
+              {collections.map((collection, index) => (
+                <motion.div
+                  key={index}
+                  className="mobile-carousel-item"
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.3, delay: index * 0.15 }}
+                >
+                  <CategoryCard
+                    image={collection.image}
+                    title={collection.title}
+                    link={collection.link}
+                    fullWidth={false}
+                  />
+                </motion.div>
+              ))}
+            </div>
           </div>
         )}
       </div>

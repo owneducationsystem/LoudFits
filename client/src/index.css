@@ -45,6 +45,28 @@
   .sticky-bottom-bar {
     @apply fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 flex items-center justify-between z-40;
   }
+  
+  /* Mobile fixed bottom navigation bar */
+  .mobile-nav-bar {
+    @apply fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-1.5 px-2 flex items-center justify-between z-40 shadow-[0_-2px_10px_rgba(0,0,0,0.05)];
+  }
+  
+  .mobile-nav-item {
+    @apply flex flex-col items-center gap-1 py-1.5 px-2 rounded-md text-gray-600 transition-colors;
+  }
+  
+  .mobile-nav-item.active {
+    @apply text-[#582A34];
+  }
+  
+  /* Mobile carousel for featured collections */
+  .mobile-carousel {
+    @apply flex overflow-x-auto snap-x pb-4 hide-scrollbar gap-3;
+  }
+  
+  .mobile-carousel-item {
+    @apply flex-shrink-0 snap-start w-[85%] xs:w-[70%] sm:w-[45%] md:w-[30%] lg:w-[22%] rounded-lg overflow-hidden;
+  }
 }
 
 :root {
