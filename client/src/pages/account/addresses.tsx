@@ -30,7 +30,7 @@ const AddressesPage = () => {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addresses, setAddresses] = useState<any[]>([]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
   // Form fields
@@ -146,7 +146,7 @@ const AddressesPage = () => {
     }, 1000);
   };
 
-  const handleRemoveAddress = (id) => {
+  const handleRemoveAddress = (id: number) => {
     setAddresses(prev => prev.filter(address => address.id !== id));
     toast({
       title: "Address removed",
@@ -154,7 +154,7 @@ const AddressesPage = () => {
     });
   };
 
-  const handleSetDefault = (id) => {
+  const handleSetDefault = (id: number) => {
     setAddresses(prev => 
       prev.map(address => ({
         ...address,

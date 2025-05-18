@@ -27,6 +27,10 @@ import TermsConditions from "@/pages/TermsConditions";
 import Account from "@/pages/Account";
 import Orders from "@/pages/Orders";
 import Checkout from "@/pages/Checkout";
+import ProfilePage from "@/pages/account/profile";
+import AddressesPage from "@/pages/account/addresses";
+import SecurityPage from "@/pages/account/security";
+import PaymentsPage from "@/pages/account/payments";
 import OrderConfirmation from "@/pages/OrderConfirmation";
 import PaymentFailed from "@/pages/PaymentFailed";
 import PaymentError from "@/pages/PaymentError";
@@ -123,6 +127,10 @@ function App() {
                 <Route path="/privacy-policy" component={PrivacyPolicy} />
                 <Route path="/terms-conditions" component={TermsConditions} />
                 <Route path="/account" component={Account} />
+                <Route path="/account/profile" component={ProfilePage} />
+                <Route path="/account/addresses" component={AddressesPage} />
+                <Route path="/account/security" component={SecurityPage} />
+                <Route path="/account/payments" component={PaymentsPage} />
                 <Route path="/orders" component={Orders} />
                 <Route path="/checkout" component={Checkout} />
                 <Route path="/order-confirmation/:orderId" component={OrderConfirmation} />
