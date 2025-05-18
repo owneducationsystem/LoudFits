@@ -74,7 +74,7 @@ const Shop = () => {
   const filteredProducts = displayProducts.filter((product: Product) => {
     let matches = true;
     
-    if (selectedCategory && product.category !== selectedCategory) {
+    if (selectedCategory && selectedCategory !== "all" && product.category !== selectedCategory) {
       matches = false;
     }
     

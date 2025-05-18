@@ -29,7 +29,7 @@ const FAQ = () => {
               <AccordionTrigger>How can I track my order?</AccordionTrigger>
               <AccordionContent>
                 Once your order is shipped, you'll receive a tracking number via email.
-                You can also check your order status on the "Track Order" page by entering your order number.
+                You can also check your order status on our <a href="/track-order" className="text-[#582A34] font-medium">Track Order</a> page by entering your order number.
               </AccordionContent>
             </AccordionItem>
             
@@ -103,7 +103,7 @@ const FAQ = () => {
             <AccordionItem value="product-3">
               <AccordionTrigger>How do I find my size?</AccordionTrigger>
               <AccordionContent>
-                Please refer to our comprehensive size guide on the "Size Guide" page.
+                Please refer to our comprehensive <a href="/size-guide" className="text-[#582A34] font-medium">Size Guide</a> page.
                 If you're between sizes, we recommend going up a size for a more comfortable fit.
               </AccordionContent>
             </AccordionItem>
@@ -118,7 +118,7 @@ const FAQ = () => {
               <AccordionContent>
                 We offer a 15-day return policy from the date of delivery. Items must be unused,
                 unwashed, and in their original packaging with tags attached. Please see our
-                "Shipping & Returns" page for detailed information.
+                <a href="/shipping-returns" className="text-[#582A34] font-medium ml-1">Shipping & Returns</a> page for detailed information.
               </AccordionContent>
             </AccordionItem>
             
