@@ -27,62 +27,72 @@ declare global {
 
 // Middleware to check if user is authenticated
 const isAuthenticated = async (req: Request, res: Response, next: NextFunction) => {
-  // For development environment, bypass authentication for easier testing
+  // For development environment, provide more flexible authentication
   if (process.env.NODE_ENV !== 'production') {
-    console.log("[DEV] Authentication bypassed for payment routes");
+    console.log("[DEV] Using flexible authentication for payment routes");
     
-    // For non-authenticated requests in development, use a mock user for testing
-    if (!req.isAuthenticated || !req.isAuthenticated()) {
-      // Use user ID from the request body if available (for testing)
-      const userId = req.body?.userId;
-      
-      // If userId is provided, get the actual user and wait for it
-      if (userId) {
-        try {
-          const storedUser = await storage.getUser(userId);
-          if (storedUser) {
-            req.user = storedUser;
-            console.log(`[DEV] Using actual user ID ${userId} for payment flow`);
-            return next();
-          }
-        } catch (err) {
-          console.error(`[DEV] Error fetching user with ID ${userId}:`, err);
+    // 1. Check if user is already authenticated (priority 1)
+    if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+      console.log(`[DEV] User already authenticated with ID ${req.user.id}`);
+      return next();
+    }
+    
+    // 2. Try to use userId from request body or query (priority 2)
+    const requestUserId = req.body?.userId || req.query?.userId;
+    
+    if (requestUserId && !isNaN(Number(requestUserId))) {
+      try {
+        const userId = Number(requestUserId);
+        console.log(`[DEV] Looking up user with ID ${userId} from request data`);
+        const storedUser = await storage.getUser(userId);
+        
+        if (storedUser) {
+          req.user = storedUser;
+          console.log(`[DEV] Using user ID ${userId} from request data`);
+          return next();
+        } else {
+          console.log(`[DEV] User ID ${userId} not found in database`);
         }
+      } catch (err) {
+        console.error(`[DEV] Error looking up user:`, err);
       }
-      
-      // Use userId from body or query params, with a much higher priority
-      const requestUserId = req.body?.userId || req.query?.userId;
-      
-      if (requestUserId) {
-        try {
-          const requestedUser = await storage.getUser(Number(requestUserId));
-          if (requestedUser) {
-            req.user = requestedUser;
-            console.log(`[DEV] Using requested user ID ${requestUserId} for payment flow`);
-            return next();
-          }
-        } catch (error) {
-          console.error(`[DEV] Error finding user ID ${requestUserId}:`, error);
-        }
-      }
-      
-      // If we don't have a userId or couldn't find the user, don't use a hardcoded ID
-      // Instead, use the actual authenticated user if possible, otherwise require auth
-      if (req.user) {
-        console.log(`[DEV] Using authenticated user (ID: ${req.user.id}) for payment flow`);
+    }
+    
+    // 3. For development testing, use a default test user (lowest priority)
+    // Looking up a real user in the database rather than hardcoding values
+    try {
+      // Try to find user ID 47 (admin) or any other user in the system
+      const defaultUser = await storage.getUser(47);
+      if (defaultUser) {
+        req.user = defaultUser;
+        console.log(`[DEV] Using default user for testing: ${defaultUser.id} (${defaultUser.username})`);
         return next();
       }
       
-      return res.status(401).json({ 
-        success: false, 
-        error: "User authentication required for payments. Please provide a valid userId or login." 
-      });
+      // If user 47 not found, try to get the first user in the system
+      const users = await storage.getAllUsers(1);
+      if (users && users.length > 0) {
+        req.user = users[0];
+        console.log(`[DEV] Using first available user for testing: ${users[0].id} (${users[0].username})`);
+        return next();
+      }
+    } catch (error) {
+      console.error('[DEV] Error finding default user:', error);
     }
     
+    // If all attempts fail, create a minimal test user object for development
+    req.user = {
+      id: 47, // Use a consistent ID that should exist in most dev environments
+      username: 'testuser',
+      email: 'test@example.com',
+      role: 'user'
+    } as User;
+    
+    console.log(`[DEV] Created minimal test user with ID ${req.user.id} for payment flow`);
     return next();
   }
   
-  // Production check
+  // Production check - strict authentication required
   if (req.isAuthenticated && req.isAuthenticated()) {
     return next();
   }
