@@ -474,14 +474,10 @@ export class DatabaseStorage implements IStorage {
 
   // Testimonial methods
   async getTestimonials(): Promise<Testimonial[]> {
-    try {
-      return await db
-        .select()
-        .from(testimonials);
-    } catch (error) {
-      console.error("Error fetching testimonials:", error);
-      return []; // Return empty array instead of failing
-    }
+    return await db
+      .select()
+      .from(testimonials)
+      .orderBy(desc(testimonials.createdAt));
   }
 
   async createTestimonial(

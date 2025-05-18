@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Testimonial } from "@shared/schema";
 import { Helmet } from "react-helmet";
-import AutoCarousel from "@/components/ui/auto-carousel";
+import HeroCarousel from "@/components/ui/hero-carousel";
 import FeaturedCategories from "@/components/ui/featured-categories";
 import TrendingProducts from "@/components/ui/trending-products";
 import UspSection from "@/components/ui/usp-section";
@@ -43,7 +43,7 @@ const Home = () => {
         <meta name="description" content="Loudfits offers bold, expressive t-shirts that help you stand out and make a statement. Shop our collection of printed and customizable tees." />
       </Helmet>
       
-      <AutoCarousel 
+      <HeroCarousel 
         images={[
           {
             src: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1920&h=1080",
