@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { Helmet } from "react-helmet";
 import { motion } from "framer-motion";
 import { Product } from "@shared/schema";
@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/sheet";
 
 const Shop = () => {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
+  const [, params] = useRoute('/shop');
   const [searchParams, setSearchParams] = useState<URLSearchParams>(new URLSearchParams());
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedGender, setSelectedGender] = useState<string>("");
@@ -37,71 +38,41 @@ const Shop = () => {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<string>("newest");
 
-  // Get query parameters from URL when location changes
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setSearchParams(params);
+  // Handle filter changes and update the URL
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    const newParams = new URLSearchParams(searchParams);
     
-    // Clear all filters first when navigating to a new page
-    setSelectedCategory("");
-    setSelectedGender("");
-    setSelectedCollection("");
-    setSelectedSizes([]);
-    setSelectedColors([]);
-    
-    // Then apply filters from URL parameters
-    const category = params.get("category");
-    if (category) {
-      setSelectedCategory(category);
+    if (category && category !== "all") {
+      newParams.set("category", category);
+    } else {
+      newParams.delete("category");
     }
     
-    const gender = params.get("gender");
-    if (gender) setSelectedGender(gender);
-    
-    const collection = params.get("collection");
-    if (collection) setSelectedCollection(collection);
-    
-    const size = params.get("size");
-    if (size) setSelectedSizes(size.split(","));
-    
-    const color = params.get("color");
-    if (color) setSelectedColors(color.split(","));
-  }, [location]);
+    const queryString = newParams.toString();
+    const newLocation = queryString ? `/shop?${queryString}` : '/shop';
+    navigate(newLocation);
+  };
   
-  // Update URL when filters change
+  // Load filters from URL when the page loads or URL changes
   useEffect(() => {
-    if (location.includes('/shop')) {
-      const params = new URLSearchParams();
-      
-      if (selectedCategory) {
-        params.set('category', selectedCategory);
-      }
-      
-      if (selectedGender) {
-        params.set('gender', selectedGender);
-      }
-      
-      if (selectedCollection) {
-        params.set('collection', selectedCollection);
-      }
-      
-      if (selectedSizes.length > 0) {
-        params.set('size', selectedSizes.join(','));
-      }
-      
-      if (selectedColors.length > 0) {
-        params.set('color', selectedColors.join(','));
-      }
-      
-      const queryString = params.toString();
-      const newLocation = queryString ? `/shop?${queryString}` : '/shop';
-      
-      // Only update if different to avoid loops
-      if (location !== newLocation) {
-        navigate(newLocation);
-      }
-    }
-  }, [selectedCategory, selectedGender, selectedCollection, selectedSizes, selectedColors]);
+    const urlParams = new URLSearchParams(window.location.search);
+    setSearchParams(urlParams);
+    
+    // Get filters from URL parameters
+    const category = urlParams.get("category");
+    const gender = urlParams.get("gender");
+    const collection = urlParams.get("collection");
+    const size = urlParams.get("size");
+    const color = urlParams.get("color");
+    
+    // Apply filters from URL parameters
+    setSelectedCategory(category || "");
+    setSelectedGender(gender || "");
+    setSelectedCollection(collection || "");
+    setSelectedSizes(size ? size.split(",") : []);
+    setSelectedColors(color ? color.split(",") : []);
+  }, [location]);
 
   const { data: products, isLoading, error } = useQuery<Product[]>({
     queryKey: ["/api/products"],
@@ -119,8 +90,11 @@ const Shop = () => {
   const filteredProducts = displayProducts.filter((product: Product) => {
     let matches = true;
     
-    // Handle "all" category differently - show all products
-    if (selectedCategory && selectedCategory !== "all" && selectedCategory !== "" && product.category !== selectedCategory) {
+      // Handle category filtering
+    if (selectedCategory && 
+        selectedCategory !== "all" && 
+        selectedCategory !== "" && 
+        !product.category.includes(selectedCategory)) {
       matches = false;
     }
     

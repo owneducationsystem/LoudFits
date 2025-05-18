@@ -70,7 +70,7 @@ const navLinks = [
     },
     { 
       name: "T-SHIRTS", 
-      path: "/shop?category=all",
+      path: "/shop",
       hasSubmenu: true,
       submenu: [
         { name: "All T-Shirts", path: "/shop" },
@@ -111,7 +111,7 @@ const mobileNavLinks = [
     },
     { 
       name: "T-SHIRTS", 
-      path: "/shop?category=all",
+      path: "/shop",
       hasSubmenu: true,
       submenu: [
         { name: "All T-Shirts", path: "/shop" },
