@@ -37,26 +37,22 @@ const Shop = () => {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<string>("newest");
 
-  // Get query parameters from URL and reset other filters when a new category is selected
+  // Get query parameters from URL when location changes
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setSearchParams(params);
     
-    // Reset all filters first
+    // Clear all filters first when navigating to a new page
     setSelectedCategory("");
     setSelectedGender("");
     setSelectedCollection("");
     setSelectedSizes([]);
     setSelectedColors([]);
     
-    // Apply filters from URL
+    // Then apply filters from URL parameters
     const category = params.get("category");
     if (category) {
-      if (category === "all") {
-        setSelectedCategory("all");
-      } else {
-        setSelectedCategory(category);
-      }
+      setSelectedCategory(category);
     }
     
     const gender = params.get("gender");
@@ -88,7 +84,8 @@ const Shop = () => {
   const filteredProducts = displayProducts.filter((product: Product) => {
     let matches = true;
     
-    if (selectedCategory && selectedCategory !== "all" && product.category !== selectedCategory) {
+    // Handle "all" category differently - show all products
+    if (selectedCategory && selectedCategory !== "all" && selectedCategory !== "" && product.category !== selectedCategory) {
       matches = false;
     }
     

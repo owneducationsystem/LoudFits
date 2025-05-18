@@ -193,7 +193,7 @@ const mobileNavLinks = [
               onMouseLeave={() => setHoveredMenu(null)}
             >
               <Link 
-                href={link.name === "T-SHIRTS" ? "/shop?category=all" : link.path}
+                href={link.name === "T-SHIRTS" ? "/shop" : link.path}
                 className={cn(
                   "px-3 py-2 text-gray-800 hover:text-[#582A34] transition-colors flex items-center relative",
                   (location === link.path || hoveredMenu === link.name) && "text-[#582A34]"
