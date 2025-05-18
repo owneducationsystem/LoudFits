@@ -33,15 +33,38 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
     
     // For non-authenticated requests in development, use a mock user for testing
     if (!req.isAuthenticated || !req.isAuthenticated()) {
-      req.user = {
-        id: 1,
-        username: 'testuser',
-        email: 'test@example.com',
-        firstName: 'Test',
-        lastName: 'User',
-        phoneNumber: '9999999999',
-        role: 'user'
-      } as User;
+      // Use user ID from the request body if available (for testing)
+      const userId = req.body?.userId || 1;
+      
+      // Try to get the actual user if possible
+      try {
+        const storedUser = await storage.getUser(userId);
+        if (storedUser) {
+          req.user = storedUser;
+        } else {
+          // Fallback to test user
+          req.user = {
+            id: 1,
+            username: 'testuser',
+            email: 'test@example.com',
+            firstName: 'Test',
+            lastName: 'User',
+            phoneNumber: '9999999999',
+            role: 'user'
+          } as User;
+        }
+      } catch (error) {
+        // Fallback to test user in case of error
+        req.user = {
+          id: 1,
+          username: 'testuser',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          phoneNumber: '9999999999',
+          role: 'user'
+        } as User;
+      }
     }
     
     return next();
