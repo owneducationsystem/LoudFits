@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+// No longer using navigation arrows
+// import { ChevronLeft, ChevronRight } from "lucide-react";
 import { fadeIn } from "@/lib/motion";
 
 interface CarouselImage {
@@ -78,15 +79,20 @@ const HeroCarousel = ({
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.7 }}
+          transition={{ duration: 1.2, ease: "easeInOut" }}
           className="absolute inset-0"
         >
-          <img 
+          <motion.img 
             src={images[currentIndex].src} 
-            alt={images[currentIndex].alt} 
+            alt={images[currentIndex].alt}
+            initial={{ scale: 1 }}
+            animate={{ 
+              scale: 1.05,
+              transition: { duration: 8, ease: "easeInOut" }
+            }}
             className="w-full h-full object-cover" 
           />
           <div className="absolute inset-0 bg-black bg-opacity-40"></div>
@@ -151,22 +157,7 @@ const HeroCarousel = ({
         </motion.div>
       </div>
       
-      {/* Navigation Arrows */}
-      <button 
-        onClick={prevSlide}
-        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-30 hover:bg-opacity-50 text-white p-2 rounded-full z-10 transition-all duration-200"
-        aria-label="Previous slide"
-      >
-        <ChevronLeft className="h-6 w-6" />
-      </button>
-      
-      <button 
-        onClick={nextSlide}
-        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-30 hover:bg-opacity-50 text-white p-2 rounded-full z-10 transition-all duration-200"
-        aria-label="Next slide"
-      >
-        <ChevronRight className="h-6 w-6" />
-      </button>
+      {/* Navigation arrows removed as requested */}
       
       {/* Indicator Dots */}
       <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-2">

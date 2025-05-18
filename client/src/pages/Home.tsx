@@ -76,7 +76,7 @@ const Home = () => {
             secondaryLinkText: "CUSTOMIZE YOUR OWN"
           }
         ]}
-        autoplaySpeed={6000}
+        autoplaySpeed={4000}
       />
       
       <FeaturedCategories />
