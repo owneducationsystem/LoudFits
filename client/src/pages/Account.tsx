@@ -98,45 +98,45 @@ const Account = () => {
 
               {/* Account sections in grid layout */}
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <div 
-                  className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col items-center justify-center h-28"
+                <button 
+                  className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col items-center justify-center h-28 w-full"
                   onClick={() => navigate("/orders")}
                 >
                   <Package className="w-6 h-6 text-[#582A34] mb-2" />
                   <span className="text-center font-medium">Your Orders</span>
-                </div>
+                </button>
                 
-                <div 
-                  className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col items-center justify-center h-28"
+                <button 
+                  className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col items-center justify-center h-28 w-full"
                   onClick={() => navigate("/wishlist")}
                 >
                   <Heart className="w-6 h-6 text-[#582A34] mb-2" />
                   <span className="text-center font-medium">Your Wishlist</span>
-                </div>
+                </button>
                 
-                <div 
-                  className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col items-center justify-center h-28"
+                <button 
+                  className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col items-center justify-center h-28 w-full"
                   onClick={() => navigate("/account/profile")}
                 >
                   <User className="w-6 h-6 text-[#582A34] mb-2" />
                   <span className="text-center font-medium">Your Profile</span>
-                </div>
+                </button>
                 
-                <div 
-                  className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col items-center justify-center h-28"
+                <button 
+                  className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col items-center justify-center h-28 w-full"
                   onClick={() => navigate("/account/addresses")}
                 >
                   <MapPin className="w-6 h-6 text-[#582A34] mb-2" />
                   <span className="text-center font-medium">Your Addresses</span>
-                </div>
+                </button>
               </div>
 
               {/* Account & Settings section */}
               <div className="mb-6">
                 <h2 className="text-lg font-semibold mb-3">Account & Settings</h2>
                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                  <div 
-                    className="p-4 border-b border-gray-100 flex items-center justify-between"
+                  <button 
+                    className="w-full p-4 border-b border-gray-100 flex items-center justify-between"
                     onClick={() => navigate("/account/profile")}
                   >
                     <div className="flex items-center">
@@ -144,10 +144,10 @@ const Account = () => {
                       <span>Profile Information</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </div>
+                  </button>
                   
-                  <div 
-                    className="p-4 border-b border-gray-100 flex items-center justify-between"
+                  <button 
+                    className="w-full p-4 border-b border-gray-100 flex items-center justify-between"
                     onClick={() => navigate("/account/addresses")}
                   >
                     <div className="flex items-center">
@@ -155,10 +155,10 @@ const Account = () => {
                       <span>Addresses</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </div>
+                  </button>
                   
-                  <div 
-                    className="p-4 border-b border-gray-100 flex items-center justify-between"
+                  <button 
+                    className="w-full p-4 border-b border-gray-100 flex items-center justify-between"
                     onClick={() => navigate("/account/payments")}
                   >
                     <div className="flex items-center">
@@ -166,10 +166,10 @@ const Account = () => {
                       <span>Payment Methods</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </div>
+                  </button>
                   
-                  <div 
-                    className="p-4 border-b border-gray-100 flex items-center justify-between"
+                  <button 
+                    className="w-full p-4 border-b border-gray-100 flex items-center justify-between"
                     onClick={() => navigate("/account/security")}
                   >
                     <div className="flex items-center">
@@ -177,17 +177,17 @@ const Account = () => {
                       <span>Login & Security</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </div>
+                  </button>
                   
-                  <div 
-                    className="p-4 flex items-center justify-between"
+                  <button 
+                    className="w-full p-4 flex items-center justify-between"
                     onClick={handleLogout}
                   >
                     <div className="flex items-center">
                       <LogOut className="w-5 h-5 text-red-500 mr-3" />
                       <span className="text-red-500">Sign Out</span>
                     </div>
-                  </div>
+                  </button>
                 </div>
               </div>
 
@@ -195,8 +195,8 @@ const Account = () => {
               <div className="mb-6">
                 <h2 className="text-lg font-semibold mb-3">Customer Service</h2>
                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                  <div 
-                    className="p-4 border-b border-gray-100 flex items-center justify-between"
+                  <button 
+                    className="w-full p-4 border-b border-gray-100 flex items-center justify-between"
                     onClick={() => navigate("/track-order")}
                   >
                     <div className="flex items-center">
@@ -204,21 +204,21 @@ const Account = () => {
                       <span>Track Your Order</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </div>
+                  </button>
                   
-                  <div 
-                    className="p-4 border-b border-gray-100 flex items-center justify-between"
-                    onClick={() => navigate("/faq")}
+                  <button 
+                    className="w-full p-4 border-b border-gray-100 flex items-center justify-between"
+                    onClick={() => navigate("/faqs")}
                   >
                     <div className="flex items-center">
                       <ClipboardList className="w-5 h-5 text-gray-500 mr-3" />
                       <span>FAQ & Help</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </div>
+                  </button>
                   
-                  <div 
-                    className="p-4 flex items-center justify-between"
+                  <button 
+                    className="w-full p-4 flex items-center justify-between"
                     onClick={() => navigate("/contact")}
                   >
                     <div className="flex items-center">
@@ -226,7 +226,7 @@ const Account = () => {
                       <span>Contact Us</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </div>
+                  </button>
                 </div>
               </div>
             </div>
