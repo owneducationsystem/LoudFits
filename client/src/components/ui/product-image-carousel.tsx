@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface ProductImageCarouselProps {
   images: string[];

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Testimonial } from "@shared/schema";
 import { Helmet } from "react-helmet";
-import HeroCarousel from "@/components/ui/hero-carousel";
+import AutoCarousel from "@/components/ui/auto-carousel";
 import FeaturedCategories from "@/components/ui/featured-categories";
 import TrendingProducts from "@/components/ui/trending-products";
 import UspSection from "@/components/ui/usp-section";
