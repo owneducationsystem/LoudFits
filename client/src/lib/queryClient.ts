@@ -30,33 +30,6 @@ export async function apiRequest(
     }
   }
   
-  // Add Firebase authentication headers if user is logged in
-  try {
-    const firebaseUser = localStorage.getItem("firebaseUser");
-    if (firebaseUser) {
-      const userData = JSON.parse(firebaseUser);
-      if (userData && userData.uid) {
-        headers["firebase-uid"] = userData.uid;
-        headers["firebase-token"] = userData.token || "firebase-authenticated";
-        
-        // For payment/checkout endpoints, include user info in the body 
-        // to help with user creation if needed
-        if (url.includes('/api/payment') && method === 'POST' && data) {
-          const modifiedData = { 
-            ...data as any, 
-            userInfo: {
-              email: userData.email,
-              displayName: userData.displayName
-            } 
-          };
-          data = modifiedData;
-        }
-      }
-    }
-  } catch (error) {
-    console.error("Error adding Firebase authentication:", error);
-  }
-  
   const res = await fetch(url, {
     method,
     headers,
@@ -75,7 +48,7 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const url = queryKey[0] as string;
-    // Set up headers for authentication
+    // Set up headers for admin authentication
     let headers: Record<string, string> = {};
     
     // Add admin-id header for admin routes
@@ -91,20 +64,6 @@ export const getQueryFn: <T>(options: {
       } catch (error) {
         console.error("Error adding admin authentication:", error);
       }
-    }
-    
-    // Add Firebase authentication headers if user is logged in
-    try {
-      const firebaseUser = localStorage.getItem("firebaseUser");
-      if (firebaseUser) {
-        const userData = JSON.parse(firebaseUser);
-        if (userData && userData.uid) {
-          headers["firebase-uid"] = userData.uid;
-          headers["firebase-token"] = userData.token || "firebase-authenticated";
-        }
-      }
-    } catch (error) {
-      console.error("Error adding Firebase authentication:", error);
     }
     
     const res = await fetch(url, {

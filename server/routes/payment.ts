@@ -25,93 +25,79 @@ declare global {
   }
 }
 
-// Enhanced middleware to check if user is authenticated
+// Middleware to check if user is authenticated
 const isAuthenticated = async (req: Request, res: Response, next: NextFunction) => {
-  console.log(`[AUTH] Checking authentication for ${req.path}`);
-  
-  // Check Firebase authentication in header
-  const firebaseToken = req.headers['firebase-token'] as string;
-  const firebaseUid = req.headers['firebase-uid'] as string;
-  
-  if (firebaseToken && firebaseUid) {
-    console.log(`[AUTH] Firebase auth header found, UID: ${firebaseUid}`);
-    try {
-      // Find user by Firebase UID
-      const user = await storage.getUserByFirebaseId(firebaseUid);
-      if (user) {
-        console.log(`[AUTH] User found by Firebase ID: ${user.id}, ${user.email}`);
-        req.user = user;
-        return next();
-      } else {
-        // If user with this Firebase ID doesn't exist yet, check if the email exists
-        const userInfo = req.body?.userInfo || {};
-        if (userInfo.email) {
-          const userByEmail = await storage.getUserByEmail(userInfo.email);
-          if (userByEmail) {
-            // Update user with Firebase ID
-            const updatedUser = await storage.updateUser(userByEmail.id, { firebaseId: firebaseUid });
-            console.log(`[AUTH] Updated user ${userByEmail.id} with Firebase ID`);
-            req.user = updatedUser;
-            return next();
-          }
-        }
-        
-        // For development - allow creation of new user on the fly
-        if (process.env.NODE_ENV !== 'production' && userInfo.email) {
-          console.log(`[AUTH-DEV] Creating new user from Firebase data: ${userInfo.email}`);
-          const username = userInfo.email.split('@')[0] || `user_${Date.now()}`;
-          const newUser = await storage.createUser({
-            email: userInfo.email,
-            username,
-            password: `firebase_${Date.now()}`,
-            firebaseId: firebaseUid,
-            firstName: userInfo.displayName || null
-          });
-          
-          console.log(`[AUTH-DEV] Created new user: ${newUser.id}, ${newUser.email}`);
-          req.user = newUser;
-          return next();
-        }
-      }
-    } catch (err) {
-      console.error(`[AUTH] Error processing Firebase authentication:`, err);
-    }
-  }
-  
-  // Direct user ID in request body - useful for testing during development
+  // For development environment, provide more flexible authentication
   if (process.env.NODE_ENV !== 'production') {
+    console.log("[DEV] Using flexible authentication for payment routes");
+    
+    // 1. Check if user is already authenticated (priority 1)
+    if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+      console.log(`[DEV] User already authenticated with ID ${req.user.id}`);
+      return next();
+    }
+    
+    // 2. Try to use userId from request body or query (priority 2)
     const requestUserId = req.body?.userId || req.query?.userId;
     
     if (requestUserId && !isNaN(Number(requestUserId))) {
       try {
         const userId = Number(requestUserId);
-        console.log(`[AUTH-DEV] Looking up user with ID ${userId} from request`);
+        console.log(`[DEV] Looking up user with ID ${userId} from request data`);
         const storedUser = await storage.getUser(userId);
         
         if (storedUser) {
           req.user = storedUser;
-          console.log(`[AUTH-DEV] Using user ID ${userId}: ${storedUser.username || storedUser.email}`);
+          console.log(`[DEV] Using user ID ${userId} from request data`);
           return next();
+        } else {
+          console.log(`[DEV] User ID ${userId} not found in database`);
         }
       } catch (err) {
-        console.error(`[AUTH-DEV] Error looking up user:`, err);
+        console.error(`[DEV] Error looking up user:`, err);
       }
     }
     
-    // Log available data for debugging
-    console.log(`[AUTH] Available auth data in request:`);
-    console.log(`- Headers:`, Object.keys(req.headers).filter(h => h.includes('fire')));
-    console.log(`- Body userId:`, req.body?.userId);
-    console.log(`- Body userInfo:`, req.body?.userInfo);
-    console.log(`- Query userId:`, req.query?.userId);
+    // 3. For development testing, use a default test user (lowest priority)
+    // Looking up a real user in the database rather than hardcoding values
+    try {
+      // Try to find user ID 47 (admin) or any other user in the system
+      const defaultUser = await storage.getUser(47);
+      if (defaultUser) {
+        req.user = defaultUser;
+        console.log(`[DEV] Using default user for testing: ${defaultUser.id} (${defaultUser.username})`);
+        return next();
+      }
+      
+      // If user 47 not found, try to get the first user in the system
+      const users = await storage.getAllUsers(1);
+      if (users && users.length > 0) {
+        req.user = users[0];
+        console.log(`[DEV] Using first available user for testing: ${users[0].id} (${users[0].username})`);
+        return next();
+      }
+    } catch (error) {
+      console.error('[DEV] Error finding default user:', error);
+    }
+    
+    // If all attempts fail, create a minimal test user object for development
+    req.user = {
+      id: 47, // Use a consistent ID that should exist in most dev environments
+      username: 'testuser',
+      email: 'test@example.com',
+      role: 'user'
+    } as User;
+    
+    console.log(`[DEV] Created minimal test user with ID ${req.user.id} for payment flow`);
+    return next();
   }
   
-  // If no authenticated user found, return 401 Unauthorized
-  console.log(`[AUTH] Authentication failed - no valid user credentials found`);
-  return res.status(401).json({ 
-    message: "Please login before proceeding with checkout",
-    error: "auth_required"
-  });
+  // Production check - strict authentication required
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    return next();
+  }
+  
+  res.status(401).json({ message: "Unauthorized - Please login first" });
 };
 
 // Update payment status and handle notifications
@@ -593,32 +579,23 @@ export function setupPaymentRoutes(app: Express) {
       const orderNumber = generateOrderNumber();
       const merchantTransactionId = orderNumber;
       
-      // Additional logging for debugging
-      console.log(`[ORDER] Creating order with authenticated user ID: ${req.user!.id}`);
-      console.log(`[ORDER] User details: ${req.user!.username}, ${req.user!.email}`);
-      
-      if (req.body.userInfo) {
-        console.log(`[ORDER] Client provided user info:`, req.body.userInfo);
-      }
-      
-      // Create order record with explicit logged user ID
+      // Create order record
       const order = await storage.createOrder({
-        userId: req.user!.id, // Use the authenticated user's ID from the session
+        userId: req.user!.id,
         orderNumber,
         status: 'PENDING',
         paymentStatus: 'PENDING',
         shippingAddress,
         billingAddress,
-        paymentMethod: paymentMethod,
+        paymentMethod: paymentMethod, // Add payment method to fix constraint violation
         shippingMethod: shippingMethod || 'standard',
         total: amount.total,
         subtotal: amount.subtotal,
         tax: amount.tax,
-        shippingCost: amount.shipping,
+        shippingCost: amount.shipping, // Use correct field name
         discount: amount.discount,
+        // Don't include orderDate as it's automatically set by the database
       });
-      
-      console.log(`[ORDER] Order created with ID: ${order.id}, associated with user ID: ${order.userId}`);
       
       // Create order items
       for (const item of cartItems) {
@@ -633,11 +610,10 @@ export function setupPaymentRoutes(app: Express) {
         });
       }
       
-      // Create payment record - ensure user ID consistency
-      console.log(`[PAYMENT] Creating payment record for order ${order.id} with user ID ${req.user!.id}`);
+      // Create payment record
       const payment = await storage.createPayment({
         orderId: order.id,
-        userId: req.user!.id, // Use the authenticated user ID - match with order
+        userId: req.user!.id, // Use the same user ID as the order, don't default to 1
         amount: amount.total,
         currency: 'INR',
         status: 'PENDING',

@@ -1,23 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import session from 'express-session';
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false }));
-
-// Add session support - this is critical for maintaining user authentication
-const isProduction = process.env.NODE_ENV === 'production';
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'loudfits-session-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { 
-    secure: isProduction,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
 
 app.use((req, res, next) => {
   const start = Date.now();

@@ -85,14 +85,9 @@ const logAdminAction = async (req: Request, res: Response, next: NextFunction) =
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Import Firebase auth routes dynamically
-  const firebaseAuthRouter = (await import('./routes/firebase-auth')).default;
-  
   // Register our routes
   app.use("/api/direct-email", directEmailRoutes);
   app.use("/api", inventoryRouter);
-  // Register Firebase auth routes
-  app.use("/api/firebase-auth", firebaseAuthRouter);
   // Also register inventory routes under admin prefix for admin UI
   app.use("/api/admin", inventoryRouter);
   // Create the HTTP server first so we can attach WebSockets to it
@@ -452,23 +447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/orders", async (req, res) => {
     try {
-      // Verify user is authenticated
-      if (!req.isAuthenticated || !req.isAuthenticated() || !req.user) {
-        console.log("[ORDER] Rejecting order - user not authenticated");
-        return res.status(401).json({ 
-          success: false, 
-          message: "You must be logged in to place an order"
-        });
-      }
-      
-      console.log(`[ORDER] Processing order for user ID: ${req.user.id}, username: ${req.user.username || req.user.email}`);
-      
-      // Make sure we use the authenticated user's ID for the order
-      const orderData = insertOrderSchema.parse({
-        ...req.body,
-        userId: req.user.id  // Always use authenticated user ID
-      });
-      
+      const orderData = insertOrderSchema.parse(req.body);
       const order = await storage.createOrder(orderData);
       
       // Send order notifications

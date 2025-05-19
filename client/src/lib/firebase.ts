@@ -48,47 +48,7 @@ export const signInWithGoogle = async (): Promise<UserCredential> => {
   try {
     console.log("Attempting sign in with Google popup...");
     // In Replit, popup may be blocked, so we'll try popup first, then fall back to redirect
-    const result = await signInWithPopup(auth, googleProvider);
-    
-    // Store user info in localStorage for authentication
-    if (result.user) {
-      const userData = {
-        uid: result.user.uid,
-        email: result.user.email,
-        displayName: result.user.displayName,
-        token: await result.user.getIdToken(),
-        photoURL: result.user.photoURL
-      };
-      localStorage.setItem('firebaseUser', JSON.stringify(userData));
-      console.log("Firebase user data stored in localStorage");
-      
-      // Sync with server (optional)
-      try {
-        const response = await fetch('/api/firebase-auth/sync', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'firebase-uid': result.user.uid,
-            'firebase-token': await result.user.getIdToken()
-          },
-          body: JSON.stringify({
-            uid: result.user.uid,
-            email: result.user.email,
-            displayName: result.user.displayName
-          })
-        });
-        
-        if (response.ok) {
-          console.log("Firebase auth synced with server");
-        } else {
-          console.warn("Failed to sync Firebase auth with server:", await response.text());
-        }
-      } catch (syncError) {
-        console.error("Error syncing Firebase auth with server:", syncError);
-      }
-    }
-    
-    return result;
+    return await signInWithPopup(auth, googleProvider);
   } catch (error) {
     console.error("Error in signInWithGoogle popup:", error);
     
@@ -124,22 +84,6 @@ export const resetPassword = async (email: string): Promise<void> => {
 };
 
 export const logOut = async (): Promise<void> => {
-  // Remove the stored user data from localStorage
-  localStorage.removeItem('firebaseUser');
-  console.log("Firebase user data removed from localStorage");
-  
-  // Try to notify the server about logout
-  try {
-    await fetch('/api/firebase-auth/logout', {
-      method: 'POST',
-      credentials: 'include'
-    });
-    console.log("Server notified about logout");
-  } catch (error) {
-    console.error("Failed to notify server about logout:", error);
-  }
-  
-  // Complete Firebase logout
   return signOut(auth);
 };
 
@@ -154,45 +98,6 @@ export const handleAuthRedirect = async (): Promise<UserCredential | null> => {
     const result = await getRedirectResult(auth);
     if (result) {
       console.log("Received redirect result:", result.user.email);
-      
-      // Store user info in localStorage for authentication
-      if (result.user) {
-        const userData = {
-          uid: result.user.uid,
-          email: result.user.email,
-          displayName: result.user.displayName,
-          token: await result.user.getIdToken(),
-          photoURL: result.user.photoURL
-        };
-        localStorage.setItem('firebaseUser', JSON.stringify(userData));
-        console.log("Firebase user data stored in localStorage after redirect");
-        
-        // Sync with server
-        try {
-          const response = await fetch('/api/firebase-auth/sync', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'firebase-uid': result.user.uid,
-              'firebase-token': await result.user.getIdToken()
-            },
-            body: JSON.stringify({
-              uid: result.user.uid,
-              email: result.user.email,
-              displayName: result.user.displayName
-            })
-          });
-          
-          if (response.ok) {
-            console.log("Firebase auth synced with server after redirect");
-          } else {
-            console.warn("Failed to sync Firebase auth with server after redirect:", await response.text());
-          }
-        } catch (syncError) {
-          console.error("Error syncing Firebase auth with server after redirect:", syncError);
-        }
-      }
-      
       return result;
     }
     console.log("No redirect result found");
