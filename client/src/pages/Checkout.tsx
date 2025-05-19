@@ -181,9 +181,22 @@ const Checkout = () => {
         shippingAddress,
         shippingMethod,
         paymentMethod,
-        // Explicitly send current user ID if available to ensure proper association
-        userId: currentUser?.uid || undefined
+        // Enhanced user identification for order tracking
+        userId: currentUser?.uid || undefined,
+        // Log detailed user info to help debug authentication issues
+        userInfo: {
+          email: currentUser?.email || 'anonymous',
+          displayName: currentUser?.displayName || 'guest',
+          isAnonymous: !currentUser
+        }
       };
+      
+      // Add diagnostic info to console during development
+      console.log("Checkout initiated with user data:", { 
+        isLoggedIn: !!currentUser,
+        userId: currentUser?.uid,
+        email: currentUser?.email
+      });
       
       // Call the payment initiation API
       const response = await apiRequest("POST", "/api/payment/initiate", orderData);

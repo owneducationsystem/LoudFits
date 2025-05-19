@@ -35,7 +35,7 @@ const isAuthenticated = async (req: Request, res: Response, next: NextFunction) 
   
   // For development environment only - allow userId in request for testing
   if (process.env.NODE_ENV !== 'production') {
-    // Try to use userId from request body or query (only for development)
+    // IMPORTANT: Modified to use clear user authentication
     const requestUserId = req.body?.userId || req.query?.userId;
     
     if (requestUserId && !isNaN(Number(requestUserId))) {
@@ -45,20 +45,22 @@ const isAuthenticated = async (req: Request, res: Response, next: NextFunction) 
         const storedUser = await storage.getUser(userId);
         
         if (storedUser) {
+          // For development only - log clear information about what user is being used
           req.user = storedUser;
-          console.log(`[DEV] Using user ID ${userId} from request data: ${storedUser.username || storedUser.email}`);
+          console.log(`[AUTH] Authentication using request user ID ${userId}: ${storedUser.username || storedUser.email}`);
           return next();
         } else {
-          console.log(`[DEV] User ID ${userId} not found in database`);
+          console.log(`[AUTH] User ID ${userId} not found in database - rejecting request`);
         }
       } catch (err) {
-        console.error(`[DEV] Error looking up user:`, err);
+        console.error(`[AUTH] Error processing authentication:`, err);
       }
     }
     
-    // CRITICAL: Return 401 instead of using a default user
-    // This ensures orders are correctly associated with the right user
-    console.log(`[AUTH] No valid user found in development mode - enforcing authentication`);
+    console.log(`[AUTH] Request verification failed - user not authenticated properly (user ID not found in request)`);
+    // Explicitly log any userId being passed to help debugging
+    if (req.body?.userId) console.log(`[AUTH] Request body contains userId: ${req.body.userId}`);
+    if (req.query?.userId) console.log(`[AUTH] Query string contains userId: ${req.query.userId}`);
   }
   
   // If no authenticated user found, return 401 Unauthorized
@@ -548,23 +550,32 @@ export function setupPaymentRoutes(app: Express) {
       const orderNumber = generateOrderNumber();
       const merchantTransactionId = orderNumber;
       
-      // Create order record
+      // Additional logging for debugging
+      console.log(`[ORDER] Creating order with authenticated user ID: ${req.user!.id}`);
+      console.log(`[ORDER] User details: ${req.user!.username}, ${req.user!.email}`);
+      
+      if (req.body.userInfo) {
+        console.log(`[ORDER] Client provided user info:`, req.body.userInfo);
+      }
+      
+      // Create order record with explicit logged user ID
       const order = await storage.createOrder({
-        userId: req.user!.id,
+        userId: req.user!.id, // Use the authenticated user's ID from the session
         orderNumber,
         status: 'PENDING',
         paymentStatus: 'PENDING',
         shippingAddress,
         billingAddress,
-        paymentMethod: paymentMethod, // Add payment method to fix constraint violation
+        paymentMethod: paymentMethod,
         shippingMethod: shippingMethod || 'standard',
         total: amount.total,
         subtotal: amount.subtotal,
         tax: amount.tax,
-        shippingCost: amount.shipping, // Use correct field name
+        shippingCost: amount.shipping,
         discount: amount.discount,
-        // Don't include orderDate as it's automatically set by the database
       });
+      
+      console.log(`[ORDER] Order created with ID: ${order.id}, associated with user ID: ${order.userId}`);
       
       // Create order items
       for (const item of cartItems) {
@@ -579,10 +590,11 @@ export function setupPaymentRoutes(app: Express) {
         });
       }
       
-      // Create payment record
+      // Create payment record - ensure user ID consistency
+      console.log(`[PAYMENT] Creating payment record for order ${order.id} with user ID ${req.user!.id}`);
       const payment = await storage.createPayment({
         orderId: order.id,
-        userId: req.user!.id, // Use the same user ID as the order, don't default to 1
+        userId: req.user!.id, // Use the authenticated user ID - match with order
         amount: amount.total,
         currency: 'INR',
         status: 'PENDING',
