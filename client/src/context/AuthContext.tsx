@@ -45,8 +45,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Listen for auth state changes
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      
+      if (user) {
+        console.log("Auth state changed: user logged in", user.email);
+        // Store Firebase user data in localStorage for API authentication
+        try {
+          const userData = {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            token: await user.getIdToken(),
+            photoURL: user.photoURL
+          };
+          localStorage.setItem('firebaseUser', JSON.stringify(userData));
+          
+          // Sync with server
+          try {
+            const response = await fetch('/api/firebase-auth/sync', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'firebase-uid': user.uid,
+                'firebase-token': await user.getIdToken()
+              },
+              body: JSON.stringify({
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName
+              })
+            });
+            
+            if (response.ok) {
+              console.log("Firebase auth synced with server on auth state change");
+            }
+          } catch (syncError) {
+            console.error("Error syncing with server on auth state change:", syncError);
+          }
+        } catch (error) {
+          console.error("Error storing Firebase user data:", error);
+        }
+      } else {
+        console.log("Auth state changed: user logged out");
+        // Clear stored Firebase user data
+        localStorage.removeItem('firebaseUser');
+      }
+      
       setLoading(false);
     });
 
