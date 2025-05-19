@@ -27,28 +27,26 @@ declare global {
 
 // Middleware to check if user is authenticated
 const isAuthenticated = async (req: Request, res: Response, next: NextFunction) => {
-  // For development environment, provide more flexible authentication
+  // Check if user is already authenticated through session
+  if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+    console.log(`[AUTH] User authenticated with session: ID=${req.user.id}, username=${req.user.username || req.user.email}`);
+    return next();
+  }
+  
+  // For development environment only - allow userId in request for testing
   if (process.env.NODE_ENV !== 'production') {
-    console.log("[DEV] Using flexible authentication for payment routes");
-    
-    // 1. Check if user is already authenticated (priority 1)
-    if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-      console.log(`[DEV] User already authenticated with ID ${req.user.id}`);
-      return next();
-    }
-    
-    // 2. Try to use userId from request body or query (priority 2)
+    // Try to use userId from request body or query (only for development)
     const requestUserId = req.body?.userId || req.query?.userId;
     
     if (requestUserId && !isNaN(Number(requestUserId))) {
       try {
         const userId = Number(requestUserId);
-        console.log(`[DEV] Looking up user with ID ${userId} from request data`);
+        console.log(`[DEV] Looking up user with ID ${userId} from request`);
         const storedUser = await storage.getUser(userId);
         
         if (storedUser) {
           req.user = storedUser;
-          console.log(`[DEV] Using user ID ${userId} from request data`);
+          console.log(`[DEV] Using user ID ${userId} from request data: ${storedUser.username || storedUser.email}`);
           return next();
         } else {
           console.log(`[DEV] User ID ${userId} not found in database`);
@@ -58,46 +56,17 @@ const isAuthenticated = async (req: Request, res: Response, next: NextFunction) 
       }
     }
     
-    // 3. For development testing, use a default test user (lowest priority)
-    // Looking up a real user in the database rather than hardcoding values
-    try {
-      // Try to find user ID 47 (admin) or any other user in the system
-      const defaultUser = await storage.getUser(47);
-      if (defaultUser) {
-        req.user = defaultUser;
-        console.log(`[DEV] Using default user for testing: ${defaultUser.id} (${defaultUser.username})`);
-        return next();
-      }
-      
-      // If user 47 not found, try to get the first user in the system
-      const users = await storage.getAllUsers(1);
-      if (users && users.length > 0) {
-        req.user = users[0];
-        console.log(`[DEV] Using first available user for testing: ${users[0].id} (${users[0].username})`);
-        return next();
-      }
-    } catch (error) {
-      console.error('[DEV] Error finding default user:', error);
-    }
-    
-    // If all attempts fail, create a minimal test user object for development
-    req.user = {
-      id: 47, // Use a consistent ID that should exist in most dev environments
-      username: 'testuser',
-      email: 'test@example.com',
-      role: 'user'
-    } as User;
-    
-    console.log(`[DEV] Created minimal test user with ID ${req.user.id} for payment flow`);
-    return next();
+    // CRITICAL: Return 401 instead of using a default user
+    // This ensures orders are correctly associated with the right user
+    console.log(`[AUTH] No valid user found in development mode - enforcing authentication`);
   }
   
-  // Production check - strict authentication required
-  if (req.isAuthenticated && req.isAuthenticated()) {
-    return next();
-  }
-  
-  res.status(401).json({ message: "Unauthorized - Please login first" });
+  // If no authenticated user found, return 401 Unauthorized
+  console.log(`[AUTH] User not authenticated - rejecting request`);
+  return res.status(401).json({ 
+    message: "Unauthorized - Please login before proceeding",
+    error: "auth_required"
+  });
 };
 
 // Update payment status and handle notifications
