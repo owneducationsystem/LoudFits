@@ -198,8 +198,48 @@ const Checkout = () => {
         email: currentUser?.email
       });
       
-      // Call the payment initiation API
-      const response = await apiRequest("POST", "/api/payment/initiate", orderData);
+      // Get Firebase user data from localStorage for manual header addition
+      let firebaseHeaders: Record<string, string> = {};
+      try {
+        const storedUser = localStorage.getItem('firebaseUser');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          console.log("Found Firebase user data in localStorage:", userData.email);
+          
+          // Set headers manually for this specific request
+          firebaseHeaders = {
+            'firebase-uid': userData.uid,
+            'firebase-token': userData.token || 'firebase-auth'
+          };
+        } else if (currentUser) {
+          // If localStorage doesn't have the data but currentUser does, create headers
+          const token = await currentUser.getIdToken();
+          firebaseHeaders = {
+            'firebase-uid': currentUser.uid,
+            'firebase-token': token
+          };
+          console.log("Using current Firebase user for authentication headers");
+        } else {
+          console.warn("No Firebase authentication data found - checkout will likely fail");
+        }
+      } catch (error) {
+        console.error("Error preparing auth headers:", error);
+      }
+      
+      // Direct fetch with manual header control to ensure auth headers
+      const response = await fetch('/api/payment/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...firebaseHeaders
+        },
+        body: JSON.stringify(orderData)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Checkout failed (${response.status}): ${errorText}`);
+      }
       const data = await response.json();
       
       if (!data.success) {
