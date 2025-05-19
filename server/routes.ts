@@ -447,7 +447,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/orders", async (req, res) => {
     try {
-      const orderData = insertOrderSchema.parse(req.body);
+      // Verify user is authenticated
+      if (!req.isAuthenticated || !req.isAuthenticated() || !req.user) {
+        console.log("[ORDER] Rejecting order - user not authenticated");
+        return res.status(401).json({ 
+          success: false, 
+          message: "You must be logged in to place an order"
+        });
+      }
+      
+      console.log(`[ORDER] Processing order for user ID: ${req.user.id}, username: ${req.user.username || req.user.email}`);
+      
+      // Make sure we use the authenticated user's ID for the order
+      const orderData = insertOrderSchema.parse({
+        ...req.body,
+        userId: req.user.id  // Always use authenticated user ID
+      });
+      
       const order = await storage.createOrder(orderData);
       
       // Send order notifications
