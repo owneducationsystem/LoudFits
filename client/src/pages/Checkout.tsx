@@ -168,7 +168,7 @@ const Checkout = () => {
     setIsLoading(true);
     
     try {
-      // Format order data for API
+      // Format order data for API - explicitly include current user data
       const orderData = {
         cartItems,
         amount: {
@@ -180,7 +180,9 @@ const Checkout = () => {
         },
         shippingAddress,
         shippingMethod,
-        paymentMethod
+        paymentMethod,
+        // Explicitly send current user ID if available to ensure proper association
+        userId: currentUser?.uid || undefined
       };
       
       // Call the payment initiation API
