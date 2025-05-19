@@ -25,48 +25,91 @@ declare global {
   }
 }
 
-// Middleware to check if user is authenticated
+// Enhanced middleware to check if user is authenticated
 const isAuthenticated = async (req: Request, res: Response, next: NextFunction) => {
-  // Check if user is already authenticated through session
-  if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-    console.log(`[AUTH] User authenticated with session: ID=${req.user.id}, username=${req.user.username || req.user.email}`);
-    return next();
+  console.log(`[AUTH] Checking authentication for ${req.path}`);
+  
+  // Check Firebase authentication in header
+  const firebaseToken = req.headers['firebase-token'] as string;
+  const firebaseUid = req.headers['firebase-uid'] as string;
+  
+  if (firebaseToken && firebaseUid) {
+    console.log(`[AUTH] Firebase auth header found, UID: ${firebaseUid}`);
+    try {
+      // Find user by Firebase UID
+      const user = await storage.getUserByFirebaseId(firebaseUid);
+      if (user) {
+        console.log(`[AUTH] User found by Firebase ID: ${user.id}, ${user.email}`);
+        req.user = user;
+        return next();
+      } else {
+        // If user with this Firebase ID doesn't exist yet, check if the email exists
+        const userInfo = req.body?.userInfo || {};
+        if (userInfo.email) {
+          const userByEmail = await storage.getUserByEmail(userInfo.email);
+          if (userByEmail) {
+            // Update user with Firebase ID
+            const updatedUser = await storage.updateUser(userByEmail.id, { firebaseId: firebaseUid });
+            console.log(`[AUTH] Updated user ${userByEmail.id} with Firebase ID`);
+            req.user = updatedUser;
+            return next();
+          }
+        }
+        
+        // For development - allow creation of new user on the fly
+        if (process.env.NODE_ENV !== 'production' && userInfo.email) {
+          console.log(`[AUTH-DEV] Creating new user from Firebase data: ${userInfo.email}`);
+          const username = userInfo.email.split('@')[0] || `user_${Date.now()}`;
+          const newUser = await storage.createUser({
+            email: userInfo.email,
+            username,
+            password: `firebase_${Date.now()}`,
+            firebaseId: firebaseUid,
+            firstName: userInfo.displayName || null
+          });
+          
+          console.log(`[AUTH-DEV] Created new user: ${newUser.id}, ${newUser.email}`);
+          req.user = newUser;
+          return next();
+        }
+      }
+    } catch (err) {
+      console.error(`[AUTH] Error processing Firebase authentication:`, err);
+    }
   }
   
-  // For development environment only - allow userId in request for testing
+  // Direct user ID in request body - useful for testing during development
   if (process.env.NODE_ENV !== 'production') {
-    // IMPORTANT: Modified to use clear user authentication
     const requestUserId = req.body?.userId || req.query?.userId;
     
     if (requestUserId && !isNaN(Number(requestUserId))) {
       try {
         const userId = Number(requestUserId);
-        console.log(`[DEV] Looking up user with ID ${userId} from request`);
+        console.log(`[AUTH-DEV] Looking up user with ID ${userId} from request`);
         const storedUser = await storage.getUser(userId);
         
         if (storedUser) {
-          // For development only - log clear information about what user is being used
           req.user = storedUser;
-          console.log(`[AUTH] Authentication using request user ID ${userId}: ${storedUser.username || storedUser.email}`);
+          console.log(`[AUTH-DEV] Using user ID ${userId}: ${storedUser.username || storedUser.email}`);
           return next();
-        } else {
-          console.log(`[AUTH] User ID ${userId} not found in database - rejecting request`);
         }
       } catch (err) {
-        console.error(`[AUTH] Error processing authentication:`, err);
+        console.error(`[AUTH-DEV] Error looking up user:`, err);
       }
     }
     
-    console.log(`[AUTH] Request verification failed - user not authenticated properly (user ID not found in request)`);
-    // Explicitly log any userId being passed to help debugging
-    if (req.body?.userId) console.log(`[AUTH] Request body contains userId: ${req.body.userId}`);
-    if (req.query?.userId) console.log(`[AUTH] Query string contains userId: ${req.query.userId}`);
+    // Log available data for debugging
+    console.log(`[AUTH] Available auth data in request:`);
+    console.log(`- Headers:`, Object.keys(req.headers).filter(h => h.includes('fire')));
+    console.log(`- Body userId:`, req.body?.userId);
+    console.log(`- Body userInfo:`, req.body?.userInfo);
+    console.log(`- Query userId:`, req.query?.userId);
   }
   
   // If no authenticated user found, return 401 Unauthorized
-  console.log(`[AUTH] User not authenticated - rejecting request`);
+  console.log(`[AUTH] Authentication failed - no valid user credentials found`);
   return res.status(401).json({ 
-    message: "Unauthorized - Please login before proceeding",
+    message: "Please login before proceeding with checkout",
     error: "auth_required"
   });
 };

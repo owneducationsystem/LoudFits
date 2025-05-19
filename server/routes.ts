@@ -85,9 +85,14 @@ const logAdminAction = async (req: Request, res: Response, next: NextFunction) =
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Import Firebase auth routes dynamically
+  const firebaseAuthRouter = (await import('./routes/firebase-auth')).default;
+  
   // Register our routes
   app.use("/api/direct-email", directEmailRoutes);
   app.use("/api", inventoryRouter);
+  // Register Firebase auth routes
+  app.use("/api/firebase-auth", firebaseAuthRouter);
   // Also register inventory routes under admin prefix for admin UI
   app.use("/api/admin", inventoryRouter);
   // Create the HTTP server first so we can attach WebSockets to it
