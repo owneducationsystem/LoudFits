@@ -56,13 +56,13 @@ const HeroCarousel = ({
   // Autoplay
   useEffect(() => {
     let interval: number;
-    
+
     if (isAutoPlaying) {
       interval = window.setInterval(() => {
         nextSlide();
       }, autoplaySpeed);
     }
-    
+
     return () => {
       if (interval) {
         clearInterval(interval);
@@ -82,7 +82,7 @@ const HeroCarousel = ({
           <img key={`preload-${index}`} src={image.src} alt="Preload" />
         ))}
       </div>
-      
+
       <AnimatePresence initial={false}>
         <motion.div
           key={currentIndex}
@@ -105,7 +105,7 @@ const HeroCarousel = ({
           <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         </motion.div>
       </AnimatePresence>
-      
+
       {/* Text Content */}
       <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-16">
         <motion.h1 
@@ -122,7 +122,7 @@ const HeroCarousel = ({
             </span>
           ))}
         </motion.h1>
-        
+
         <motion.p 
           key={`subtitle-${currentIndex}`}
           initial={{ opacity: 0, y: 20 }}
@@ -132,7 +132,7 @@ const HeroCarousel = ({
         >
           {images[currentIndex].subtitle}
         </motion.p>
-        
+
         <motion.div 
           key={`buttons-${currentIndex}`}
           className="flex flex-col sm:flex-row gap-4"
@@ -149,7 +149,7 @@ const HeroCarousel = ({
               {images[currentIndex].linkText}
             </motion.a>
           </Link>
-          
+
           {images[currentIndex].secondaryLink && (
             <Link href={images[currentIndex].secondaryLink}>
               <motion.a 
@@ -163,9 +163,9 @@ const HeroCarousel = ({
           )}
         </motion.div>
       </div>
-      
+
       {/* Navigation arrows removed as requested */}
-      
+
       {/* Indicator Dots */}
       <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-2">
         {images.map((_, index) => (
