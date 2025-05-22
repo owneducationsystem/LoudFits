@@ -579,9 +579,17 @@ export function setupPaymentRoutes(app: Express) {
       const orderNumber = generateOrderNumber();
       const merchantTransactionId = orderNumber;
       
+      // Ensure user is authenticated
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({
+          success: false,
+          error: "User not authenticated"
+        });
+      }
+
       // Create order record
       const order = await storage.createOrder({
-        userId: req.user!.id,
+        userId: req.user.id,
         orderNumber,
         status: 'PENDING',
         paymentStatus: 'PENDING',
@@ -610,10 +618,18 @@ export function setupPaymentRoutes(app: Express) {
         });
       }
       
-      // Create payment record
+      // Get authenticated user ID
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({
+          success: false,
+          error: "User not authenticated"
+        });
+      }
+
+      // Create payment record with authenticated user
       const payment = await storage.createPayment({
         orderId: order.id,
-        userId: req.user!.id, // Use the same user ID as the order, don't default to 1
+        userId: req.user.id,
         amount: amount.total,
         currency: 'INR',
         status: 'PENDING',
