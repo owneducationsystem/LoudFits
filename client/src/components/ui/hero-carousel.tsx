@@ -152,13 +152,13 @@ const HeroCarousel = ({
 
           {images[currentIndex].secondaryLink && (
             <Link href={images[currentIndex].secondaryLink}>
-              <motion.a 
-                className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-black font-bold py-3 px-8 inline-block text-center transition-colors"
+              <motion.div 
+                className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-black font-bold py-3 px-8 inline-block text-center transition-colors cursor-pointer"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
                 {images[currentIndex].secondaryLinkText}
-              </motion.a>
+              </motion.div>
             </Link>
           )}
         </motion.div>

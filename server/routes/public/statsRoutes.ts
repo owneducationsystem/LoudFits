@@ -8,14 +8,10 @@ const statsRouter = Router();
 statsRouter.get("/testimonials", async (req, res) => {
   try {
     const testimonials = await storage.getTestimonials();
-    if (!testimonials || testimonials.length === 0) {
-      return res.json([]); // Return empty array instead of error if no testimonials
-    }
-    res.json(testimonials);
+    res.json(testimonials || []);
   } catch (error) {
     console.error("Error fetching testimonials:", error);
-    // Return empty array with 200 status to prevent client errors
-    res.json([]);
+    res.json([]); // Always return empty array on error
   }
 });
 
