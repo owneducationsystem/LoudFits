@@ -30,13 +30,13 @@ const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
     if (!adminId) {
       return res.status(401).json({ message: "Unauthorized - Admin ID missing" });
     }
-    
+
     // Verify user exists and has admin role
     const user = await storage.getUser(parseInt(adminId));
     if (!user || user.role !== 'admin') {
       return res.status(403).json({ message: "Forbidden - Admin access required" });
     }
-    
+
     // User is authenticated as admin, proceed
     next();
   } catch (error) {
@@ -48,7 +48,7 @@ const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
 // Middleware to log admin actions
 const logAdminAction = async (req: Request, res: Response, next: NextFunction) => {
   const originalSend = res.send;
-  
+
   res.send = function(body: any) {
     // Get admin user ID from request headers
     const adminId = req.headers['admin-id'] as string;
@@ -58,7 +58,7 @@ const logAdminAction = async (req: Request, res: Response, next: NextFunction) =
       const path = req.path;
       const entityType = path.split('/')[2]; // Assumes path format: /api/entityType/...
       const entityId = req.params.id || 'multiple';
-      
+
       // Create admin log
       storage.createAdminLog({
         userId,
@@ -76,11 +76,11 @@ const logAdminAction = async (req: Request, res: Response, next: NextFunction) =
         userAgent: req.get('user-agent')
       }).catch(err => console.error('Failed to log admin action:', err));
     }
-    
+
     // Call the original send method with the body
     return originalSend.call(res, body);
   };
-  
+
   next();
 };
 
@@ -92,13 +92,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/admin", inventoryRouter);
   // Create the HTTP server first so we can attach WebSockets to it
   let httpServer = createServer(app);
-  
+
   // Initialize the notification service with our HTTP server
   notificationService.initialize(httpServer);
-  
+
   // Setup routes
   setupPaymentRoutes(app);
-  
+
   // Set up email test routes
   if (process.env.NODE_ENV !== 'production') {
     try {
@@ -113,7 +113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Failed to register email routes:", error);
     }
   }
-  
+
   // Setup notification test routes
   app.get("/api/notifications/test", async (req, res) => {
     try {
@@ -126,28 +126,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date(),
         read: false
       };
-      
+
       // Send the notification to all connected clients
       await notificationService.sendBroadcast({
         type: NotificationType.SYSTEM,
         title: "Test Notification",
         message: "This is a test notification from Loudfits. If you can see this, the notification system is working!"
       });
-      
+
       res.json({ success: true, notification });
     } catch (error: any) {
       console.error("Error sending test notification:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   });
-  
+
   app.post("/api/notifications/order-test", async (req, res) => {
     try {
       const { userId } = req.body;
-      
+
       // Generate a random order number
       const orderNumber = `TEST-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
-      
+
       // User notification
       await notificationService.sendUserNotification({
         userId,
@@ -157,7 +157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityId: 123, // Mock order ID
         entityType: 'order'
       });
-      
+
       // Admin notification
       await notificationService.sendAdminNotification({
         type: NotificationType.ORDER_PLACED,
@@ -167,21 +167,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: 'order',
         isAdmin: true
       });
-      
+
       res.json({ success: true, orderNumber });
     } catch (error: any) {
       console.error("Error sending order test notification:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   });
-  
+
   app.post("/api/notifications/payment-test", async (req, res) => {
     try {
       const { userId, success = true } = req.body;
-      
+
       // Generate a random order number
       const orderNumber = `TEST-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
-      
+
       if (success) {
         // Payment success notification
         await notificationService.sendUserNotification({
@@ -192,7 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           entityId: 123, // Mock order ID
           entityType: 'order'
         });
-        
+
         await notificationService.sendAdminNotification({
           type: NotificationType.PAYMENT_RECEIVED,
           title: "Payment Received",
@@ -211,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           entityId: 123, // Mock order ID
           entityType: 'order'
         });
-        
+
         await notificationService.sendAdminNotification({
           type: NotificationType.PAYMENT_FAILED,
           title: "Payment Failed",
@@ -221,7 +221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isAdmin: true
         });
       }
-      
+
       res.json({ success: true, orderNumber, paymentStatus: success ? 'success' : 'failed' });
     } catch (error: any) {
       console.error("Error sending payment test notification:", error);
@@ -232,15 +232,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/test", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
-  
+
   // Add route for redirecting from PhonePe callback to our frontend
   app.get("/payment/callback", (req, res) => {
     const { merchantTransactionId, transactionId, code } = req.query;
-    
+
     // PhonePe sometimes sends status in query params
     if (merchantTransactionId) {
       console.log(`Payment callback received: merchantId=${merchantTransactionId}, code=${code}`);
-      
+
       // Forward to API endpoint which will handle the validation
       res.redirect(`/api/payment/callback?merchantTransactionId=${merchantTransactionId}&transactionId=${transactionId || ''}&code=${code || ''}`);
     } else {
@@ -252,12 +252,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", async (req, res) => {
     try {
       const products = await storage.getAllProducts();
-      
+
       // If we get here, the database connection is working
       res.json(products);
     } catch (error) {
       console.error("Error fetching products:", error);
-      
+
       // Return empty array instead of error to prevent dashboard from breaking
       // This helps the dashboard continue loading even if product data is unavailable
       res.json([]);
@@ -318,7 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userData = insertUserSchema.parse(req.body);
       const user = await storage.createUser(userData);
-      
+
       // Send welcome email to the new user
       try {
         emailService.sendWelcomeEmail(user).then(sent => {
@@ -331,7 +331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (emailError) {
         console.error("Error sending welcome email:", emailError);
       }
-      
+
       // Send notification about new user registration (if admin is connected)
       try {
         notificationService.sendAdminNotification({
@@ -344,7 +344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (notificationError) {
         console.error("Error sending registration notification:", notificationError);
       }
-      
+
       res.status(201).json(user);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -358,7 +358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username, password } = req.body;
       const user = await storage.getUserByUsername(username);
-      
+
       if (!user || user.password !== password) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
@@ -366,7 +366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get client IP address and user agent for security notifications
       const ipAddress = req.ip || req.socket.remoteAddress;
       const userAgent = req.get('user-agent');
-      
+
       // Send login notification email
       try {
         emailService.sendLoginNotificationEmail(user, ipAddress, userAgent).then(sent => {
@@ -379,7 +379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (emailError) {
         console.error("Error sending login notification email:", emailError);
       }
-      
+
       // Send admin notification about login (useful for monitoring)
       try {
         notificationService.sendAdminNotification({
@@ -449,17 +449,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orderData = insertOrderSchema.parse(req.body);
       const order = await storage.createOrder(orderData);
-      
+
       // Send order notifications
       if (order.userId) {
         // Get user information
         const user = await storage.getUser(order.userId);
-        
+
         if (user) {
           // Get order items and products for detailed email
           const orderItems = await storage.getOrderItems(order.id);
           const products = [];
-          
+
           // Fetch product details for each item
           for (const item of orderItems) {
             const product = await storage.getProduct(item.productId);
@@ -467,7 +467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               products.push(product);
             }
           }
-          
+
           // Send email confirmation
           emailService.sendOrderConfirmationEmail(order, user, products).then(sent => {
             if (sent) {
@@ -478,7 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }).catch(err => {
             console.error(`Error sending order confirmation email: ${err.message}`);
           });
-          
+
           // Send user notification
           notificationService.sendUserNotification({
             type: NotificationType.ORDER_PLACED,
@@ -493,7 +493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error(`Error sending order notification: ${err.message}`);
           });
         }
-        
+
         // Send admin notification about new order
         notificationService.sendAdminNotification({
           type: NotificationType.ORDER_PLACED,
@@ -511,7 +511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(`Error sending admin order notification: ${err.message}`);
         });
       }
-      
+
       res.status(201).json(order);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -605,6 +605,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/orders/:id", async (req, res) => {
     try {
+      // Check if the ID is an order number (starts with LF-)
+      if (req.params.id.startsWith('LF-')) {
+        const order = await storage.getOrderByOrderNumber(req.params.id);
+        if (!order) {
+          return res.status(404).json({ message: "Order not found" });
+        }
+        return res.json(order);
+      }
+
+      // Otherwise treat as numeric ID
       const orderId = parseInt(req.params.id);
       if (isNaN(orderId)) {
         return res.status(400).json({ message: "Invalid order ID" });
@@ -641,7 +651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const cartId = parseInt(req.params.cartId);
       const productId = parseInt(req.params.productId);
-      
+
       if (isNaN(cartId) || isNaN(productId)) {
         return res.status(400).json({ message: "Invalid cart or product ID" });
       }
@@ -677,66 +687,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Track login attempts to implement basic rate limiting
   const loginAttempts = new Map<string, { count: number, lastAttempt: number }>();
-  
+
   // Admin login route (not protected)
   app.post("/api/admin/login", async (req, res) => {
     try {
       const { username, password } = req.body;
       const ipAddress = req.ip || 'unknown';
-      
+
       // Basic rate limiting - prevent brute force attacks
       const now = Date.now();
       const attempts = loginAttempts.get(ipAddress) || { count: 0, lastAttempt: 0 };
-      
+
       // Reset attempts if it's been more than 15 minutes
       if (now - attempts.lastAttempt > 15 * 60 * 1000) {
         attempts.count = 0;
       }
-      
+
       // Limit to 5 failed attempts within 15 minutes
       if (attempts.count >= 5) {
         console.log(`Too many login attempts from IP: ${ipAddress}`);
         return res.status(429).json({ message: "Too many login attempts. Please try again later." });
       }
-      
+
       // Update attempts counter
       attempts.count++;
       attempts.lastAttempt = now;
       loginAttempts.set(ipAddress, attempts);
-      
+
       // Validate request
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password are required" });
       }
-      
+
       // Try to find user by username or email
       let user = await storage.getUserByUsername(username);
-      
+
       // If not found by username, try to find by email
       if (!user) {
         user = await storage.getUserByEmail(username);
       }
-      
+
       // For security, use a consistent response time whether successful or not
       const delayResponse = () => new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
-      
+
       // Always use same generic error message to prevent username enumeration
       if (!user || user.role !== "admin") {
         console.log(`Admin login attempt failed for username/email: "${username}" from IP: ${ipAddress}`);
         await delayResponse();
         return res.status(401).json({ message: "Invalid credentials" });
       }
-      
+
       // Check password
       if (user.password !== password) {
         console.log(`Admin login attempt with correct username but wrong password from IP: ${ipAddress}`);
         await delayResponse();
         return res.status(401).json({ message: "Invalid credentials" });
       }
-      
+
       // Successful login - Reset failed attempts counter
       loginAttempts.delete(ipAddress);
-      
+
       // Log successful login
       await storage.createAdminLog({
         userId: user.id,
@@ -747,11 +757,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ipAddress: ipAddress,
         userAgent: req.get('user-agent') || 'unknown'
       }).catch(err => console.error('Failed to log admin login:', err));
-      
+
       // Return user information (excluding password)
       const { password: _, ...userWithoutPassword } = user;
       console.log(`Admin login successful for ${username} from IP: ${ipAddress}`);
-      
+
       res.json({ 
         user: userWithoutPassword,
         message: "Login successful" 
@@ -767,28 +777,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-      
+
       const users = await storage.getAllUsers(limit, offset);
       const count = await storage.countUsers();
-      
+
       // Remove passwords from response
       const usersWithoutPasswords = users.map(user => {
         const { password, ...userWithoutPassword } = user;
         return userWithoutPassword;
       });
-      
+
       res.json({ users: usersWithoutPasswords, total: count });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch users" });
     }
   });
-  
+
   // Create new user from admin panel
   app.post("/api/admin/users", isAdmin, logAdminAction, async (req, res) => {
     try {
       // Validate user data
       const userData = insertUserSchema.parse(req.body);
-      
+
       // Check if username already exists
       const existingUsername = await storage.getUserByUsername(userData.username);
       if (existingUsername) {
@@ -796,7 +806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: `Username "${userData.username}" is already taken. Please choose another.` 
         });
       }
-      
+
       // Check if email already exists
       if (userData.email) {
         const existingEmail = await storage.getUserByEmail(userData.email);
@@ -806,13 +816,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Create the user
       const user = await storage.createUser(userData);
-      
+
       // Remove password from response
       const { password, ...userWithoutPassword } = user;
-      
+
       // Return the created user
       res.status(201).json(userWithoutPassword);
     } catch (error) {
@@ -832,26 +842,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-      
+
       const products = await storage.getAllProducts();
       const count = await storage.countProducts();
-      
+
       res.json({ products, total: count });
     } catch (error) {
       console.error("Error fetching products:", error);
       res.status(500).json({ message: "Failed to fetch products" });
     }
   });
-  
+
   // Create new product from admin panel
   app.post("/api/admin/products", isAdmin, logAdminAction, async (req, res) => {
     try {
       // Validate product data
       const productData = insertProductSchema.parse(req.body);
-      
+
       // Create the product
       const product = await storage.createProduct(productData);
-      
+
       // Return the created product
       res.status(201).json(product);
     } catch (error) {
@@ -865,7 +875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to create product" });
     }
   });
-  
+
   // Update existing product from admin panel
   app.patch("/api/admin/products/:id", isAdmin, logAdminAction, async (req, res) => {
     try {
@@ -873,19 +883,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(productId)) {
         return res.status(400).json({ message: "Invalid product ID" });
       }
-      
+
       // Check if product exists
       const existingProduct = await storage.getProduct(productId);
       if (!existingProduct) {
         return res.status(404).json({ message: "Product not found" });
       }
-      
+
       // Validate product data
       const productData = req.body;
-      
+
       // Update the product
       const updatedProduct = await storage.updateProduct(productId, productData);
-      
+
       // Return the updated product
       res.json(updatedProduct);
     } catch (error) {
@@ -899,7 +909,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update product" });
     }
   });
-  
+
   // Categories API endpoints
   // For now, these are placeholders since we don't yet have category tables in the database schema
   app.get("/api/admin/categories", isAdmin, logAdminAction, async (req, res) => {
@@ -913,14 +923,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       { id: 5, name: "Artists", description: "Designs from our featured artists", slug: "artists", productCount: 7 },
       { id: 6, name: "Limited Edition", description: "Exclusive limited runs of special designs", slug: "limited-edition", productCount: 3 },
     ];
-    
+
     res.json(categories);
   });
-  
+
   app.post("/api/admin/categories", isAdmin, logAdminAction, async (req, res) => {
     try {
       const { name, description } = req.body;
-      
+
       // This is a placeholder
       // In a real implementation, you would create a category in the database
       const category = {
@@ -930,19 +940,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         slug: name.toLowerCase().replace(/\s+/g, '-'),
         productCount: 0
       };
-      
+
       res.status(201).json(category);
     } catch (error) {
       console.error("Error creating category:", error);
       res.status(500).json({ message: "Failed to create category" });
     }
   });
-  
+
   app.patch("/api/admin/categories/:id", isAdmin, logAdminAction, async (req, res) => {
     try {
       const categoryId = parseInt(req.params.id);
       const { name, description } = req.body;
-      
+
       // This is a placeholder
       // In a real implementation, you would update a category in the database
       const category = {
@@ -952,29 +962,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         slug: name.toLowerCase().replace(/\s+/g, '-'),
         productCount: 0 // In a real implementation, this would be the actual count
       };
-      
+
       res.json(category);
     } catch (error) {
       console.error("Error updating category:", error);
       res.status(500).json({ message: "Failed to update category" });
     }
   });
-  
+
   app.delete("/api/admin/categories/:id", isAdmin, logAdminAction, async (req, res) => {
     try {
       const categoryId = parseInt(req.params.id);
-      
+
       // This is a placeholder
       // In a real implementation, you would delete a category from the database
       // and check if it's safe to delete (no products assigned to it)
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting category:", error);
       res.status(500).json({ message: "Failed to delete category" });
     }
   });
-  
+
   app.get("/api/admin/orders", isAdmin, logAdminAction, async (req, res) => {
     try {
       console.log("[ADMIN] Fetching orders for admin panel");
@@ -982,7 +992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
       const status = req.query.status as string;
       const search = req.query.search as string;
-      
+
       // Get orders with filtering if needed
       let orders;
       if (search) {
@@ -994,14 +1004,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         orders = await storage.getAllOrders(limit, offset);
       }
-      
+
       const count = await storage.countOrders();
       console.log(`[ADMIN] Found ${orders.length} orders (total count: ${count})`);
-      
+
       // Enhance order data with customer information and product details - IMPROVED VERSION
       const enhancedOrders = await Promise.all(orders.map(async (order) => {
         console.log(`[ADMIN] Processing order #${order.orderNumber}, userId=${order.userId || 'none'}`);
-        
+
         // Get customer details if userId exists
         let customerDetails = null;
         if (order.userId) {
@@ -1009,7 +1019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // CRITICAL FIX: Make sure we get the correct customer data in real-time
             console.log(`[ADMIN] Getting customer data for order ${order.orderNumber}, userId=${order.userId}`);
             const customer = await storage.getUser(order.userId);
-            
+
             if (customer) {
               // Create a complete customer profile with data from both user and order
               customerDetails = {
@@ -1042,7 +1052,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                               order.shippingAddress.country : null)
                 }
               };
-              
+
               console.log(`[ADMIN] ✓ Found customer data for order ${order.orderNumber}: ${customer.username} (${customer.id})`);
             } else {
               console.error(`[ADMIN ERROR] No customer found for userId=${order.userId} in order ${order.orderNumber}`);
@@ -1051,7 +1061,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error(`[ADMIN ERROR] Failed to fetch customer for order ${order.orderNumber}:`, error);
           }
         }
-        
+
         // Get order items with product details
         const orderItems = await storage.getOrderItems(order.id);
         const itemsWithDetails = await Promise.all(orderItems.map(async (item) => {
@@ -1066,7 +1076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } : null
           };
         }));
-        
+
         // Return enhanced order with customer and item details
         return {
           ...order,
@@ -1074,7 +1084,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           items: itemsWithDetails
         };
       }));
-      
+
       res.json({ orders: enhancedOrders, total: count });
     } catch (error) {
       console.error("Error fetching admin orders:", error);
@@ -1096,7 +1106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import the order service for notification handling
       const { updateOrderWithNotification } = await import('./services/orderService');
-      
+
       // Update order with notification
       const updatedOrder = await updateOrderWithNotification(
         orderId, 
@@ -1105,10 +1115,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         false, // don't notify admin (since admin is making the change)
         notes // optional notes to include in the notification
       );
-      
+
       // Log who updated the order
       console.log(`Order ${orderId} updated to status '${status}' by admin ${req.user?.username || 'unknown'}`);
-      
+
       res.json(updatedOrder);
     } catch (error) {
       console.error("Error updating order status:", error);
@@ -1153,7 +1163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-      
+
       const logs = await storage.getAdminLogs(limit, offset);
       res.json(logs);
     } catch (error) {
@@ -1180,7 +1190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userCount = await storage.countUsers();
       const productCount = await storage.countProducts();
       const orderCount = await storage.countOrders();
-      
+
       res.json({
         users: userCount,
         products: productCount,
@@ -1194,12 +1204,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up notification routes
   const { setupNotificationRoutes } = await import('./routes/notificationRoutes');
   setupNotificationRoutes(app);
-  
+
   // Set up admin dashboard routes
   setupAdminDashboardRoutes(app);
   setupPublicStatsRoutes(app);
   setupPaymentPerformanceRoutes(app);
-  
+
   // Server is already created at the top for WebSocket support
   return httpServer;
 }

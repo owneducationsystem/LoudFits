@@ -100,7 +100,8 @@ class NotificationService {
             if (clientInfo && message.data) {
               // Update client info with authentication data
               if (message.data.userId) {
-                clientInfo.userId = parseInt(message.data.userId);
+                const userId = parseInt(message.data.userId);
+                clientInfo.userId = !isNaN(userId) ? userId : null;
 
                 // Send any unread notifications to this user
                 this.sendUnreadNotifications(socket, clientInfo.userId);

@@ -1,28 +1,27 @@
 
-import { Card, CardContent } from "./card";
-import { cn } from "@/lib/utils";
+import React from 'react';
+import { Link } from 'wouter';
+import { Card, CardContent } from './card';
 
 interface CategoryCardProps {
   name: string;
-  description?: string;
-  image?: string;
-  className?: string;
+  image: string;
+  slug: string;
+  productCount?: number;
 }
 
-const CategoryCard = ({ name, description, image, className }: CategoryCardProps) => {
+export function CategoryCard({ name, image, slug, productCount }: CategoryCardProps) {
   return (
-    <Card className={cn("overflow-hidden", className)}>
-      {image && (
-        <div className="aspect-square relative">
-          <img src={image} alt={name} className="object-cover w-full h-full" />
-        </div>
-      )}
-      <CardContent className="p-4">
-        <h3 className="font-semibold">{name}</h3>
-        {description && <p className="text-sm text-gray-500">{description}</p>}
-      </CardContent>
-    </Card>
+    <Link href={`/category/${slug}`}>
+      <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+        <CardContent className="p-4">
+          <img src={image} alt={name} className="w-full h-48 object-cover rounded-md" />
+          <h3 className="mt-2 text-lg font-semibold">{name}</h3>
+          {productCount !== undefined && (
+            <p className="text-sm text-gray-600">{productCount} products</p>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
   );
-};
-
-export default CategoryCard;
+}
