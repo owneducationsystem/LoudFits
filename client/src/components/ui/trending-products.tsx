@@ -27,9 +27,16 @@ const TrendingProducts = () => {
     );
   }
 
-  if (error || !products) {
+  if (error) {
     console.error("Error loading trending products:", error);
-    return null;
+    return (
+      <section className="py-12 px-4 bg-[#BECCD5] bg-opacity-20">
+        <div className="container mx-auto">
+          <h2 className="text-3xl font-bold mb-8 text-center">TRENDING NOW</h2>
+          <p className="text-center text-red-500">Unable to load trending products. Please try again later.</p>
+        </div>
+      </section>
+    );
   }
 
   // If no products are available, display an empty state

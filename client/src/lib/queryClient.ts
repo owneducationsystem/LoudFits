@@ -14,7 +14,7 @@ export async function apiRequest(
 ): Promise<Response> {
   // Set up headers
   let headers: Record<string, string> = data ? { "Content-Type": "application/json" } : {};
-  
+
   // Add admin-id header for admin routes
   if (url.includes('/api/admin')) {
     try {
@@ -29,7 +29,7 @@ export async function apiRequest(
       console.error("Error adding admin authentication:", error);
     }
   }
-  
+
   const res = await fetch(url, {
     method,
     headers,
@@ -50,7 +50,7 @@ export const getQueryFn: <T>(options: {
     const url = queryKey[0] as string;
     // Set up headers for admin authentication
     let headers: Record<string, string> = {};
-    
+
     // Add admin-id header for admin routes
     if (url.includes('/api/admin')) {
       try {
@@ -65,7 +65,7 @@ export const getQueryFn: <T>(options: {
         console.error("Error adding admin authentication:", error);
       }
     }
-    
+
     const res = await fetch(url, {
       headers,
       credentials: "include",
@@ -86,7 +86,10 @@ export const queryClient = new QueryClient({
       refetchInterval: 30000, // Refetch data every 30 seconds
       refetchOnWindowFocus: true, // Refetch when window is focused
       staleTime: 10000, // Data becomes stale after 10 seconds
-      retry: false,
+      retry: 1,
+      onError: (error) => {
+        console.error('Query error:', error);
+      },
     },
     mutations: {
       retry: false,
