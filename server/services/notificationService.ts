@@ -10,27 +10,27 @@ export enum NotificationType {
   ORDER_SHIPPED = 'order_shipped',
   ORDER_DELIVERED = 'order_delivered',
   ORDER_CANCELED = 'order_canceled',
-  
+
   // Payment related notifications
   PAYMENT_RECEIVED = 'payment_received',
   PAYMENT_FAILED = 'payment_failed',
   PAYMENT_REFUNDED = 'payment_refunded',
-  
+
   // User related notifications
   USER_REGISTERED = 'user_registered',
   USER_UPDATED = 'user_updated',
-  
+
   // Product related notifications
   PRODUCT_UPDATED = 'product_updated',
   PRODUCT_ADDED = 'product_added',
   STOCK_ALERT = 'stock_alert',
   LOW_STOCK = 'low_stock',
   OUT_OF_STOCK = 'out_of_stock',
-  
+
   // Admin notifications
   ADMIN_ALERT = 'admin_alert',
   ADMIN_LOGIN = 'admin_login',
-  
+
   // System notifications
   SYSTEM = 'system',
   ERROR = 'error'
@@ -67,7 +67,7 @@ class NotificationService {
   private clients: Map<WebSocket, ConnectedClient> = new Map();
   private notificationHistory: Map<number, Notification[]> = new Map(); // User ID -> notifications
   private adminNotifications: Notification[] = [];
-  
+
   /**
    * Initialize the WebSocket server
    * @param server HTTP server instance
@@ -77,23 +77,23 @@ class NotificationService {
       server,
       path: '/ws'
     });
-    
+
     console.log('WebSocket notification server initialized');
-    
+
     this.wss.on('connection', (socket) => {
       console.log('Client connected to notification service');
-      
+
       // Add client to connected clients
       this.clients.set(socket, {
         socket,
         lastActivity: new Date()
       });
-      
+
       // Handle authentication message
       socket.on('message', (data) => {
         try {
           const message = JSON.parse(data.toString());
-          
+
           // Handle authentication
           if (message.type === 'auth') {
             const clientInfo = this.clients.get(socket);
@@ -101,26 +101,26 @@ class NotificationService {
               // Update client info with authentication data
               if (message.data.userId) {
                 clientInfo.userId = parseInt(message.data.userId);
-                
+
                 // Send any unread notifications to this user
                 this.sendUnreadNotifications(socket, clientInfo.userId);
               }
-              
+
               if (message.data.isAdmin) {
                 clientInfo.isAdmin = Boolean(message.data.isAdmin);
-                
+
                 // Send recent admin notifications
                 if (clientInfo.isAdmin) {
                   this.sendAdminNotifications(socket);
                 }
               }
-              
+
               // Update client info
               clientInfo.lastActivity = new Date();
               this.clients.set(socket, clientInfo);
-              
+
               console.log(`Client authenticated: userId=${clientInfo.userId}, isAdmin=${clientInfo.isAdmin}`);
-              
+
               // Send confirmation
               socket.send(JSON.stringify({
                 type: 'auth_confirmation',
@@ -130,7 +130,7 @@ class NotificationService {
               }));
             }
           }
-          
+
           // Handle read receipt
           if (message.type === 'mark_read') {
             const clientInfo = this.clients.get(socket);
@@ -142,28 +142,28 @@ class NotificationService {
           console.error('Error processing WebSocket message:', error);
         }
       });
-      
+
       // Handle disconnection
       socket.on('close', () => {
         console.log('Client disconnected from notification service');
         this.clients.delete(socket);
       });
-      
+
       // Handle errors
       socket.on('error', (error) => {
         console.error('WebSocket error:', error);
         this.clients.delete(socket);
       });
     });
-    
+
     // Heartbeat to check client connections
     setInterval(() => {
       this.cleanupDisconnectedClients();
     }, 30000); // Check every 30 seconds
-    
+
     return this;
   }
-  
+
   /**
    * Send a notification to a specific user
    */
@@ -171,25 +171,25 @@ class NotificationService {
     if (!notification.userId) {
       throw new Error('userId is required for user notifications');
     }
-    
+
     const fullNotification: Notification = {
       ...notification,
       id: this.generateNotificationId(),
       createdAt: new Date(),
       read: false
     };
-    
+
     // Store in history
     const userNotifications = this.notificationHistory.get(notification.userId) || [];
     userNotifications.push(fullNotification);
-    
+
     // Limit history to 50 notifications per user
     if (userNotifications.length > 50) {
       userNotifications.shift(); // Remove oldest
     }
-    
+
     this.notificationHistory.set(notification.userId, userNotifications);
-    
+
     // Send to connected clients with this userId
     this.clients.forEach((client, socket) => {
       if (client.userId === notification.userId && socket.readyState === WebSocket.OPEN) {
@@ -199,10 +199,10 @@ class NotificationService {
         }));
       }
     });
-    
+
     return fullNotification;
   }
-  
+
   /**
    * Send a notification to all admin users
    */
@@ -214,15 +214,15 @@ class NotificationService {
       read: false,
       isAdmin: true
     };
-    
+
     // Store in admin history
     this.adminNotifications.push(fullNotification);
-    
+
     // Limit admin history to 100 notifications
     if (this.adminNotifications.length > 100) {
       this.adminNotifications.shift(); // Remove oldest
     }
-    
+
     // Send to all admin clients
     this.clients.forEach((client, socket) => {
       if (client.isAdmin && socket.readyState === WebSocket.OPEN) {
@@ -232,10 +232,10 @@ class NotificationService {
         }));
       }
     });
-    
+
     return fullNotification;
   }
-  
+
   /**
    * Send a broadcast notification to all connected clients
    */
@@ -246,7 +246,7 @@ class NotificationService {
       createdAt: new Date(),
       read: false
     };
-    
+
     // Send to all connected clients
     this.clients.forEach((client, socket) => {
       if (socket.readyState === WebSocket.OPEN) {
@@ -256,17 +256,17 @@ class NotificationService {
         }));
       }
     });
-    
+
     return fullNotification;
   }
-  
+
   /**
    * Send unread notifications to a user
    */
   private sendUnreadNotifications(socket: WebSocket, userId: number) {
     const userNotifications = this.notificationHistory.get(userId) || [];
     const unread = userNotifications.filter(n => !n.read);
-    
+
     if (unread.length > 0 && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({
         type: 'unread_notifications',
@@ -274,14 +274,14 @@ class NotificationService {
       }));
     }
   }
-  
+
   /**
    * Send recent admin notifications
    */
   private sendAdminNotifications(socket: WebSocket) {
     // Get the 20 most recent admin notifications
     const recent = this.adminNotifications.slice(-20);
-    
+
     if (recent.length > 0 && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({
         type: 'admin_notifications',
@@ -289,7 +289,7 @@ class NotificationService {
       }));
     }
   }
-  
+
   /**
    * Mark a notification as read
    */
@@ -303,20 +303,20 @@ class NotificationService {
       }
     }
   }
-  
+
   /**
    * Generate a unique notification ID
    */
   private generateNotificationId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
   }
-  
+
   /**
    * Clean up disconnected clients
    */
   private cleanupDisconnectedClients() {
     const now = new Date();
-    
+
     this.clients.forEach((client, socket) => {
       // Check if socket is closed or inactive for > 15 minutes
       if (socket.readyState !== WebSocket.OPEN || 
@@ -325,14 +325,14 @@ class NotificationService {
       }
     });
   }
-  
+
   /**
    * Get the number of connected clients
    */
   getConnectedClientCount() {
     let regular = 0;
     let admin = 0;
-    
+
     this.clients.forEach((client) => {
       if (client.isAdmin) {
         admin++;
@@ -340,10 +340,10 @@ class NotificationService {
         regular++;
       }
     });
-    
+
     return { regular, admin };
   }
-  
+
   /**
    * Send an order notification to both user and admin
    * @param orderId Order ID
@@ -357,12 +357,12 @@ class NotificationService {
     const userTitle = status === 'placed' 
       ? 'Order Placed Successfully' 
       : `Order ${status.charAt(0).toUpperCase() + status.slice(1)}`;
-    
+
     const userMessage = message || 
       (status === 'placed' 
         ? `Your order #${orderNumber} has been received and is being processed.`
         : `Your order #${orderNumber} has been updated to ${status}.`);
-    
+
     // Determine notification type based on status
     let notificationType: NotificationType;
     switch(status.toLowerCase()) {
@@ -372,7 +372,7 @@ class NotificationService {
       case 'canceled': notificationType = NotificationType.ORDER_CANCELED; break;
       default: notificationType = NotificationType.ORDER_UPDATED;
     }
-    
+
     // Send to the user
     await this.sendUserNotification({
       type: notificationType,
@@ -385,10 +385,10 @@ class NotificationService {
       priority: 'medium',
       actionRequired: false
     });
-    
+
     // Send to admin with higher priority for certain statuses
     const priority = status === 'placed' || status === 'canceled' ? 'high' : 'medium';
-    
+
     await this.sendAdminNotification({
       type: notificationType,
       title: `Order ${status.charAt(0).toUpperCase() + status.slice(1)}: #${orderNumber}`,
@@ -400,7 +400,7 @@ class NotificationService {
       actionRequired: status === 'placed',
       actionType: status === 'placed' ? 'process_order' : undefined
     });
-    
+
     // Also broadcast this notification to make sure all clients receive it
     await this.sendBroadcast({
       type: notificationType,
@@ -411,10 +411,10 @@ class NotificationService {
       metadata: { orderNumber, status, userId },
       priority: 'medium'
     });
-    
+
     return true;
   }
-  
+
   /**
    * Send payment notification to both user and admin
    * @param paymentId Payment ID
@@ -436,11 +436,11 @@ class NotificationService {
       style: 'currency',
       currency: 'INR'
     }).format(amount);
-    
+
     const notificationType = success 
       ? NotificationType.PAYMENT_RECEIVED 
       : NotificationType.PAYMENT_FAILED;
-    
+
     // Send to user
     await this.sendUserNotification({
       type: notificationType,
@@ -456,7 +456,7 @@ class NotificationService {
       actionRequired: !success,
       actionType: !success ? 'retry_payment' : undefined
     });
-    
+
     // Send to admin
     await this.sendAdminNotification({
       type: notificationType,
@@ -471,7 +471,7 @@ class NotificationService {
       actionRequired: !success,
       actionType: !success ? 'check_payment' : undefined
     });
-    
+
     // Also broadcast this notification to make sure all clients receive it
     await this.sendBroadcast({
       type: notificationType,
@@ -484,7 +484,7 @@ class NotificationService {
       metadata: { orderNumber, amount, paymentId, userId, success },
       priority: success ? 'medium' : 'high'
     });
-    
+
     return true;
   }
 
@@ -498,7 +498,7 @@ class NotificationService {
   async sendStockAlert(productId: number, productName: string, currentStock: number, threshold: number = 5) {
     let priority: 'low' | 'medium' | 'high' | 'urgent';
     let type = NotificationType.STOCK_ALERT;
-    
+
     // Determine priority based on stock level
     if (currentStock === 0) {
       priority = 'urgent';
@@ -512,7 +512,7 @@ class NotificationService {
     } else {
       priority = 'low';
     }
-    
+
     return this.sendAdminNotification({
       type,
       title: currentStock === 0 ? 'Product Out of Stock!' : 'Low Stock Alert',
@@ -531,7 +531,7 @@ class NotificationService {
       }
     });
   }
-  
+
   /**
    * Send an order status update to both admin and customer
    * @param orderId Order ID
@@ -544,7 +544,7 @@ class NotificationService {
     let type: NotificationType;
     let title: string;
     let adminTitle: string;
-    
+
     // Determine notification type based on status
     switch (status.toLowerCase()) {
       case 'shipped':
@@ -568,7 +568,7 @@ class NotificationService {
         title = 'Your Order Status Has Been Updated';
         adminTitle = 'Order Updated';
     }
-    
+
     // Send to customer
     const userMessage = `Your order #${orderNumber} has been ${status.toLowerCase()}${additionalInfo ? '. ' + additionalInfo : '.'}`;
     await this.sendUserNotification({
@@ -584,7 +584,7 @@ class NotificationService {
         status
       }
     });
-    
+
     // Send to admin
     const adminMessage = `Order #${orderNumber} has been ${status.toLowerCase()}${additionalInfo ? '. ' + additionalInfo : '.'}`;
     return this.sendAdminNotification({
@@ -602,7 +602,7 @@ class NotificationService {
       }
     });
   }
-  
+
   /**
    * Send a legacy payment notification 
    * @param orderId Order ID
@@ -622,7 +622,7 @@ class NotificationService {
       console.error('Error parsing amount:', amount, e);
       numericAmount = 0; // Fallback
     }
-    
+
     // Use the numeric payment notification method
     return this.sendPaymentNotification(
       0, // No payment ID available for legacy methods
@@ -633,7 +633,7 @@ class NotificationService {
       isSuccess
     );
   }
-  
+
   /**
    * Send a notification about new user registration
    * @param userId User ID
@@ -656,12 +656,12 @@ class NotificationService {
         timestamp: new Date().toISOString()
       }
     });
-    
+
     return true;
   }
-  
+
   // These functions have been moved to the dashboardService
-  
+
   /**
    * Send a real-time dashboard update notification
    * @param data Dashboard update data
