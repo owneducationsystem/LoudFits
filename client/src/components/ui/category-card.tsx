@@ -1,33 +1,28 @@
 
-import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { Card, CardContent } from "./card";
+import { cn } from "@/lib/utils";
 
 interface CategoryCardProps {
   name: string;
-  image: string;
-  href: string;
+  description?: string;
+  image?: string;
+  className?: string;
 }
 
-export function CategoryCard({ name, image, href }: CategoryCardProps) {
+const CategoryCard = ({ name, description, image, className }: CategoryCardProps) => {
   return (
-    <motion.div
-      whileHover={{ scale: 1.05 }}
-      className="relative overflow-hidden rounded-lg"
-    >
-      <Link href={href}>
-        <div className="cursor-pointer">
-          <img
-            src={image}
-            alt={name}
-            className="h-64 w-full object-cover transition-transform duration-300 hover:scale-110"
-          />
-          <div className="absolute inset-0 bg-black/40">
-            <div className="flex h-full items-center justify-center">
-              <h3 className="text-2xl font-bold text-white">{name}</h3>
-            </div>
-          </div>
+    <Card className={cn("overflow-hidden", className)}>
+      {image && (
+        <div className="aspect-square relative">
+          <img src={image} alt={name} className="object-cover w-full h-full" />
         </div>
-      </Link>
-    </motion.div>
+      )}
+      <CardContent className="p-4">
+        <h3 className="font-semibold">{name}</h3>
+        {description && <p className="text-sm text-gray-500">{description}</p>}
+      </CardContent>
+    </Card>
   );
-}
+};
+
+export default CategoryCard;
