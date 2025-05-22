@@ -1,42 +1,33 @@
+
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 
 interface CategoryCardProps {
+  name: string;
   image: string;
-  title: string;
-  link: string;
-  fullWidth?: boolean;
+  href: string;
 }
 
-const CategoryCard = ({ image, title, link, fullWidth = false }: CategoryCardProps) => {
+export function CategoryCard({ name, image, href }: CategoryCardProps) {
   return (
-    <div className={`relative group cursor-pointer overflow-hidden ${fullWidth ? 'md:col-span-2' : ''}`}>
-      <motion.div
-        whileHover={{ scale: 1.05 }}
-        transition={{ duration: 0.3 }}
-        className="h-full"
-      >
-        <img 
-          src={image} 
-          alt={title} 
-          className={`w-full ${fullWidth ? 'h-[300px] md:h-[400px]' : 'h-[300px]'} object-cover`} 
-        />
-        <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-all"></div>
-        <div className="absolute inset-0 flex flex-col justify-center items-center">
-          <h3 className="text-white text-2xl md:text-3xl font-bold mb-4">{title}</h3>
-          <Link href={link}>
-            <motion.a
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-white text-black hover:bg-[#582A34] hover:text-white py-2 px-6 font-medium transition-colors"
-            >
-              {title.includes("COLLECTION") ? "EXPLORE" : "SHOP NOW"}
-            </motion.a>
-          </Link>
+    <motion.div
+      whileHover={{ scale: 1.05 }}
+      className="relative overflow-hidden rounded-lg"
+    >
+      <Link href={href}>
+        <div className="cursor-pointer">
+          <img
+            src={image}
+            alt={name}
+            className="h-64 w-full object-cover transition-transform duration-300 hover:scale-110"
+          />
+          <div className="absolute inset-0 bg-black/40">
+            <div className="flex h-full items-center justify-center">
+              <h3 className="text-2xl font-bold text-white">{name}</h3>
+            </div>
+          </div>
         </div>
-      </motion.div>
-    </div>
+      </Link>
+    </motion.div>
   );
-};
-
-export default CategoryCard;
+}
