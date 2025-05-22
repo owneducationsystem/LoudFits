@@ -140,7 +140,7 @@ const HeroCarousel = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.7 }}
         >
-          <Link href={images[currentIndex].link}>
+          {/* <Link href={images[currentIndex].link}>
             <motion.a 
               className="bg-black text-white hover:bg-[#582A34] hover:text-white font-bold py-3 px-8 inline-block text-center transition-colors"
               whileHover={{ scale: 1.05 }}
@@ -148,7 +148,16 @@ const HeroCarousel = ({
             >
               {images[currentIndex].linkText}
             </motion.a>
-          </Link>
+          </Link> */}
+          <div onClick={() => window.location.href = images[currentIndex].link} style={{cursor: 'pointer'}}>
+            <motion.a 
+              className="bg-black text-white hover:bg-[#582A34] hover:text-white font-bold py-3 px-8 inline-block text-center transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {images[currentIndex].linkText}
+            </motion.a>
+          </div>
 
           {images[currentIndex].secondaryLink && (
             <Link href={images[currentIndex].secondaryLink}>

@@ -49,7 +49,11 @@ const TrendingProducts = () => {
   return (
     <section className="py-12 px-4 bg-[#BECCD5] bg-opacity-20">
       <div className="container mx-auto">
-        <ProductCarousel products={displayProducts} title="TRENDING NOW" />
+        {displayProducts?.length > 0 ? (
+          <ProductCarousel products={displayProducts} title="TRENDING NOW" />
+        ) : (
+          <div className="text-center py-8">Loading trending products...</div>
+        )}
       </div>
     </section>
   );
