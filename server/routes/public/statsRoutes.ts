@@ -8,10 +8,14 @@ const statsRouter = Router();
 statsRouter.get("/testimonials", async (req, res) => {
   try {
     const testimonials = await storage.getTestimonials();
-    res.json(testimonials || []);
+    if (!testimonials) {
+      console.warn("No testimonials found");
+      return res.json([]);
+    }
+    res.json(testimonials);
   } catch (error) {
     console.error("Error fetching testimonials:", error);
-    res.json([]); // Always return empty array on error
+    res.status(500).json({ message: "Failed to fetch testimonials", error: error instanceof Error ? error.message : "Unknown error" });
   }
 });
 
